@@ -19,7 +19,7 @@ export class AiClientError extends Error {
 const MESSAGES = {
   sin_configurar: 'Falta configurar la conexión con la IA (Documento → Conexión).',
   sin_conexion: 'Sin conexión: la IA necesita internet. Puedes añadir los alimentos a mano.',
-  red: 'No se pudo contactar con el servidor de la IA. Revisa la dirección y tu conexión.',
+  red: 'No se pudo contactar con el servidor de la IA. Revisa la dirección, tu conexión y que ALLOWED_ORIGIN del Worker sea esta página.',
   token_invalido: 'El token no es correcto. Revísalo en Documento → Conexión.',
   origen: 'El servidor rechaza esta página (CORS): revisa ALLOWED_ORIGIN en el Worker.',
   limite_de_uso: 'Se ha alcanzado el límite de uso gratuito de la IA. Prueba más tarde o añade a mano.',
@@ -57,10 +57,16 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       return { items: body.items, unmatched: body.unmatched, warnings: Array.isArray(body.warnings) ? body.warnings : [], model: body.model };
     },
 
-    // Comprobación de que el Worker responde (no gasta IA).
+    // "Probar" (no gasta IA): ¿responde?, ¿tiene sus secretos?, ¿el token es el correcto? -> { ok, configurado, token }.
+    // Un fallo de red aquí suele ser ALLOWED_ORIGIN: el navegador bloquea la respuesta si el Worker no admite esta página.
     async health() {
       if (!base) throw fail('sin_configurar');
-      try { const r = await fetchImpl(`${base}/health`); return r.ok; } catch (e) { throw fail('red', e.message); }
+      let res;
+      try { res = await fetchImpl(`${base}/health`, token ? { headers: { 'X-App-Token': token } } : undefined); } catch (e) { throw fail('red', e.message); }
+      if (!res.ok) return { ok: false };
+      let b = null;
+      try { b = await res.json(); } catch { /* sin JSON */ }
+      return { ok: true, configurado: b?.configurado !== false, token: b?.token ?? null };
     },
   };
 }

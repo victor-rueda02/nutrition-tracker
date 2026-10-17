@@ -38,9 +38,16 @@ test('sin configurar o sin conexión: no se intenta la llamada', async () => {
   assert.equal(called, false);
 });
 
-test('health no necesita token ni gasta IA', async () => {
+test('health ("Probar") no gasta IA: dice si responde, si tiene sus secretos y si el token es el correcto', async () => {
   let url;
-  const c = createAiClient({ endpoint: 'https://w.example', fetchImpl: async (u) => { url = u; return new Response('{"ok":true}'); } });
-  assert.equal(await c.health(), true);
+  let init;
+  const c = createAiClient({ endpoint: 'https://w.example', fetchImpl: async (u, i) => { url = u; init = i; return new Response('{"ok":true}'); } });
+  assert.deepEqual(await c.health(), { ok: true, configurado: true, token: null });
   assert.equal(url, 'https://w.example/health');
+  assert.equal(init, undefined); // sin token no manda cabecera
+  const conToken = createAiClient({ endpoint: 'https://w.example/', token: 'tok', fetchImpl: async (u, i) => { init = i; return new Response('{"ok":true,"configurado":false,"token":"incorrecto"}'); } });
+  assert.deepEqual(await conToken.health(), { ok: true, configurado: false, token: 'incorrecto' });
+  assert.equal(init.headers['X-App-Token'], 'tok');
+  assert.deepEqual(await createAiClient({ endpoint: 'https://w', fetchImpl: async () => new Response('x', { status: 500 }) }).health(), { ok: false });
+  await assert.rejects(createAiClient({ endpoint: 'https://w', fetchImpl: async () => { throw new TypeError('Failed to fetch'); } }).health(), (e) => /ALLOWED_ORIGIN/.test(e.userMessage));
 });

@@ -53,6 +53,25 @@ test('configuración incompleta -> 500; ruta desconocida -> 404; /health', async
   assert.equal((await handleRequest(req({ method: 'GET', path: '/health' }), env)).status, 200);
 });
 
+test('/health ("Probar"): secretos configurados y token correcto, sin revelar valores ni gastar IA', async () => {
+  const health = async (headers, e = env) => {
+    const r = await handleRequest(new Request('https://w.example/health', { headers }), e, { callModel: () => { throw new Error('no debe llamar a la IA'); } });
+    return [r.status, await r.text()];
+  };
+  const [status, body] = await health({ Origin: ORIGIN, 'X-App-Token': 'tok-123' });
+  assert.equal(status, 200);
+  assert.deepEqual(JSON.parse(body), { ok: true, configurado: true, token: 'ok' });
+  assert.ok(!body.includes('CLAVE-SECRETA-XYZ') && !body.includes('tok-123'));
+  assert.equal(JSON.parse((await health({ 'X-App-Token': 'otro' }))[1]).token, 'incorrecto');
+  assert.equal(JSON.parse((await health({}))[1]).token, 'sin_token');
+  assert.equal(JSON.parse((await health({}, { ...env, GEMINI_API_KEY: '' }))[1]).configurado, false);
+  // la app manda el token en un GET: la comprobación previa del navegador lo permite
+  const pre = await handleRequest(new Request('https://w.example/health', { method: 'OPTIONS', headers: { Origin: ORIGIN, 'Access-Control-Request-Method': 'GET', 'Access-Control-Request-Headers': 'x-app-token' } }), env);
+  assert.equal(pre.status, 204);
+  assert.match(pre.headers.get('access-control-allow-methods'), /GET/);
+  assert.match(pre.headers.get('access-control-allow-headers'), /X-App-Token/);
+});
+
 test('flujo correcto: devuelve JSON validado; la clave no aparece en la respuesta', async () => {
   const cm = model(good);
   const res = await handleRequest(req(), env, { callModel: cm });

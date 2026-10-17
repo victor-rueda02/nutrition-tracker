@@ -15,7 +15,7 @@ function corsHeaders(origin, env) {
   if (!origin || origin !== env.ALLOWED_ORIGIN) return {};
   return {
     'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, X-App-Token',
     'Access-Control-Max-Age': '86400',
     Vary: 'Origin',
@@ -58,7 +58,12 @@ export async function handleRequest(request, env, { callModel = defaultCallModel
   const cors = corsHeaders(origin, env);
 
   if (request.method === 'OPTIONS') return cors['Access-Control-Allow-Origin'] ? new Response(null, { status: 204, headers: cors }) : json(403, { error: 'origen_no_permitido' });
-  if (url.pathname === '/health' && request.method === 'GET') return json(200, { ok: true }, cors);
+  // "Probar" de la app (no gasta IA): ¿tiene sus secretos? ¿el token enviado es el correcto? Nunca los valores.
+  if (url.pathname === '/health' && request.method === 'GET') {
+    const t = request.headers.get('X-App-Token');
+    const token = t === null ? 'sin_token' : env.APP_TOKEN && safeEqual(t, env.APP_TOKEN) ? 'ok' : 'incorrecto';
+    return json(200, { ok: true, configurado: Boolean(env.GEMINI_MODEL && env.GEMINI_API_KEY && env.APP_TOKEN), token }, cors);
+  }
   if (url.pathname !== '/parse' || request.method !== 'POST') return json(404, { error: 'no_encontrado' }, cors);
 
   if (origin && !cors['Access-Control-Allow-Origin']) return json(403, { error: 'origen_no_permitido' });

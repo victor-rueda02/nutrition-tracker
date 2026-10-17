@@ -13,7 +13,7 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido' } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' } } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
@@ -29,7 +29,7 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
       if (next instanceof Error) throw next;
       return next;
     },
-    async health() { return true; },
+    async health() { return health; },
   });
   const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; } });
   const $ = (s) => root.querySelector(s);
@@ -205,7 +205,16 @@ test('conexión: se guarda el Worker y el token (no van en el repositorio)', { s
   await t.act(() => t.btn('Guardar').click());
   assert.deepEqual(await t.store.getSetting('conn'), { endpoint: 'https://w.example', token: 'secreto' });
   await t.act(() => t.btn('Probar').click());
-  assert.match(t.root.textContent, /El Worker responde/);
+  assert.match(t.root.textContent, /Todo correcto: el Worker responde, tiene sus secretos y el token es el correcto/);
+});
+
+test('Probar: token incorrecto o secretos que faltan, con un mensaje para cada caso', { skip }, async () => {
+  for (const [health, re] of [[{ ok: true, configurado: true, token: 'incorrecto' }, /el token no es correcto/], [{ ok: true, configurado: false, token: 'ok' }, /le faltan secretos/], [{ ok: false }, /no responde bien/]]) {
+    const t = await setup({ health });
+    await t.act(() => t.btn('Documento').click());
+    await t.act(() => t.btn('Probar').click());
+    assert.match(t.root.textContent, re);
+  }
 });
 
 // ---------- Diario (hito 4, fase 1) ----------

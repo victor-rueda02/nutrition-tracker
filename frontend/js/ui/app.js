@@ -42,6 +42,11 @@ const ESTADO_TEXT = {
   en_objetivo: 'En objetivo', por_encima: 'Por encima', sin_dato: 'Sin dato', sin_objetivo: '',
 };
 const TIPO_TEXT = { min: 'al menos', max: 'como mucho', objetivo: 'objetivo' };
+// Resultado de "Probar" (comprueba origen, secretos y token sin gastar IA).
+const probarTexto = (r) => (!r?.ok ? 'El Worker no responde bien.'
+  : r.token === 'incorrecto' ? 'El Worker responde, pero el token no es correcto.'
+    : r.configurado === false ? 'El Worker responde, pero le faltan secretos (GEMINI_API_KEY o APP_TOKEN): ver README, «Worker».'
+      : r.token === 'ok' ? 'Todo correcto: el Worker responde, tiene sus secretos y el token es el correcto.' : 'El Worker responde.');
 
 // deps: { store, createAiClient, catalog, settings, targets (data/targets.json), objetivos (los tuyos, del almacén),
 //         initial: { foods, extraHeaders, docName }, conn, now, idGen, readFile, saveFile }
@@ -473,7 +478,7 @@ export function mountApp(root, deps) {
       h('label', {}, 'Worker', ep), h('label', {}, 'Token', tk),
       h('div', { class: 'row' },
         h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
-        h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = (await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()) ? 'El Worker responde.' : 'El Worker no responde bien.'; } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
+        h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
       connMsg,
       h('h2', {}, 'Copia de seguridad'),
       h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). La copia no incluye el token.`),
