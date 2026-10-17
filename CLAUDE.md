@@ -58,10 +58,12 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 ## 5. Estado actual (17-10-2026)
 
 - **Hitos 1, 2 y 3 hechos**: parser y validador, cálculo, completitud, porciones, Worker, validación de la IA, reglas de variantes, frontend (dictado, confirmación editable, guardado, importar documento, pantalla de conexión, PWA).
-- **128 tests pasan en Windows y Linux** (`npm install` y `npm test`).
-- **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Ha destapado tres fallos (ver sección 6).
-- **El catálogo no tiene nutrientes todavía**: los 63 alimentos están pendientes de completar. Sin el script de USDA, la app no puede calcular nada útil.
-- **No probado aún**: la app en un iPhone/Safari real, el despliegue del Worker y el hosting.
+- **142 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
+- **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Destapó tres fallos, ya corregidos (puntos 1–3 de la sección 6): palabras de estado dentro del nombre ("tomate frito"), cortes y especies (`pechuga_pollo_cruda`; "pollo", "pavo" y "pechuga" a secas son ambiguos) y mililitros (el modelo devuelve `cantidad` + `unidad`; la app convierte ml → g con `densidad_g_ml`, que no viaja a la IA). Pendiente de volver a probar esas correcciones con Gemini real.
+- **El catálogo no tiene nutrientes todavía**: los 64 alimentos están pendientes de completar. Sin el script de USDA, la app no puede calcular nada útil.
+- **Repositorio git** creado en local (rama `main`). Aún no está en GitHub.
+- **`try-phrases.mjs`** toma el modelo de `GEMINI_MODEL` en `worker/wrangler.toml` (o de la variable de entorno del mismo nombre).
+- **No probado aún**: la app en un iPhone/Safari real y el hosting. El Worker nunca se ha desplegado; el primer despliegue se hará con el README del hito 4.
 - **Ya tengo**: la clave de Gemini y la clave de FoodData Central. Las pongo yo como variables de entorno; no me las pidas.
 
 ## 6. Trabajo pendiente, en este orden
