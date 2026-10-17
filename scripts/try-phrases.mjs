@@ -12,6 +12,7 @@ import { parseFoodsDocument } from '../frontend/js/core/foods-parser.js';
 import { buildCompactList } from '../frontend/js/core/ai-contract.js';
 import { createDraft } from '../frontend/js/core/draft.js';
 import { handleRequest } from '../worker/src/index.js';
+import { callGemini } from '../worker/src/providers/gemini.js';
 
 // Rutas siempre con fileURLToPath/resolve (new URL(...).pathname rompe en Windows: "/C:/...").
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -44,12 +45,18 @@ if (!simulated && !process.env.GEMINI_API_KEY) {
 
 console.log(`Documento: ${foods.length} alimentos, ${list.length} enviados a la IA (sin nutrientes)`);
 console.log(`Modelo: ${simulated ? 'simulado' : model}\n`);
+let totalCalls = 0; // llamadas reales a Gemini, reintentos incluidos (la cuota es limitada)
 for (const p of phrases) {
   console.log(`ENTRADA: "${p.frase}"`);
   if (p.modelo) console.log(`  [modelo simulado] ${JSON.stringify(p.modelo)}`);
   const request = new Request('https://local/parse', { method: 'POST', headers: { 'X-App-Token': 'local' }, body: JSON.stringify({ texto: p.frase, alimentos: list }) });
-  const res = await handleRequest(request, env, p.modelo ? { callModel: async () => JSON.stringify(p.modelo) } : {});
+  let calls = 0;
+  const res = await handleRequest(request, env, p.modelo
+    ? { callModel: async () => JSON.stringify(p.modelo) }
+    : { callModel: (e, a) => { calls++; return callGemini({ apiKey: e.GEMINI_API_KEY, model: e.GEMINI_MODEL, ...a }); } });
+  totalCalls += calls;
   const body = await res.json();
+  if (!simulated) console.log(`  [${calls} llamada${calls === 1 ? '' : 's'} a Gemini]`);
   if (res.status !== 200) { console.log(`  ERROR ${res.status}: ${JSON.stringify(body)}\n`); continue; }
   // Lo que vería la app en la confirmación (incluye la conversión ml -> g con densidad_g_ml).
   const d = createDraft({ text: p.frase, meal: 'otro', result: body, foodsById });
@@ -59,3 +66,4 @@ for (const p of phrases) {
   for (const w of d.warnings) console.log(`  ! ${w}`);
   console.log('');
 }
+if (!simulated) console.log(`Total: ${totalCalls} llamada${totalCalls === 1 ? '' : 's'} a Gemini para ${phrases.length} frase${phrases.length === 1 ? '' : 's'}.`);
