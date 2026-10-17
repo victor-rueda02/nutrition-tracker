@@ -1,7 +1,7 @@
 // Validación en código de la respuesta de la IA + elección determinista de variante crudo/cocinado.
 // La IA propone; aquí se descarta lo inválido y se aplican las reglas de variantes.
-import { MAX_GRAMS, detectEstado, detectVolumen, detectPeso } from './ai-contract.js';
-import { normalizeText } from './text.js';
+import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectEstado, detectVolumen, detectPeso, cantidadDicha } from './ai-contract.js';
+import { normalizeText, containsTerm, removeTerms } from './text.js';
 
 const CONF = ['alta', 'media', 'baja'];
 const lower = (c) => CONF[Math.min(CONF.indexOf(c) + 1, CONF.length - 1)];
@@ -51,29 +51,25 @@ export function stripNameStates(text, food) {
   return { text: t, states };
 }
 
+const nameTerms = (f) => [f.nombre, ...(f.alias ?? [])];
+
 // ¿El texto dicho contiene el nombre o algún alias de alguno de estos alimentos? Sin acentos, sin mayúsculas
 // y tolerando plurales por palabra ("tomates fritos" ~ "tomate frito", "macarrones" ~ "macarrón").
-const words = (s) => normalizeText(s).split(/[^a-z0-9ñ]+/).filter(Boolean);
-const sameWord = (a, b) => a === b || a === `${b}s` || b === `${a}s` || a === `${b}es` || b === `${a}es`;
-export function mentionsFood(text, foods) {
-  const t = words(text);
-  return foods.some((f) => [f.nombre, ...(f.alias ?? [])].some((term) => {
-    const w = words(term);
-    if (!w.length) return false;
-    for (let i = 0; i + w.length <= t.length; i++) if (w.every((x, j) => sameWord(t[i + j], x))) return true;
-    return false;
-  }));
-}
+export const mentionsFood = (text, foods) => foods.some((f) => nameTerms(f).some((term) => containsTerm(text, term)));
 
-// ¿Los gramos salen de una porción de alguno de estos alimentos? Múltiplos de ¼ o ⅓ de porción ("medio vaso",
-// "2 huevos", "un tercio de yogur"), con un 1 % de tolerancia por redondeos.
-export function fromPortion(grams, foods) {
-  const cerca = (r, paso) => Math.abs(r - Math.round(r / paso) * paso) <= 0.01 * Math.max(r, 1);
-  return foods.some((f) => (f.porciones ?? []).some((p) => {
-    if (!(p.gramos > 0)) return false;
+// Cantidad dicha sin unidad: ¿los gramos salen de una porción del alimento? Si se dijo el número ("2 huevos",
+// "medio vaso"), gramos = número × porción; si se nombra una porción ("una cucharadita"), tiene que ser esa. Sin número
+// ("vaso de leche"), vale un múltiplo de ¼ o ⅓ de porción. Tolerancia del 1 % por redondeos.
+export function porcionCuadra(grams, n, text, foods) {
+  const porciones = foods.flatMap((f) => f.porciones ?? []).filter((p) => p.gramos > 0);
+  const nombradas = porciones.filter((p) => containsTerm(text, p.nombre));
+  const candidatas = nombradas.length ? nombradas : porciones;
+  const cerca = (a, b) => Math.abs(a - b) <= 0.01 * Math.max(a, 1);
+  if (n !== null) return candidatas.some((p) => cerca(grams, n * p.gramos));
+  return candidatas.some((p) => {
     const r = grams / p.gramos;
-    return r >= 0.25 - 1e-9 && (cerca(r, 0.25) || cerca(r, 1 / 3));
-  }));
+    return r >= 0.25 - 1e-9 && (cerca(r, Math.round(r * 4) / 4) || cerca(r, Math.round(r * 3) / 3));
+  });
 }
 
 // Reglas de variante (ver conversación del hito 2):
@@ -156,23 +152,36 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     let confidence = v.confidence;
     const modelFood = index.byId.get(raw.food_id);
     const family = modelFood.grupo ? index.groups.get(modelFood.grupo) : [modelFood];
-    // Sin unidad de peso ni de volumen en lo dicho ("1 manzana", "2 huevos"), el número son unidades, NUNCA gramos:
-    // solo vale si los gramos salen de una porción del alimento; si no, a "sin porción" para que pongas los gramos.
-    if (!detectPeso(text) && !detectVolumen(text) && (unidad === 'ml' || !fromPortion(qty, [...family, index.byId.get(v.food_id)]))) {
-      unmatched.push({ text: text || v.food_id, motivo: 'sin_porcion', food_id: v.food_id });
-      warnings.push(`${v.food_id}: "${text}" no dice gramos y no hay una porción que dé ${qty} ${unidad}: pon los gramos`);
-      continue;
+    const foods = [...family, index.byId.get(v.food_id)];
+    // Cantidad sin unidad de peso ni de volumen en lo dicho (el número se lee sin el nombre: "chocolate 85" no es 85):
+    //  - menos de UMBRAL_GRAMOS_SIN_UNIDAD ("1 manzana", "2 huevos"): son unidades; solo vale si los gramos salen de una
+    //    porción del alimento; si no (o si llega en ml), a "sin porción" para que pongas los gramos.
+    //  - desde el umbral ("150 de arroz"): se asume que son gramos, con aviso; no bloquea el guardado.
+    let cantidad = qty;
+    let unidadFinal = unidad;
+    if (!detectPeso(text) && !detectVolumen(text)) {
+      const n = cantidadDicha(removeTerms(text, foods.flatMap(nameTerms)));
+      if (n !== null && n >= UMBRAL_GRAMOS_SIN_UNIDAD) {
+        cantidad = n;
+        unidadFinal = 'g';
+        flags.push('gramos_asumidos');
+        warnings.push(`${v.food_id}: "${text}" no dice la unidad: se asumen ${n} g`);
+      } else if (unidad === 'ml' || !porcionCuadra(qty, n, text, foods)) {
+        unmatched.push({ text: text || v.food_id, motivo: 'sin_porcion', food_id: v.food_id });
+        warnings.push(`${v.food_id}: "${text}" no dice gramos y no hay una porción que dé ${qty} ${unidad}: pon los gramos`);
+        continue;
+      }
     }
     // Lo dicho debe nombrar al alimento (o a una variante de su grupo): si no, el modelo eligió por su cuenta
     // ("150 g de pechuga" -> pechuga de pollo). Se marca para confirmar; sirve también para descubrir alias que faltan.
-    if (!mentionsFood(text, [...family, index.byId.get(v.food_id)])) {
+    if (!mentionsFood(text, foods)) {
       flags.push('sin_alias');
       confidence = 'baja';
       warnings.push(`${v.food_id}: "${text}" no coincide con tus alias`);
     }
     // Volumen: aquí no se convierte (la densidad no viaja a internet); lo convierte la app al crear el borrador.
-    const amount = unidad === 'ml' ? { grams: null, ml: qty } : { grams: qty };
-    if (qty > maxGrams) { flags.push('gramos_altos'); warnings.push(`${v.food_id}: ${qty} ${unidad} supera ${maxGrams}, confirma la cantidad`); }
+    const amount = unidadFinal === 'ml' ? { grams: null, ml: cantidad } : { grams: cantidad };
+    if (cantidad > maxGrams) { flags.push('gramos_altos'); warnings.push(`${v.food_id}: ${cantidad} ${unidadFinal} supera ${maxGrams}, confirma la cantidad`); }
     if (unidad === 'g' && detectVolumen(text)) { flags.push('unidad_discrepante'); warnings.push(`${v.food_id}: dijiste un volumen pero llegó en gramos, revisa la cantidad`); }
     if (v.flags.includes('variante_no_disponible')) warnings.push(`${raw.food_id}: dijiste un estado para el que no hay variante en el documento`);
     if (v.flags.includes('sin_variante_por_defecto')) warnings.push(`${raw.food_id}: grupo sin variante_por_defecto`);

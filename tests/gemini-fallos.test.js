@@ -2,11 +2,11 @@
 // Las respuestas del modelo son SIMULADAS: se prueba la capa determinista, no la calidad del modelo.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectVolumen, toCompact } from '../frontend/js/core/ai-contract.js';
+import { detectVolumen, toCompact, UMBRAL_GRAMOS_SIN_UNIDAD, cantidadDicha } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, stripNameStates } from '../frontend/js/core/ai-validate.js';
-import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText, validateDraft, setGrams, confirmFood, changeFood, toMealRecord } from '../frontend/js/core/draft.js';
+import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText, gramosAsumidos, validateDraft, setGrams, confirmFood, changeFood, toMealRecord } from '../frontend/js/core/draft.js';
 import { parseFoodsCSV, foodsToCSV, foodsToJSON } from '../frontend/js/core/foods-parser.js';
-import { normalizeText } from '../frontend/js/core/text.js';
+import { normalizeText, removeTerms } from '../frontend/js/core/text.js';
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA } from '../worker/src/prompt.js';
 import { realFoods, realList, catalog, csv } from './helpers.js';
 
@@ -235,35 +235,95 @@ test('sin_alias: la línea no se puede guardar hasta confirmar el alimento o cam
   assert.equal(cambiado.lines[0].grams, 150);
 });
 
-// ---------- Real: "1 manzana" se guardó como 1 g (la manzana no tiene porción) ----------
-test('sin unidad de peso o volumen, el número NUNCA son gramos: sin porción aplicable -> "sin porción"', () => {
+// ---------- Cantidades sin unidad de peso ni volumen (reales: "1 manzana" se guardó como 1 g; "150 de arroz") ----------
+// Menos de UMBRAL_GRAMOS_SIN_UNIDAD (20) son unidades: porción o "sin porción". Desde 20, gramos asumidos con aviso.
+const asumido = (r) => r.items[0]?.flags.includes('gramos_asumidos');
+
+test('umbral en una constante (20) y en el prompt', () => {
+  assert.equal(UMBRAL_GRAMOS_SIN_UNIDAD, 20);
+  assert.ok(SYSTEM_PROMPT.includes('menor que 20') && SYSTEM_PROMPT.includes('de 20 o más'));
+  assert.ok(SYSTEM_PROMPT.includes('"1 manzana"') && SYSTEM_PROMPT.includes('"150 de arroz"'));
+});
+
+test('"150 de arroz" -> 150 g con el aviso "asumido en gramos" (no bloquea el guardado)', () => {
+  for (const [cantidad, unidad] of [[150, 'g'], [1, 'g'], [150, 'ml']]) { // lo que diga el modelo, cuenta lo dicho
+    const r = run([line('arroz_blanco_crudo', '150 de arroz', { cantidad, unidad })]);
+    assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.ml]), [['arroz_blanco_crudo', 150, undefined]], `${cantidad} ${unidad}`);
+    assert.ok(asumido(r));
+    assert.equal(r.items[0].confidence, 'alta');
+    assert.equal(r.items[0].requiresConfirmation, false);
+    assert.match(r.warnings[0], /no dice la unidad: se asumen 150 g/);
+  }
+  const d = createDraft({ meal: 'comida', result: run([line('arroz_blanco_crudo', '150 de arroz', { cantidad: 150 })]), foodsById: byId });
+  assert.equal(validateDraft(d).ok, true); // se puede guardar tal cual
+  assert.ok(d.lines[0].flags.includes('gramos_asumidos'));
+});
+
+test('"25 de almendras" -> 25 g con aviso; 20 es el límite; "19 de nueces" son unidades', () => {
+  const r = run([line('almendras_crudas', '25 de almendras', { cantidad: 25 })]);
+  assert.deepEqual([r.items[0].grams, asumido(r)], [25, true]);
+  assert.ok(asumido(run([line('nueces', '20 de nueces', { cantidad: 20 })])));
+  assert.equal(run([line('nueces', '19 de nueces', { cantidad: 19 })]).unmatched[0].motivo, 'sin_porcion');
+  assert.ok(asumido(run([line('arroz_blanco_crudo', '150,5 de arroz', { cantidad: 150.5 })])));
+});
+
+test('"1 manzana" -> "sin porción" (la manzana no tiene porción); no se rellenan gramos que nadie dijo', () => {
   for (const [cantidad, unidad] of [[1, 'g'], [120, 'g'], [1, 'ml']]) {
     const r = run([line('manzana_con_piel', '1 manzana', { cantidad, unidad })]);
     assert.deepEqual(r.items, [], `${cantidad} ${unidad}`);
     assert.deepEqual(r.unmatched, [{ text: '1 manzana', motivo: 'sin_porcion', food_id: 'manzana_con_piel' }]);
     assert.match(r.warnings[0], /no dice gramos/);
   }
-  // "150 de arroz": tampoco son gramos si no lo dice
-  assert.equal(run([line('arroz_blanco_crudo', '150 de arroz', { cantidad: 150 })]).unmatched[0].motivo, 'sin_porcion');
-  // y en la confirmación no se rellenan gramos que nadie dijo
   const d = createDraft({ meal: 'comida', result: run([line('manzana_con_piel', '1 manzana', { cantidad: 1 })]), foodsById: byId });
-  assert.equal(resolveUnmatched(d, 0, 'manzana_con_piel', null, byId.get('manzana_con_piel')).lines[0].grams, null);
+  const l = resolveUnmatched(d, 0, 'manzana_con_piel', null, byId.get('manzana_con_piel')).lines[0];
+  assert.deepEqual([l.grams, l.flags], [null, []]);
 });
 
-test('sin unidad pero con porción: vale si los gramos salen de la porción (¼, ⅓, ½, 1, 2...)', () => {
-  const ok = [['huevo', '2 huevos', 100], ['kiwi_verde', 'un kiwi', 69], ['aceite_oliva', 'una cucharada de aceite', 13.5], ['aceite_oliva', 'una cucharadita de aceite', 4.5],
-    ['leche_entera', 'medio vaso de leche', 125], ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 50.4]];
-  for (const [id, text, cantidad] of ok) assert.deepEqual(run([line(id, text, { cantidad })]).items.map((i) => [i.food_id, i.grams]), [[id, cantidad]], text);
-  // gramos que no salen de ninguna porción, o ml sin haber dicho un volumen ("un vaso" es una porción en gramos)
-  for (const [id, text, cantidad, unidad] of [['huevo', '2 huevos', 2, 'g'], ['kiwi_verde', 'un kiwi', 100, 'g'], ['leche_entera', 'un vaso de leche', 250, 'ml']]) {
-    assert.equal(run([line(id, text, { cantidad, unidad })]).unmatched[0]?.motivo, 'sin_porcion', text);
-  }
+test('"2 huevos" -> 100 g (2 × porción de 50 g); el número dicho manda: 150 g no valen para "2 huevos"', () => {
+  const r = run([line('huevo', '2 huevos', { cantidad: 100 })]);
+  assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.flags]), [['huevo', 100, []]]);
+  for (const cantidad of [2, 150, 50]) assert.equal(run([line('huevo', '2 huevos', { cantidad })]).unmatched[0]?.motivo, 'sin_porcion', String(cantidad));
 });
 
-test('con unidad de peso o volumen dicha, se respetan los gramos aunque no haya porción', () => {
+test('unidades con porción: número en cifras o palabras, y la porción nombrada tiene que ser esa', () => {
+  const ok = [['kiwi_verde', 'un kiwi', 69], ['aceite_oliva', 'una cucharada de aceite', 13.5], ['aceite_oliva', 'una cucharadita de aceite', 4.5],
+    ['aceite_oliva', 'media cucharadita de aceite', 2.25], ['leche_entera', 'medio vaso de leche', 125], ['leche_entera', 'dos vasos de leche', 500],
+    ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 50.4], ['huevo', 'un huevo y medio', 75],
+    ['huevo', 'media docena de huevos', 300], ['leche_entera', 'vaso de leche', 250]]; // sin número: una porción entera
+  for (const [id, text, cantidad] of ok) assert.deepEqual(run([line(id, text, { cantidad })]).items.map((x) => [x.food_id, x.grams]), [[id, cantidad]], text);
+  const mal = [['kiwi_verde', 'un kiwi', 100, 'g'], ['aceite_oliva', 'una cucharadita de aceite', 13.5, 'g'], ['leche_entera', 'un vaso de leche', 250, 'ml'],
+    ['aceite_oliva', '15 de aceite', 15, 'g']]; // 15 < 20: son unidades, y 15 cucharadas no son 15 g
+  for (const [id, text, cantidad, unidad] of mal) assert.equal(run([line(id, text, { cantidad, unidad })]).unmatched[0]?.motivo, 'sin_porcion', text);
+});
+
+test('un número del nombre no es una cantidad ("chocolate 85")', () => {
+  assert.equal(run([line('chocolate_negro_85', 'chocolate 85', { cantidad: 85 })]).unmatched[0]?.motivo, 'sin_porcion');
+  const r = run([line('chocolate_negro_85', '20 de chocolate 85', { cantidad: 20 })]);
+  assert.deepEqual([r.items[0].grams, asumido(r)], [20, true]);
+  assert.equal(run([line('chocolate_negro_85', '20 g de chocolate 85', { cantidad: 20 })]).items[0].flags.includes('gramos_asumidos'), false);
+});
+
+test('cantidadDicha y removeTerms', () => {
+  const casos = [['150 de arroz', 150], ['1,5 de algo', 1.5], ['1/2 vaso', 0.5], ['dos huevos', 2], ['un cuarto de vaso', 0.25], ['un par de kiwis', 2],
+    ['media docena', 6], ['dos y medio', 2.5], ['medio vaso', 0.5], ['unos pistachos', null], ['leche', null], ['veinte de nueces', 20], ['dieciséis de nueces', 16]];
+  for (const [t, n] of casos) assert.equal(cantidadDicha(t), n, t);
+  assert.equal(removeTerms('Un huevo y medio', ['huevo']).trim().replace(/\s+/g, ' '), 'un y medio');
+  assert.equal(cantidadDicha(removeTerms('Chocolate negro 85% y 20 de chocolate 85', ['Chocolate negro 85%', 'chocolate 85'])), 20);
+});
+
+test('al resolver un "sin resolver" como "150 de arroz", también se asumen los gramos (con aviso)', () => {
+  const d = createDraft({ meal: 'comida', result: { items: [], unmatched: [{ text: '150 de arroz', motivo: 'sin_porcion', food_id: 'arroz_blanco_crudo' }], warnings: [] }, foodsById: byId });
+  const l = resolveUnmatched(d, 0, 'arroz_blanco_crudo', null, byId.get('arroz_blanco_crudo')).lines[0];
+  assert.deepEqual([l.grams, l.flags], [150, ['gramos_asumidos']]);
+  assert.equal(gramosAsumidos('150 g de arroz'), null); // con unidad, no hay nada que asumir
+  assert.equal(gramosAsumidos('3 rebanadas de pan'), null);
+});
+
+test('con unidad de peso o volumen dicha, se respetan los gramos aunque no haya porción y sin aviso', () => {
   for (const text of ['150 g de manzana', '150gr de manzana', '150 gramos de manzana', 'medio kilo de manzanas', '0,2 kg de manzana']) {
-    assert.equal(run([line('manzana_con_piel', text, { cantidad: 150 })]).items.length, 1, text);
+    const r = run([line('manzana_con_piel', text, { cantidad: 150 })]);
+    assert.equal(r.items.length, 1, text);
+    assert.equal(asumido(r), false, text);
   }
   assert.equal(run([line('leche_entera', '200 ml de leche', { cantidad: 200, unidad: 'ml' })]).items[0].ml, 200);
-  assert.ok(SYSTEM_PROMPT.includes('NUNCA son gramos') && SYSTEM_PROMPT.includes('"1 manzana"'));
 });

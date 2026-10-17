@@ -58,8 +58,11 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 - Esa línea **no se puede guardar** hasta que la toque explícitamente: pulsar "Sí, es «alimento»" o cambiar el alimento. Editar los gramos no basta.
 - En "no reconocido", el texto es el fragmento exacto con su cantidad ("180 g de pollo"); al elegir el alimento, los gramos se rellenan solos.
 
-### Cantidades: un número sin unidad nunca son gramos
-- Si lo dicho no lleva unidad de peso o volumen (g, kg, ml, l...), como "1 manzana" o "150 de arroz", el número son unidades: solo vale si los gramos salen de una porción del alimento (múltiplos de ¼ o ⅓ de porción). Si no, la línea va a "sin porción" para que yo ponga los gramos. Lo aplica el código, no solo el prompt.
+### Cantidades sin unidad de peso ni volumen
+- Peso casi todo y a menudo digo "150 de arroz" sin decir "gramos". Si lo dicho no lleva unidad (g, kg, ml, l...), cuenta el número que dije (en cifras o palabras; el número de un nombre, como "chocolate 85", no cuenta):
+  - **Menos de 20** ("1 manzana", "2 huevos"): son unidades. Solo vale si los gramos salen de una porción del alimento (número × porción; si nombro una porción, como "una cucharadita", tiene que ser esa). Si no, la línea va a "sin porción" para que yo ponga los gramos.
+  - **20 o más** ("150 de arroz", "25 de almendras"): se asume que son gramos; la línea lleva el aviso "asumido en gramos", visible en la confirmación, sin bloquear el guardado.
+- El límite es la constante `UMBRAL_GRAMOS_SIN_UNIDAD` de `frontend/js/core/ai-contract.js` (la usan la validación, el borrador y el prompt). Lo aplica el código, no solo el prompt.
 
 ### Cortes y partes distintas son alimentos distintos
 - La pechuga de pollo y el muslo de pollo son alimentos diferentes. Nunca se aproxima uno con otro, ni pollo con pavo.
@@ -69,7 +72,7 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 ## 5. Estado actual (17-10-2026)
 
 - **Hitos 1, 2 y 3 hechos**: parser y validador, cálculo, completitud, porciones, Worker, validación de la IA, reglas de variantes, frontend (dictado, confirmación editable, guardado, importar documento, pantalla de conexión, PWA).
-- **206 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
+- **213 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
 - **Hito 4, fase 1 hecha y probada por mí en el PC y en el iPhone (servidor local)**: pantalla **Diario** (sustituye a "Hoy"; navegación por días; kcal, macros y los 31 micronutrientes con % del objetivo; totales parciales con los alimentos sin dato; aviso aparte si se supera un UL; desglose por comida), pantalla **Objetivos** (perfil EFSA hombre por defecto o mujer; mis kcal, macros y cualquier micro, guardados en el dispositivo) y `data/targets.json` (energía y macros: ingestas de referencia de la UE; micros: EFSA para adultos, con UL). Los objetivos de kcal y macros son secundarios: no invertir más ahí por ahora. Orden del resto en la sección 6, punto 5.
 - **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Destapó tres fallos, ya corregidos (puntos 1–3 de la sección 6): palabras de estado dentro del nombre ("tomate frito"), cortes y especies (`pechuga_pollo_cruda`; "pollo", "pavo" y "pechuga" a secas son ambiguos) y mililitros (el modelo devuelve `cantidad` + `unidad`; la app convierte ml → g con `densidad_g_ml`, que no viaja a la IA). Reprobado con Gemini real: "150 g de pechuga" acababa en pechuga de pollo; corregido con el prompt y la comprobación de alias (sección 4). Añadida la columna `peso_en_crudo`.
 - **Catálogo con nutrientes** (17-10-2026): `data/foods.csv` tiene datos de USDA en 49 alimentos; **48 completos** (≥ 80 %); incompletos: la chía (23/31, aceptado) y los 15 con `incluir=no` (recetas y puntuales, sin datos). Cada fila lleva `fdc_id` y `fuente_usda`. Pendiente: corn flakes con los valores de la etiqueta (USDA está fortificado).

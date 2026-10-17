@@ -24,6 +24,7 @@ const FLAG_TEXT = {
   convertido_ml: 'Convertido de ml a g con la densidad de tu documento',
   unidad_discrepante: 'Dijiste un volumen pero la IA lo pasó como gramos: revisa la cantidad',
   sin_alias: 'No coincide con tus alias: revisa que sea este alimento',
+  gramos_asumidos: 'Asumido en gramos (no dijiste la unidad)',
 };
 const MOTIVO_TEXT = { no_en_catalogo: 'No está en tu documento', ambiguo: 'No lo tengo claro', sin_porcion: 'Falta la cantidad en gramos', excluido_catalogo: 'Excluido del catálogo (incluir=no)', sin_densidad: 'Dijiste ml y este alimento no tiene densidad_g_ml en tu documento' };
 const MEAL_LABEL = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena', otro: 'Otro' };

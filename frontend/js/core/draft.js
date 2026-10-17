@@ -1,10 +1,10 @@
 // Borrador de la pantalla de confirmación. Funciones puras (devuelven un borrador nuevo), sin DOM.
 // Aquí viven las ediciones del usuario: cambiar gramos, cambiar alimento, borrar línea, resolver "no reconocidos".
 import { parseNumber } from './numbers.js';
-import { MAX_GRAMS } from './ai-contract.js';
+import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectPeso, detectVolumen, cantidadDicha } from './ai-contract.js';
 import { sumLines } from './nutrients.js';
 import { madridNow } from './meal-defaults.js';
-import { normalizeText } from './text.js';
+import { normalizeText, removeTerms } from './text.js';
 
 const mapLine = (d, key, fn) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? fn(l) : l)) });
 const newLine = (d, food_id, grams = null, source_text = '', confidence = 'manual') => {
@@ -78,12 +78,26 @@ export function gramsFromText(text, food = null) {
   return n.value;
 }
 
+// Número dicho sin unidad, desde UMBRAL_GRAMOS_SIN_UNIDAD ("150 de arroz"): se asume en gramos. Por debajo
+// ("1 manzana") son unidades: null. El número se lee sin el nombre del alimento ("chocolate 85" no es 85).
+export function gramosAsumidos(text, food = null) {
+  if (detectPeso(text) || detectVolumen(text)) return null;
+  const n = cantidadDicha(removeTerms(text, food ? [food.nombre, ...(food.alias ?? [])] : []));
+  return n !== null && n >= UMBRAL_GRAMOS_SIN_UNIDAD ? n : null;
+}
+
 // Un "no reconocido" resuelto con un alimento del documento pasa a ser una línea. Si no se dan los gramos,
-// se toman del texto dicho cuando lo dice claro ("180 g de pollo" -> 180); si no, la línea queda sin gramos.
+// se toman del texto dicho cuando lo dice claro ("180 g de pollo" -> 180) o se asumen ("150 de arroz", con aviso);
+// si no, la línea queda sin gramos.
 export function resolveUnmatched(d, index, food_id, grams = null, food = null) {
   const u = d.unmatched[index];
-  const g = grams ?? gramsFromText(u?.text ?? '', food);
-  return addLine(dropUnmatched(d, index), food_id, g, u?.text ?? '');
+  const text = u?.text ?? '';
+  let g = grams ?? gramsFromText(text, food);
+  const asumido = g === null ? gramosAsumidos(text, food) : null;
+  if (asumido !== null) g = asumido;
+  const d2 = addLine(dropUnmatched(d, index), food_id, g, text);
+  if (asumido === null) return d2;
+  return mapLine(d2, d2.lines.at(-1).key, (l) => ({ ...l, flags: ['gramos_asumidos'] }));
 }
 
 export function lineProblem(line) {
