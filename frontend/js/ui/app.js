@@ -13,6 +13,8 @@ import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
 import { loadTargets, resolveTargets, referenceValue } from '../core/targets.js';
 import { diaryReport, shiftDate } from '../core/diary.js';
+import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core/repeat.js';
+import { repeatScreen } from './repeat-screen.js';
 import { parseNumber } from '../core/numbers.js';
 
 const FLAG_TEXT = {
@@ -71,7 +73,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null,
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null,
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
@@ -259,6 +261,30 @@ export function mountApp(root, deps) {
         h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, nada ? 'Cerrar' : 'Cancelar')));
   }
 
+  // "Repetir": comidas de otro día con ajuste rápido de gramos, sin IA (ver ui/repeat-screen.js).
+  // Desde el inicio: el día entero de ayer, cada grupo a su comida. Desde el Diario: esa comida, a la comida de la hora.
+  function openRepeat({ sourceDate, recordId = null, targetDate = today(), targetMeal = DESTINO_ORIGEN, back = state.repeatBack }) {
+    return track((async () => {
+      const day = await deps.store.listMealsByDate(sourceDate);
+      const meals = recordId ? day.filter((m) => m.id === recordId) : day;
+      state.repeat = createRepeat({ meals, sourceDate, recordId, foodsById: byId(), targetDate, targetMeal });
+      state.repeatBack = back;
+      state.screen = 'repeat'; render();
+    })());
+  }
+
+  function saveRepeat() {
+    const r = state.repeat;
+    if (!validateRepeat(r).ok) return;
+    return track((async () => {
+      const recs = toRecords(r, { now: now(), idGen: deps.idGen });
+      for (const rec of recs) await deps.store.addMeal(rec);
+      const n = recs.reduce((a, x) => a + x.lines.length, 0);
+      state.repeat = null;
+      await openDay(r.targetDate, `Añadidos ${n} ${n === 1 ? 'alimento' : 'alimentos'} de ${dayLabel(r.sourceDate).toLowerCase()}.`);
+    })());
+  }
+
   function editMeal(rec) {
     state.draft = draftFromRecord(rec, byId());
     state.pendingDelete = null; state.error = ''; state.screen = 'confirm'; render();
@@ -355,7 +381,8 @@ export function mountApp(root, deps) {
       state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : h('p', { class: 'muted' }, `${state.foods.length} alimentos${incompletos ? ` · ${incompletos} incompletos` : ''}`),
       ta, mealChips(state.meal, (m) => { state.meal = m; render(); }),
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
-      h('div', { class: 'row' }, btn, h('button', { class: 'secondary', onclick: startManual }, 'Añadir a mano')));
+      h('div', { class: 'row' }, btn, h('button', { class: 'secondary', onclick: startManual }, 'Añadir a mano')),
+      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openRepeat({ sourceDate: shiftDate(today(), -1), back: 'home' }) }, 'Repetir de ayer')));
   }
 
   function flagsFor(line) { return line.flags.filter((f) => FLAG_TEXT[f]).map((f) => h('div', { class: 'flag' }, FLAG_TEXT[f])); }
@@ -543,7 +570,7 @@ export function mountApp(root, deps) {
             h('ul', { class: 'lines' }, r.lines.map((l) => h('li', {}, `${l.nombre} · ${nf1.format(l.grams)} g · ${l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`}`))),
             h('div', { class: 'row between' },
               h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
-              h('span', { class: 'row' }, h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), deleteControls(r.id, state.day))))))),
+              h('span', { class: 'row' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), deleteControls(r.id, state.day))))))),
       ],
       h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
   }
@@ -580,7 +607,11 @@ export function mountApp(root, deps) {
 
   // ---------- render ----------
   function render() {
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen };
+    const repeat = () => repeatScreen({
+      h, state, byId, header, fmtTotal, nf0, nf1, MEAL_LABEL, dayLabel, today, shiftDate, openRepeat, saveRepeat,
+      back: () => { const r = state.repeat; state.repeat = null; if (state.repeatBack === 'diary') openDay(r.sourceDate); else { state.screen = 'home'; render(); } },
+    });
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat };
     root.replaceChildren(screens[state.screen]());
   }
   render();

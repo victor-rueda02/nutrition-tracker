@@ -1,0 +1,10 @@
+/* Pantalla "Repetir" (estilos propios; los globales son de la rama estetica). */
+.repeat .repeat-source { margin-top:4px; }
+.repeat .source-label { text-transform:capitalize; }
+.repeat .repeat-item.off { opacity:.55; }
+.repeat .repeat-name { gap:10px; margin:0 0 6px; }
+.repeat .repeat-name input[type=checkbox] { width:22px; height:22px; flex:none; }
+.repeat .repeat-qty { gap:6px; margin:0; }
+.repeat .repeat-qty .nudge { min-width:44px; padding:8px 4px; flex:none; }
+.repeat .repeat-qty input.grams { width:5.5rem; flex:none; text-align:right; }
+.repeat .repeat-target label { display:block; }

@@ -487,3 +487,106 @@ test('importar el diario: los objetivos de la copia solo se restauran si en este
   assert.match(con.root.textContent, /Objetivos: se mantienen los de este dispositivo/);
   assert.match(con.root.textContent, /No hay nada nuevo que importar/);
 });
+
+// ---------- "Repetir comida" (tras el MVP) ----------
+const DESAYUNO_AYER = MEAL('r0', '2026-10-15', 'desayuno', [['avena_copos', 80]]);
+const gramosDe = (t) => t.$$('.repeat-item input.grams').map((i) => i.value);
+const itemDe = (t, nombre) => t.$$('.repeat-item').find((li) => li.textContent.includes(nombre));
+const kcal = (id, g) => (realFoods.find((f) => f.id === id).nutrients.energia_kcal * g) / 100;
+
+test('Repetir de ayer: agrupado, todo marcado, ajuste rápido y totales en vivo; "Añadir" guarda sin IA', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  assert.equal(t.$('.source-label').textContent, 'De: Ayer');
+  assert.deepEqual(t.$$('.repeat-group h2').map((x) => x.textContent), ['Desayuno', 'Comida']);
+  assert.deepEqual(gramosDe(t), ['80', '150', '69', '10']);
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'origen');
+  assert.equal(t.$('input[aria-label="Fecha de destino"]').value, '2026-10-16');
+  assert.match(t.$('.bar .totals').textContent, new RegExp(`Total: ${Math.round(kcal('avena_copos', 80) + kcal('arroz_blanco_crudo', 150) + kcal('kiwi_verde', 69) + kcal('aceite_oliva', 10))} kcal`));
+  // quitar el kiwi, +10 al arroz, teclear la avena
+  const kiwi = itemDe(t, 'Kiwi');
+  kiwi.querySelector('input[type=checkbox]').checked = false;
+  kiwi.querySelector('input[type=checkbox]').dispatchEvent(new t.document.defaultView.Event('change', { bubbles: true }));
+  assert.ok(kiwi.classList.contains('off'));
+  itemDe(t, 'Arroz').querySelector('button[aria-label^="+10"]').click();
+  t.type(itemDe(t, 'Avena').querySelector('input.grams'), '90,5');
+  assert.deepEqual(gramosDe(t), ['90,5', '160', '69', '10']);
+  const total = Math.round(kcal('avena_copos', 90.5) + kcal('arroz_blanco_crudo', 160) + kcal('aceite_oliva', 10));
+  assert.match(t.$('.bar .totals').textContent, new RegExp(`Total: ${total} kcal`));
+  await t.act(() => t.btn('Añadir 3 alimentos').click());
+  // vuelve al diario de hoy
+  assert.equal(t.$('.daylabel').textContent, 'Hoy');
+  assert.match(t.$('p.ok[role=status]').textContent, /Añadidos 3 alimentos de ayer/);
+  const hoy = (await t.store.allMeals()).filter((m) => m.date === '2026-10-16');
+  assert.deepEqual(hoy.map((m) => [m.meal, m.text, m.lines.map((l) => [l.food_id, l.grams, l.source_text])]), [
+    ['desayuno', 'Repetido de 2026-10-15', [['avena_copos', 90.5, 'repetido de 2026-10-15']]],
+    ['comida', 'Repetido de 2026-10-15', [['arroz_blanco_crudo', 160, 'repetido de 2026-10-15'], ['aceite_oliva', 10, 'repetido de 2026-10-15']]]]);
+  assert.equal(t.calls.length, 0); // ninguna llamada a la IA
+});
+
+test('Repetir: tocar el campo selecciona el número; −10 no baja de 1 g', { skip }, async () => {
+  const t = await setup({ meals: [DESAYUNO_AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  const input = t.$('.repeat-item input.grams');
+  assert.equal(input.getAttribute('inputmode'), 'decimal');
+  input.focus();
+  input.dispatchEvent(new t.document.defaultView.FocusEvent('focus'));
+  assert.deepEqual([input.selectionStart, input.selectionEnd], [0, 2]);
+  t.type(input, '8');
+  for (let i = 0; i < 2; i++) t.$('button[aria-label^="−10"]').click();
+  assert.equal(input.value, '1');
+});
+
+test('Repetir esta comida (desde el Diario): solo esa comida, destino la comida de la hora; volver regresa al Diario', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  const repetir = () => t.$('.registro[data-id="r1"]').querySelector('button').click(); // primer botón: "Repetir esta comida"
+  assert.equal(t.$('.registro[data-id="r1"]').querySelector('button').textContent, 'Repetir esta comida');
+  await t.act(repetir);
+  assert.deepEqual(t.$$('.repeat-group h2').map((x) => x.textContent), ['Comida']);
+  assert.match(t.root.textContent, /Solo la comida que elegiste en el Diario/);
+  assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'desayuno'); // 09:30 en Madrid
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  await t.act(repetir);
+  await t.act(() => t.btn('Añadir 3 alimentos').click());
+  const hoy = (await t.store.allMeals()).filter((m) => m.date === '2026-10-16');
+  assert.deepEqual(hoy.map((m) => [m.meal, m.lines.length]), [['desayuno', 3]]);
+});
+
+test('Repetir: flechas del día de origen, día sin comidas, y destino a una comida concreta', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  assert.equal(t.$('button[aria-label="Día de origen siguiente"]').disabled, false);
+  await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
+  assert.match(t.root.textContent, /No hay comidas guardadas ese día/);
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
+  assert.equal(t.$('.source-label').textContent, 'De: Ayer');
+  await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
+  assert.equal(t.$('.source-label').textContent, 'De: Hoy');
+  assert.equal(t.$('button[aria-label="Día de origen siguiente"]').disabled, true);
+  await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
+  const sel = t.$('select[aria-label="Comida de destino"]');
+  sel.value = 'cena'; sel.dispatchEvent(new t.document.defaultView.Event('change', { bubbles: true }));
+  await t.act(() => t.btn('Añadir 4 alimentos').click());
+  const hoy = (await t.store.allMeals()).filter((m) => m.date === '2026-10-16');
+  assert.deepEqual(hoy.map((m) => [m.meal, m.lines.length]), [['cena', 4]]);
+});
+
+test('Repetir: sin gramos o con más de 2000 g no se puede añadir, y se dice por qué', { skip }, async () => {
+  const t = await setup({ meals: [DESAYUNO_AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  const input = t.$('.repeat-item input.grams');
+  t.type(input, '');
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  assert.match(t.$('.bar').textContent, /Pon los gramos de las líneas marcadas/);
+  assert.ok(input.classList.contains('bad'));
+  t.type(input, '2500');
+  assert.match(t.$('.bar').textContent, /Más de 2000 g en una línea/);
+  t.type(input, '85');
+  assert.equal(t.$('.bar button.primary').disabled, false);
+  assert.equal(input.classList.contains('bad'), false);
+});

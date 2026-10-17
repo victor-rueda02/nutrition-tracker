@@ -108,7 +108,7 @@ export function lineProblem(line) {
 }
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const validDate = (s) => {
+export const validDate = (s) => {
   if (!DATE.test(s ?? '')) return false;
   const t = new Date(`${s}T00:00:00Z`);
   return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === s; // descarta 2026-13-01 y 2026-02-30
