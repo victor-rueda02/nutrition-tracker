@@ -66,10 +66,16 @@ test('sin resolver: resolver con alimento (línea sin gramos), descartar', () =>
   assert.equal(addLine(d, 'kiwi_verde', 69).lines.at(-1).grams, 69);
 });
 
-test('previewTotals usa el documento: sin nutrientes -> "sin dato" (null), no 0', () => {
+test('previewTotals usa el documento; un alimento sin nutrientes deja el total parcial (missing), nunca suma 0', () => {
   const t = previewTotals(setGrams(mk(), 'l3', '50'), byId);
-  assert.equal(t.energia_kcal.value, null);
-  assert.deepEqual(t.energia_kcal.missing.sort(), ['avena_copos', 'huevo', 'kiwi_verde']);
+  // catálogo real: 80 g avena (379 kcal) + 100 g huevo (143) + 50 g kiwi (61)
+  assert.equal(Math.round(t.energia_kcal.value * 10) / 10, 476.7);
+  assert.deepEqual(t.energia_kcal.missing, []);
+  const parcial = previewTotals(addLine(setGrams(mk(), 'l3', '50'), 'coca_cola', 330), byId); // incluir=no, sin datos
+  assert.equal(Math.round(parcial.energia_kcal.value * 10) / 10, 476.7);
+  assert.deepEqual(parcial.energia_kcal.missing, ['coca_cola']);
+  const vacio = previewTotals(addLine(createDraft({ meal: 'otro', foodsById: byId }), 'coca_cola', 330), byId);
+  assert.equal(vacio.energia_kcal.value, null);
   const withData = new Map([['a', { id: 'a', nutrients: { energia_kcal: 200, proteina_g: 10 } }]]);
   const d = addLine(createDraft({ meal: 'otro', foodsById: withData }), 'a', 50);
   assert.equal(previewTotals(d, withData).energia_kcal.value, 100);

@@ -69,7 +69,10 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   assert.equal(t.btn('Guardar').disabled, true);          // línea sin gramos
   t.type(grams[1], '100');
   assert.equal(t.btn('Guardar').disabled, false);
-  assert.match(t.root.textContent, /sin dato de kcal/);   // el documento aún no trae nutrientes
+  // con el catálogo real: 90,5 g de avena (379 kcal/100 g) + 100 g de huevo (143 kcal/100 g)
+  assert.match(t.root.textContent, /343 kcal · 11,9 g prot./);
+  assert.match(t.root.textContent, /Total: 486 kcal · 24,5 g de proteína/);
+  assert.ok(!/parcial|sin dato/.test(t.root.textContent));
   await t.act(() => t.$$('button[aria-label^="Borrar"]')[1].click());
   assert.equal(t.$$('li.card[data-key]').length, 1);
   await t.act(() => t.btn('Guardar').click());
