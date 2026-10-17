@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   mapNutrients, usdaNutrients, coincidencia, suggest, sortCandidates, searchPlan, createUsdaClient, findCandidates,
   eleccionCSV, readEleccion, applyUsda, runCandidatos, runFilas, informeMarkdown, ELECCION_HEADER, FNDDS, searchQuery,
+  fortificacion, valoresSospechosos, calorieFactors,
 } from '../scripts/usda-lib.mjs';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { completenessReport } from '../frontend/js/core/completeness.js';
@@ -155,8 +156,8 @@ test('eleccion.csv: punto y coma + BOM para Excel; se lee con ; y con ,', () => 
   assert.deepEqual(readEleccion(text).elegidos, []); // fdcId vacío: aún no has elegido
   const conPuntoYComa = '﻿id;nombre;fdcId\r\narroz;Arroz;169756\r\nleche;Leche;\r\nhuevo;Huevo;abc\r\n';
   const conComa = 'id,nombre,fdcId\narroz,Arroz,169756\n';
-  assert.deepEqual(readEleccion(conPuntoYComa), { elegidos: [{ id: 'arroz', fdcId: 169756 }], errores: ['huevo: fdcId "abc" no es un número'] });
-  assert.deepEqual(readEleccion(conComa).elegidos, [{ id: 'arroz', fdcId: 169756 }]);
+  assert.deepEqual(readEleccion(conPuntoYComa), { elegidos: [{ id: 'arroz', fdcId: 169756, sinEnriquecer: false }], errores: ['huevo: fdcId "abc" no es un número'] });
+  assert.deepEqual(readEleccion(conComa).elegidos, [{ id: 'arroz', fdcId: 169756, sinEnriquecer: false }]);
 });
 
 // ---------- filas propuestas ----------
@@ -253,4 +254,69 @@ test('parecido: categoría de USDA (primera palabra) y palabras con el mismo com
   assert.ok(coincidencia('Apples, raw, with skin', 'Apples, raw, without skin') < 1); // "with" no es "without"
   const s = suggest([cand({ fdcId: 1, ratio: 1, coincidencia: coincidencia('Ham, serrano', 'Peppers, serrano, raw') }), cand({ fdcId: 2, ratio: 0.7, coincidencia: coincidencia('Ham, serrano', 'Ham, sliced, regular') })], threshold);
   assert.deepEqual([s.candidato.fdcId, s.estado], [2, 'incompleto']);
+});
+
+// ---------- Fortificación de EE. UU. y valores imposibles ----------
+test('sin_enriquecer=si: B9, B1, B2, B3 y hierro quedan vacíos y se anota (mejor sin dato que inflado)', () => {
+  const { foods } = doc();
+  const usda = new Map([[1, usdaFood(1, 'Bread, white, commercially prepared', 'SR Legacy', { shape: 'full', extra: [['431', 86, 'UG']] })]]);
+  const r = applyUsda(foods, [{ id: 'arroz', fdcId: 1, sinEnriquecer: true }], usda, { map });
+  const n = r.foods.find((f) => f.id === 'arroz').nutrients;
+  for (const k of map.enriquecimiento.columnas) assert.ok(!(k in n), k);
+  assert.equal(n.proteina_g, 1);
+  assert.deepEqual(r.resultado[0].vaciados, map.enriquecimiento.columnas);
+  assert.match(r.foods.find((f) => f.id === 'arroz').extra.fuente_usda, /sin enriquecer: vacíos vitamina_b9_ug/);
+  assert.deepEqual(r.resultado[0].fortificacion, ['ácido fólico añadido (431) = 86 µg']);
+  // sin la marca, se rellenan como siempre
+  assert.equal(applyUsda(foods, [{ id: 'arroz', fdcId: 1 }], usda, { map }).foods.find((f) => f.id === 'arroz').nutrients.hierro_mg, 1);
+});
+
+test('aviso de fortificación: enriched / fortified / with added / ácido fólico > 0; no "unenriched" ni "without added"', () => {
+  const f = (description, folico) => fortificacion({ description, foodNutrients: folico === undefined ? [] : [nut('431', folico, 'UG')] });
+  assert.deepEqual(f('Cookies, butter, commercially prepared, enriched'), ['la descripción dice "enriched"']);
+  assert.deepEqual(f('Milk, whole, 3.25% milkfat, with added vitamin D'), ['la descripción dice "with added"']);
+  assert.deepEqual(f('Cereals, fortified'), ['la descripción dice "fortified"']);
+  assert.deepEqual(f('Cereals ready-to-eat, RALSTON Corn Flakes', 300), ['ácido fólico añadido (431) = 300 µg']);
+  for (const d of ['Cookies, butter, commercially prepared, unenriched', 'Milk, whole, 3.25% milkfat, without added vitamin A and vitamin D']) assert.deepEqual(f(d, 0), [], d);
+});
+
+test('valores sospechosos: g > 100, kcal fuera de rango, macros > 100 g, fibra/azúcares > hidratos, energía incoherente', () => {
+  assert.deepEqual(valoresSospechosos({ energia_kcal: 365, proteina_g: 7.13, grasa_total_g: 0.66, hidratos_g: 80, fibra_g: 1.3, agua_g: 11.6 }), []); // arroz
+  assert.deepEqual(valoresSospechosos({ energia_kcal: 884, grasa_total_g: 100, proteina_g: 0, hidratos_g: 0, grasas_saturadas_g: 13.8, grasas_monoinsaturadas_g: 73, grasas_poliinsaturadas_g: 10.5 }), []); // aceite
+  const malo = valoresSospechosos({ energia_kcal: 1200, proteina_g: 120, grasa_total_g: 5, hidratos_g: 3, fibra_g: 4, azucares_g: 6 });
+  for (const re of [/proteina_g = 120/, /fuera de 0–900/, /> 100 g\)$/, /fibra/, /azúcares/]) assert.ok(malo.some((x) => re.test(x)), re);
+  assert.ok(valoresSospechosos({ energia_kcal: 100, proteina_g: 20, grasa_total_g: 20, hidratos_g: 20 }).some((x) => /los macros dan/.test(x)));
+});
+
+test('candidatos conserva las elecciones previas (fdcId y sin_enriquecer) al regenerar eleccion.csv', () => {
+  const rows = [{ id: 'arroz', nombre: 'Arroz', termino: 'Rice', estado: 'completo', candidato: cand({ fdcId: 7 }), candidatos: [] }, { id: 'pan', nombre: 'Pan', termino: 'Bread', estado: 'completo', candidato: cand({ fdcId: 8 }), candidatos: [] }];
+  const text = eleccionCSV(rows, [{ id: 'pan', fdcId: 174924, sinEnriquecer: true }]);
+  assert.deepEqual(readEleccion(text).elegidos, [{ id: 'pan', fdcId: 174924, sinEnriquecer: true }]);
+});
+
+test('informe: secciones de fortificación y valores sospechosos', () => {
+  const { foods } = doc();
+  const usda = new Map([[1, usdaFood(1, 'Cookies, butter, enriched', 'SR Legacy', { shape: 'full' })]]);
+  const r = applyUsda(foods, [{ id: 'arroz', fdcId: 1, sinEnriquecer: true }], usda, { map });
+  const md = informeMarkdown({ report: completenessReport(r.foods, settings), resultado: r.resultado, plan: searchPlan(foods), elegidosIds: new Set(['arroz']), labels: new Map(), fecha: 'hoy' });
+  assert.match(md, /## Avisos de fortificación[\s\S]*- arroz \(fdcId 1, Cookies, butter, enriched\): la descripción dice "enriched" — vaciados: vitamina_b9_ug/);
+  assert.match(md, /## Valores sospechosos/);
+});
+
+// Regresiones de la ejecución real de "filas".
+test('fortificación: "not fortified" no avisa; cereal con B1/hierro imposibles sin fortificar sí (aunque falte el 431)', () => {
+  assert.deepEqual(fortificacion({ description: 'Cereals, oats, regular and quick, not fortified, dry', foodNutrients: [nut('404', 0.46, 'MG'), nut('303', 4.25, 'MG')] }), []);
+  const corn = fortificacion({ description: 'Cereals ready-to-eat, RALSTON Corn Flakes', foodNutrients: [nut('404', 4.483, 'MG'), nut('303', 19.4, 'MG')] });
+  assert.equal(corn.length, 2);
+  assert.match(corn[0], /B1 = 4.483 mg/);
+  // fuera de cereales, un hierro alto es natural (cacao)
+  assert.deepEqual(fortificacion({ description: 'Cocoa, dry powder, unsweetened', foodNutrients: [nut('303', 13.86, 'MG')] }), []);
+});
+
+test('energía: se usan los factores calóricos propios del alimento (cacao 228 kcal no es sospechoso)', () => {
+  const cacao = { energia_kcal: 228, proteina_g: 19.6, grasa_total_g: 13.7, hidratos_g: 57.9, fibra_g: 37 };
+  assert.equal(valoresSospechosos(cacao).length, 1); // con Atwater general sí lo parecería
+  const usda = { nutrientConversionFactors: [{ type: '.CalorieConversionFactor', proteinValue: 1.83, fatValue: 8.37, carbohydrateValue: 1.33 }] };
+  assert.deepEqual(calorieFactors(usda), { p: 1.83, g: 8.37, h: 1.33 });
+  assert.deepEqual(valoresSospechosos(cacao, calorieFactors(usda)), []);
 });

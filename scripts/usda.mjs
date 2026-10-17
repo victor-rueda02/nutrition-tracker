@@ -2,14 +2,17 @@
 // La clave sale de .env (ignorado por git):
 //   node --env-file=.env scripts/usda.mjs candidatos [--foods data/foods.csv] [--out usda/eleccion.csv]
 //       Busca cada termino_busqueda_usda y escribe usda/eleccion.csv (punto y coma + BOM, para Excel).
-//       Tú escribes en la columna "fdcId" el que eliges (o copias el "sugerido").
+//       Tú escribes en la columna "fdcId" el que eliges (o copias el "sugerido"). Con "sin_enriquecer" = si, "filas"
+//       deja vacíos B9, B1, B2, B3 y hierro (USDA enriquece harinas y cereales; en España normalmente no).
+//       Si vuelves a ejecutarlo, se conservan tus fdcId y sin_enriquecer.
 //   node --env-file=.env scripts/usda.mjs filas [--eleccion usda/eleccion.csv] [--foods data/foods.csv] [--sobrescribir]
-//       Genera usda/foods.propuesto.csv (tu documento con los nutrientes rellenos) y usda/informe.md.
+//       Genera usda/foods.propuesto.csv (tu documento con los nutrientes rellenos) y usda/informe.md (completitud,
+//       avisos de fortificación de EE. UU. y valores sospechosos).
 //       NUNCA toca data/foods.csv: lo revisas y lo copias tú. Sin --sobrescribir no pisa celdas con valor.
 //   node --env-file=.env scripts/usda.mjs buscar "Rice, white, long-grain, raw"
 //   node --env-file=.env scripts/usda.mjs fila 169756 [--id arroz_blanco_crudo]
 // Las respuestas se guardan en usda/cache/ (fuera de git) para no repetir llamadas.
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCatalog } from '../frontend/js/core/catalog.js';
@@ -17,7 +20,7 @@ import { loadSettings } from '../frontend/js/core/settings.js';
 import { parseFoodsDocument, foodsToCSV } from '../frontend/js/core/foods-parser.js';
 import { completenessReport } from '../frontend/js/core/completeness.js';
 import {
-  createUsdaClient, findCandidates, runCandidatos, runFilas, eleccionCSV, informeMarkdown, mapNutrients, countRequired, applyUsda, UsdaError, FNDDS, pct,
+  createUsdaClient, findCandidates, runCandidatos, runFilas, eleccionCSV, readEleccion, informeMarkdown, mapNutrients, countRequired, applyUsda, UsdaError, FNDDS, pct,
 } from './usda-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -66,8 +69,10 @@ try {
       client, foods, map, required, threshold,
       onProgress: (id, r) => console.log(`${id}: ${r.estado}${r.candidato ? ` → ${linea(r.candidato)}` : ''}`),
     });
-    write(out, eleccionCSV(rows));
-    console.log(`\nEscrito ${out}`);
+    // Conserva lo que ya elegiste (fdcId y sin_enriquecer) si el fichero existe.
+    const previo = existsSync(out) ? readEleccion(read(out)).elegidos : [];
+    write(out, eleccionCSV(rows, previo));
+    console.log(`\nEscrito ${out}${previo.length ? ` (conservadas ${previo.length} elecciones previas)` : ''}`);
     console.log(`Sugerido completo (Foundation/SR Legacy ≥ ${pct(threshold)}): ${resumen.completo}`);
     console.log(`Sugerido completo solo en FNDDS (estimado): ${resumen.completo_estimado}`);
     console.log(`Solo candidatos incompletos: ${resumen.incompleto}`);
@@ -85,7 +90,9 @@ try {
     const report = completenessReport(r.propuestos, settings);
     write(outMd, informeMarkdown({ report, resultado: r.resultado, plan: r.plan, elegidosIds: r.elegidosIds, errores: r.errores, labels, fecha: new Date().toISOString().slice(0, 10) }));
     console.log(`Escrito ${outCsv} y ${outMd}`);
-    console.log(`Completos: ${report.summary.complete} · incompletos: ${report.summary.incomplete} · con fdcId: ${r.resultado.filter((x) => !x.error).length}`);
+    const ok = r.resultado.filter((x) => !x.error);
+    console.log(`Completos: ${report.summary.complete} · incompletos: ${report.summary.incomplete} · con fdcId: ${ok.length}`);
+    console.log(`Avisos de fortificación: ${ok.filter((x) => x.fortificacion.length).length} · valores sospechosos: ${ok.filter((x) => x.sospechosos.length).length} (detalle en el informe)`);
     for (const e of [...r.errores, ...r.resultado.filter((x) => x.error).map((x) => `${x.id}: ${x.error}`)]) console.log(`! ${e}`);
     console.log(`Llamadas a USDA: ${client.calls}`);
   } else if (cmd === 'buscar') {

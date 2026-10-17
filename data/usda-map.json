@@ -66,6 +66,10 @@
     "prolina_g": { "n": "517", "unidad": "g" },
     "serina_g": { "n": "518", "unidad": "g" }
   },
+  "enriquecimiento": {
+    "_comentario": "Nutrientes que EE. UU. añade al enriquecer harinas y cereales. Con sin_enriquecer=si en usda/eleccion.csv, 'filas' los deja vacíos (mejor sin dato que inflado). El ácido fólico (USDA 431) no tiene columna en el documento.",
+    "columnas": ["vitamina_b9_ug", "vitamina_b1_mg", "vitamina_b2_mg", "vitamina_b3_mg", "hierro_mg"]
+  },
   "sin_mapeo": {
     "omega3_g": "USDA no da un total; se deja vacío (mejor sin dato que una suma con componentes que faltan)",
     "omega6_g": "USDA no da un total; se deja vacío (mejor sin dato que una suma con componentes que faltan)"

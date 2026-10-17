@@ -184,14 +184,17 @@ export async function findCandidates(client, termino, { map, required, threshold
 // ---------- usda/eleccion.csv (para Excel en español: punto y coma y BOM) ----------
 const tipoTexto = (c) => (c.estimado ? `${c.tipo} (estimado)` : c.tipo);
 const oblTexto = (c) => `${c.obligatorios}/${c.total}`;
-export const ELECCION_HEADER = ['id', 'nombre', 'termino_busqueda_usda', 'fdcId', 'estado', 'sugerido', 'sugerido_descripcion', 'sugerido_tipo', 'sugerido_obligatorios', 'sugerido_parecido', 'motivo_sugerido',
+export const ELECCION_HEADER = ['id', 'nombre', 'termino_busqueda_usda', 'fdcId', 'sin_enriquecer', 'estado', 'sugerido', 'sugerido_descripcion', 'sugerido_tipo', 'sugerido_obligatorios', 'sugerido_parecido', 'motivo_sugerido',
   ...Array.from({ length: MAX_CANDIDATOS }, (_, i) => [`c${i + 1}_fdcId`, `c${i + 1}_descripcion`, `c${i + 1}_tipo`, `c${i + 1}_obligatorios`, `c${i + 1}_parecido`]).flat()];
 
-export function eleccionCSV(rows) {
+// "previo" = elecciones de un eleccion.csv anterior (readEleccion): se conservan fdcId y sin_enriquecer.
+export function eleccionCSV(rows, previo = []) {
+  const antes = new Map(previo.map((e) => [e.id, e]));
   const out = [ELECCION_HEADER];
   for (const r of rows) {
     const s = r.candidato;
-    const cells = [r.id, r.nombre, r.termino, '', r.estado, s?.fdcId ?? '', s?.descripcion ?? '', s ? tipoTexto(s) : '', s ? oblTexto(s) : '', s ? pct(s.coincidencia) : '', r.motivo ?? ''];
+    const e = antes.get(r.id);
+    const cells = [r.id, r.nombre, r.termino, e?.fdcId ?? '', e?.sinEnriquecer ? 'si' : '', r.estado, s?.fdcId ?? '', s?.descripcion ?? '', s ? tipoTexto(s) : '', s ? oblTexto(s) : '', s ? pct(s.coincidencia) : '', r.motivo ?? ''];
     for (let i = 0; i < MAX_CANDIDATOS; i++) {
       const c = r.candidatos?.[i];
       cells.push(c?.fdcId ?? '', c?.descripcion ?? '', c ? tipoTexto(c) : '', c ? oblTexto(c) : '', c ? pct(c.coincidencia) : '');
@@ -201,13 +204,14 @@ export function eleccionCSV(rows) {
   return serializeCSV(out, { delimiter: ';', bom: true, eol: '\r\n' });
 }
 
-// Lee la elección (con ; o con ,). Devuelve { elegidos: [{ id, fdcId }], errores: [...] }.
+// Lee la elección (con ; o con ,). Devuelve { elegidos: [{ id, fdcId, sinEnriquecer }], errores: [...] }.
 export function readEleccion(text) {
   const table = parseCSV(text);
   const [header = [], ...rows] = table.rows;
   const col = (name) => header.findIndex((h) => normalizeText(h).replace(/^﻿/, '') === normalizeText(name));
   const iId = col('id');
   const iFdc = col('fdcId');
+  const iSin = col('sin_enriquecer');
   if (iId < 0 || iFdc < 0) return { elegidos: [], errores: ['eleccion.csv: faltan las columnas "id" o "fdcId"'] };
   const elegidos = [];
   const errores = [];
@@ -216,9 +220,63 @@ export function readEleccion(text) {
     const raw = String(cells[iFdc] ?? '').trim();
     if (!id || !raw) continue;
     if (!/^\d+$/.test(raw)) { errores.push(`${id}: fdcId "${raw}" no es un número`); continue; }
-    elegidos.push({ id, fdcId: Number(raw) });
+    elegidos.push({ id, fdcId: Number(raw), sinEnriquecer: iSin >= 0 && ['si', 'sí', 'x'].includes(normalizeText(cells[iSin])) });
   }
   return { elegidos, errores };
+}
+
+// ---------- Revisión automática ----------
+// Fortificación de EE. UU. (en España estos productos normalmente no están enriquecidos): para revisarlo a mano.
+// "unenriched", "not fortified" y "without added" no cuentan. Como USDA no siempre da el ácido fólico (431), en
+// cereales, panes, galletas, pastas, harinas y arroz también avisa si B1 o hierro son imposibles sin fortificar.
+const CEREALES = /^(cereals|bread|cookies|crackers|pasta|spaghetti|macaroni|noodles|rice|flour|wheat flour)/i;
+export function fortificacion(usda) {
+  const motivos = [];
+  const d = String(usda.description ?? '');
+  for (const re of [/(?<!\bnot |\bnon-?)\benriched\b/i, /(?<!\bnot |\bnon-?)\bfortified\b/i, /\bwith added\b/i]) {
+    const m = d.match(re);
+    if (m) motivos.push(`la descripción dice "${m[0]}"`);
+  }
+  const n = usdaNutrients(usda);
+  const folico = n.get('431');
+  if (folico && folico.value > 0) motivos.push(`ácido fólico añadido (431) = ${folico.value} µg`);
+  if (CEREALES.test(d)) {
+    const b1 = n.get('404')?.value;
+    const fe = n.get('303')?.value;
+    if (b1 > 1.5) motivos.push(`B1 = ${b1} mg por 100 g: imposible sin fortificar en un cereal`);
+    if (fe >= 10) motivos.push(`hierro = ${fe} mg por 100 g: imposible sin fortificar en un cereal`);
+  }
+  return motivos;
+}
+
+// Factores calóricos propios del alimento según USDA (p. ej. cacao 1,83/8,37/1,33), si los trae.
+export function calorieFactors(usda) {
+  const f = (usda?.nutrientConversionFactors ?? []).find((x) => String(x.type ?? '').includes('Calorie'));
+  return f && [f.proteinValue, f.fatValue, f.carbohydrateValue].every((x) => typeof x === 'number') ? { p: f.proteinValue, g: f.fatValue, h: f.carbohydrateValue } : null;
+}
+
+// Valores imposibles o incoherentes por 100 g. "factores" = calorieFactors(usda); sin ellos, Atwater general.
+export function valoresSospechosos(n, factores = null) {
+  const v = (k) => (typeof n[k] === 'number' ? n[k] : null);
+  const out = [];
+  for (const [k, x] of Object.entries(n)) if (k.endsWith('_g') && x > 100) out.push(`${k} = ${x} g (> 100 g por 100 g)`);
+  const kcal = v('energia_kcal');
+  if (kcal !== null && (kcal < 0 || kcal > 900)) out.push(`energia_kcal = ${kcal} (fuera de 0–900)`);
+  const p = v('proteina_g') ?? 0; const g = v('grasa_total_g') ?? 0; const h = v('hidratos_g') ?? 0;
+  const suma = p + g + h + (v('agua_g') ?? 0) + (v('alcohol_g') ?? 0);
+  if (suma > 102) out.push(`proteína + grasa + hidratos + agua + alcohol = ${redondea(suma)} g (> 100 g)`);
+  if (v('fibra_g') !== null && v('hidratos_g') !== null && v('fibra_g') > v('hidratos_g') + 0.5) out.push(`fibra (${v('fibra_g')}) > hidratos (${v('hidratos_g')})`);
+  if (v('azucares_g') !== null && v('hidratos_g') !== null && v('azucares_g') > v('hidratos_g') + 0.5) out.push(`azúcares (${v('azucares_g')}) > hidratos (${v('hidratos_g')})`);
+  const grasas = ['grasas_saturadas_g', 'grasas_monoinsaturadas_g', 'grasas_poliinsaturadas_g'].map(v);
+  if (grasas.every((x) => x !== null) && v('grasa_total_g') !== null && grasas.reduce((a, b) => a + b, 0) > v('grasa_total_g') * 1.05 + 0.5) out.push(`saturadas + mono + poli > grasa total (${v('grasa_total_g')})`);
+  // Atwater: la energía no debería alejarse mucho de lo que dicen los macros. Con los factores propios del alimento
+  // se usan esos (hidratos totales); si no, los generales 4/9/4/7 con la fibra a 2 kcal/g.
+  if (kcal !== null && [v('proteina_g'), v('grasa_total_g'), v('hidratos_g')].every((x) => x !== null)) {
+    const fib = v('fibra_g') ?? 0;
+    const at = (factores ? factores.p * p + factores.g * g + factores.h * h : 4 * p + 9 * g + 4 * (h - fib) + 2 * fib) + 7 * (v('alcohol_g') ?? 0);
+    if (Math.abs(kcal - at) > Math.max(25, 0.2 * at)) out.push(`energia_kcal = ${kcal}, pero los macros dan ≈ ${Math.round(at)} kcal`);
+  }
+  return out;
 }
 
 // ---------- Filas propuestas ----------
@@ -228,12 +286,15 @@ export function applyUsda(foods, elegidos, usdaById, { map, sobrescribir = false
   const resultado = [];
   const copia = foods.map((f) => ({ ...f, nutrients: { ...f.nutrients }, extra: { ...f.extra } }));
   const copiaById = new Map(copia.map((f) => [f.id, f]));
-  for (const { id, fdcId } of elegidos) {
+  for (const { id, fdcId, sinEnriquecer = false } of elegidos) {
     const food = copiaById.get(id);
     const usda = usdaById.get(fdcId);
     if (!food) { resultado.push({ id, fdcId, error: 'id no está en el documento' }); continue; }
     if (!usda) { resultado.push({ id, fdcId, error: 'USDA no devolvió ese fdcId' }); continue; }
     const m = mapNutrients(usda, map);
+    const vaciados = sinEnriquecer ? (map.enriquecimiento?.columnas ?? []).filter((k) => k in m.values) : [];
+    for (const k of vaciados) delete m.values[k];
+    if (vaciados.length) m.notas.push(`sin enriquecer: vacíos ${vaciados.join(', ')} (USDA está enriquecido)`);
     const choques = [];
     for (const [k, v] of Object.entries(m.values)) {
       const actual = food.nutrients[k];
@@ -243,7 +304,8 @@ export function applyUsda(foods, elegidos, usdaById, { map, sobrescribir = false
     const estimado = usda.dataType === FNDDS;
     food.extra.fdc_id = String(fdcId);
     food.extra.fuente_usda = [`${usda.description} (${usda.dataType}${estimado ? ', estimado' : ''})`, ...m.notas].join(' · ');
-    resultado.push({ id, fdcId, descripcion: usda.description, tipo: usda.dataType, estimado, notas: m.notas, unidades: m.unidades, choques });
+    resultado.push({ id, fdcId, descripcion: usda.description, tipo: usda.dataType, estimado, notas: m.notas, unidades: m.unidades, choques,
+      fortificacion: fortificacion(usda), sospechosos: valoresSospechosos(food.nutrients, calorieFactors(usda)), vaciados });
   }
   return { foods: copia, resultado };
 }
@@ -271,6 +333,16 @@ export function informeMarkdown({ report, resultado, plan, elegidosIds, errores 
     for (const r of resultado.filter((x) => x.error)) L.push(`- ${r.id} (fdcId ${r.fdcId}): ${r.error}`);
     L.push('');
   }
+  const ok = resultado.filter((x) => !x.error);
+  L.push('## Avisos de fortificación (revisar contra el envase)', '');
+  const fort = ok.filter((r) => r.fortificacion.length);
+  if (!fort.length) L.push('- Ninguno.');
+  for (const r of fort) L.push(`- ${r.id} (fdcId ${r.fdcId}, ${r.descripcion}): ${r.fortificacion.join('; ')}${r.vaciados.length ? ` — vaciados: ${r.vaciados.join(', ')}` : ''}`);
+  L.push('', '## Valores sospechosos', '');
+  const sosp = ok.filter((r) => r.sospechosos.length);
+  if (!sosp.length) L.push('- Ninguno (kcal 0–900, ningún valor en g por encima de 100, macros + agua ≤ 100 g, fibra y azúcares ≤ hidratos, ácidos grasos ≤ grasa total, energía coherente con los macros).');
+  for (const r of sosp) L.push(`- ${r.id}: ${r.sospechosos.join('; ')}`);
+  L.push('');
   L.push('## Alimentos con datos de USDA', '');
   for (const r of resultado.filter((x) => !x.error)) {
     const p = perFood.get(r.id);
@@ -281,6 +353,8 @@ export function informeMarkdown({ report, resultado, plan, elegidosIds, errores 
     for (const n of r.notas) L.push(`- Alternativa usada: ${n}`);
     for (const u of r.unidades) L.push(`- Unidad no coincide (no se rellena): ${u}`);
     for (const c of r.choques) L.push(`- Choque con tu documento: ${c}`);
+    for (const f of r.fortificacion) L.push(`- ⚠ Fortificación: ${f}${r.vaciados.length ? ' (enriquecimiento vaciado)' : ''}`);
+    for (const x of r.sospechosos) L.push(`- ⚠ Valor sospechoso: ${x}`);
     L.push('');
   }
   L.push('## Incompletos, de peor a mejor', '');

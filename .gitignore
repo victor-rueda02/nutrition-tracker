@@ -15,3 +15,5 @@ usda/cache/
 
 # Ajustes locales del editor
 .vscode/
+# Propuesta regenerable de "usda.mjs filas" (se copia a data/foods.csv solo con OK)
+usda/foods.propuesto.csv
