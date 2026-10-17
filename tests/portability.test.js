@@ -55,3 +55,13 @@ test('try-phrases acepta --foods con ruta absoluta o relativa', () => {
   const b = spawnSync(process.execPath, [script, '--simulated', '--foods', join('tests', 'fixtures', 'alimentos_iniciales.csv')], { cwd: root, encoding: 'utf8' });
   assert.equal(b.status, 0, b.stderr);
 });
+
+test('try-phrases sin GEMINI_API_KEY: mensaje claro con el nombre de la variable y sin llamar a la red', () => {
+  const script = join(root, 'scripts', 'try-phrases.mjs');
+  const env = { ...process.env };
+  delete env.GEMINI_API_KEY;
+  const r = spawnSync(process.execPath, [script, 'una frase'], { cwd: root, encoding: 'utf8', env });
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /Falta la variable GEMINI_API_KEY/);
+  assert.match(r.stderr, /--env-file=\.env/);
+});

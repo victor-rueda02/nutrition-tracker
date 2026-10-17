@@ -64,7 +64,7 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 - **Repositorio git** creado en local (rama `main`). Aún no está en GitHub.
 - **`try-phrases.mjs`** toma el modelo de `GEMINI_MODEL` en `worker/wrangler.toml` (o de la variable de entorno del mismo nombre).
 - **No probado aún**: la app en un iPhone/Safari real y el hosting. El Worker nunca se ha desplegado; el primer despliegue se hará con el README del hito 4.
-- **Ya tengo**: la clave de Gemini y la clave de FoodData Central. Las pongo yo como variables de entorno; no me las pidas.
+- **Las claves están en `.env`** (ignorado por git), con `GEMINI_API_KEY` y `USDA_API_KEY`. Úsalas solo con `node --env-file=.env`. Nunca leas ni muestres el fichero.
 
 ## 6. Trabajo pendiente, en este orden
 
@@ -88,7 +88,7 @@ Comprueba primero en el código si alguno ya está hecho; no lo repitas.
 - Cada fallo corregido lleva su test de regresión.
 - No añadas dependencias de ejecución sin preguntarme. Las de desarrollo, solo si hacen falta.
 - No toques mis datos reales (mi `foods.csv`) sin preguntarme. Puedes modificar los ficheros de ejemplo y los fixtures.
-- No ejecutes `wrangler deploy` ni nada que publique o gaste cuota sin pedírmelo.
+- Puedes ejecutar `try-phrases.mjs` con Gemini real para verificar cambios del prompt, con un máximo de 10 frases por tarea; dime cuántas llamadas has gastado. Para el script de USDA, igual: llamadas solo las necesarias. Nada de `wrangler deploy` ni publicar sin pedírmelo.
 - Si algo que pido contradice estas reglas o es mala idea, dímelo antes de hacerlo.
 - Háblame en español, de forma directa y concisa. Al acabar, dime qué cambiaste, qué probaste y qué falta.
 - Si aprendemos algo nuevo sobre el proyecto (una decisión, una regla), propón actualizar este fichero.

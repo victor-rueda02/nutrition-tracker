@@ -1,8 +1,8 @@
 // Prueba el flujo de la IA con frases y muestra entradas y salidas.
 //   Simulado (sin red, respuestas de modelo de tests/fixtures/phrases.json):
 //     node scripts/try-phrases.mjs --simulated
-//   Real (llama a Gemini; necesita tu clave y red):
-//     GEMINI_API_KEY=... node scripts/try-phrases.mjs [--foods data/foods.csv] "frase 1" "frase 2"
+//   Real (llama a Gemini; una llamada por frase; la clave sale de .env, que git ignora):
+//     node --env-file=.env scripts/try-phrases.mjs [--foods data/foods.csv] "frase 1" "frase 2"
 //   El modelo es GEMINI_MODEL de worker/wrangler.toml; la variable de entorno GEMINI_MODEL lo sustituye si la pones.
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -37,7 +37,10 @@ const env = { APP_TOKEN: 'local', ALLOWED_ORIGIN: 'http://localhost', GEMINI_MOD
 const phrases = simulated
   ? JSON.parse(read(fromRoot('tests', 'fixtures', 'phrases.json'))).map((p) => ({ frase: p.frase, modelo: p.modelo_simulado }))
   : args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--foods').map((frase) => ({ frase }));
-if (!simulated && !process.env.GEMINI_API_KEY) { console.error('Falta GEMINI_API_KEY (o usa --simulated).'); process.exit(1); }
+if (!simulated && !process.env.GEMINI_API_KEY) {
+  console.error('Falta la variable GEMINI_API_KEY. Ponla en .env y ejecuta: node --env-file=.env scripts/try-phrases.mjs "frase" (o usa --simulated).');
+  process.exit(1);
+}
 
 console.log(`Documento: ${foods.length} alimentos, ${list.length} enviados a la IA (sin nutrientes)`);
 console.log(`Modelo: ${simulated ? 'simulado' : model}\n`);
