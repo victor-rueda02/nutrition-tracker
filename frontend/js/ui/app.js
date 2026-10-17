@@ -3,7 +3,7 @@
 // Sin frameworks: DOM con textContent (nunca innerHTML con datos). Toda la lógica de negocio está en js/core.
 import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
-import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, validateDraft, lineProblem, previewTotals, toMealRecord } from '../core/draft.js';
+import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, setDate, validateDraft, lineProblem, previewTotals, toMealRecord, draftFromRecord } from '../core/draft.js';
 import { MEALS, defaultMeal, madridNow } from '../core/meal-defaults.js';
 import { parseFoodsDocument, formatIssue } from '../core/foods-parser.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
@@ -50,7 +50,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) },
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) },
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null,
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
@@ -130,6 +130,7 @@ export function mountApp(root, deps) {
 
   function save() {
     if (!validateDraft(state.draft).ok) return;
+    if (state.draft.editing) return saveEdit();
     return track((async () => {
       const rec = toMealRecord(state.draft, { now: now(), idGen: deps.idGen });
       await deps.store.addMeal(rec);
@@ -140,7 +141,42 @@ export function mountApp(root, deps) {
 
   const today = () => madridNow(now()).date;
   async function loadDay(date) { state.day = date; state.dayMeals = await deps.store.listMealsByDate(date); }
-  const openDay = (date) => track(loadDay(date).then(() => { state.screen = 'diary'; render(); }));
+  const openDay = (date, msg = '') => track(loadDay(date).then(() => { state.screen = 'diary'; state.diaryMsg = msg; state.pendingDelete = null; render(); }));
+
+  // Comida editada: mismo id (se sustituye); se vuelve al diario del día en que queda.
+  function saveEdit() {
+    return track((async () => {
+      const rec = toMealRecord(state.draft, { now: now() });
+      await deps.store.addMeal(rec);
+      const movida = rec.date !== state.draft.editing.date;
+      state.draft = null;
+      await openDay(rec.date, movida ? `Cambios guardados. La comida está ahora en este día.` : 'Cambios guardados.');
+    })());
+  }
+
+  function deleteMeal(id, date) {
+    return track((async () => {
+      await deps.store.deleteMeal(id);
+      state.draft = null;
+      await openDay(date, 'Comida borrada.');
+    })());
+  }
+
+  // Borrar pide confirmación dentro de la app (sin diálogos del navegador): "Borrar" -> "Sí, borrar" / "Cancelar".
+  function deleteControls(id, date, label = 'Borrar') {
+    if (state.pendingDelete !== id) {
+      return h('button', { class: 'link danger', onclick: () => { state.pendingDelete = id; render(); } }, label);
+    }
+    return h('span', { class: 'confirm-delete', role: 'group', 'aria-label': 'Confirmar borrado' },
+      h('span', { class: 'small' }, '¿Borrar esta comida? '),
+      h('button', { class: 'danger', onclick: () => deleteMeal(id, date) }, 'Sí, borrar'),
+      h('button', { class: 'link', onclick: () => { state.pendingDelete = null; render(); } }, 'Cancelar'));
+  }
+
+  function editMeal(rec) {
+    state.draft = draftFromRecord(rec, byId());
+    state.pendingDelete = null; state.error = ''; state.screen = 'confirm'; render();
+  }
 
   // Guarda tus objetivos. Vacío = referencia; un valor no válido no se guarda y se dice cuál.
   async function saveObjetivos(perfil, inputs) {
@@ -242,14 +278,15 @@ export function mountApp(root, deps) {
     const d = state.draft;
     const footer = h('footer', { class: 'bar' });
     const totalsEl = h('div', { class: 'totals' });
-    const saveBtn = h('button', { class: 'primary', onclick: save }, 'Guardar');
+    const editing = d.editing;
+    const saveBtn = h('button', { class: 'primary', onclick: save }, editing ? 'Guardar cambios' : 'Guardar');
     const hint = h('div', { class: 'muted small' });
     const paintFooter = () => {
       const v = validateDraft(state.draft);
       const t = previewTotals(state.draft, byId());
       totalsEl.textContent = `Total: ${fmtTotal(t, 'energia_kcal', 'kcal', nf0)} · ${fmtTotal(t, 'proteina_g', 'g de proteína', nf1)}`;
       saveBtn.disabled = !v.ok || state.busy;
-      hint.textContent = v.empty ? 'Añade al menos un alimento.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
+      hint.textContent = v.empty ? (editing ? 'Añade al menos un alimento o borra la comida.' : 'Añade al menos un alimento.') : v.problems.some((p) => p.code === 'fecha') ? 'La fecha no es válida.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
     };
 
     const lineCard = (line) => {
@@ -307,8 +344,11 @@ export function mountApp(root, deps) {
     };
 
     footer.append(totalsEl, hint, h('div', { class: 'row' }, saveBtn));
+    const dateIn = editing ? h('input', { type: 'date', 'aria-label': 'Fecha', value: d.date, max: today(), onchange: (e) => { state.draft = setDate(state.draft, e.target.value); paintFooter(); } }) : null;
     const screen = h('main', {},
-      header('Confirmar', () => { state.screen = 'home'; render(); }),
+      editing ? header('Editar comida', () => { state.draft = null; openDay(editing.date); }) : header('Confirmar', () => { state.screen = 'home'; render(); }),
+      editing ? h('p', { class: 'muted small' }, 'Los cambios no se guardan hasta pulsar «Guardar cambios».') : null,
+      editing ? h('label', {}, 'Fecha', dateIn) : null,
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
       state.busy ? h('p', { class: 'muted', role: 'status' }, 'Procesando…') : null,
       d.text ? h('p', { class: 'muted small' }, `«${d.text}»`) : null,
@@ -318,6 +358,7 @@ export function mountApp(root, deps) {
       h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
       d.unmatched.length ? h('h2', {}, 'Sin resolver') : null,
       h('ul', { class: 'cards' }, d.unmatched.map(unmatchedCard)),
+      editing ? h('div', { class: 'row' }, deleteControls(editing.id, editing.date, 'Borrar esta comida')) : null,
       footer);
     paintFooter();
     return screen;
@@ -376,6 +417,8 @@ export function mountApp(root, deps) {
         r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null));
   }
 
+  const fmtKcal = (x) => (x.kcal === null ? 'sin dato de kcal' : `${nf0.format(x.kcal)} kcal${x.kcalParcial ? ' (parcial)' : ''}`);
+
   function diaryScreen() {
     const rep = diaryReport(state.dayMeals, byId(), resolveTargets(targets, state.objetivos), deps.catalog);
     const macros = rep.rows.filter((r) => MACROS.includes(r.clave));
@@ -387,6 +430,7 @@ export function mountApp(root, deps) {
         h('strong', { class: 'daylabel' }, dayLabel(state.day)),
         h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, '›')),
       state.day !== today() ? h('button', { class: 'link', onclick: () => openDay(today()) }, 'Ir a hoy') : null,
+      state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
         rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
           h('ul', {}, rep.avisosUl.map((r) => h('li', {}, `${r.label}: ${fmtQty(r.total, r.unit)} (UL ${fmtQty(r.ul, r.unit)})`, r.notaUl ? h('div', { class: 'small muted' }, r.notaUl) : null)))) : null,
@@ -397,8 +441,12 @@ export function mountApp(root, deps) {
           h('ul', {}, rep.otros.map((o) => h('li', {}, `${o.label}: ${o.total === null ? 'sin dato' : fmtQty(o.total, o.unit)}${o.parcial && o.total !== null ? ' (parcial)' : ''}`)))),
         h('h2', {}, 'Comidas'),
         rep.comidas.map((c) => h('section', { class: 'card meal' },
-          h('div', { class: 'row between' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, c.kcal === null ? 'sin dato de kcal' : `${nf0.format(c.kcal)} kcal${c.kcalParcial ? ' (parcial)' : ''}`)),
-          h('ul', { class: 'lines' }, c.lines.map((l) => h('li', {}, `${l.nombre} · ${nf1.format(l.grams)} g · ${l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`}`))))),
+          h('div', { class: 'row between' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, fmtKcal(c))),
+          c.registros.map((r) => h('div', { class: 'registro', 'data-id': r.id },
+            h('ul', { class: 'lines' }, r.lines.map((l) => h('li', {}, `${l.nombre} · ${nf1.format(l.grams)} g · ${l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`}`))),
+            h('div', { class: 'row between' },
+              h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
+              h('span', { class: 'row' }, h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), deleteControls(r.id, state.day))))))),
       ],
       h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
   }

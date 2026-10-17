@@ -56,3 +56,8 @@ details { margin:8px 0; } details ul { font-size:.85rem; padding-left:18px; }
 .alert-ul { border:2px solid var(--err); border-radius:14px; padding:4px 12px; margin:12px 0; } .alert-ul h2 { color:var(--err); }
 .lines { list-style:none; padding:0; margin:6px 0 0; font-size:.9rem; } .lines li { padding:2px 0; }
 select { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); width:100%; }
+/* Editar y borrar comidas */
+.registro + .registro { border-top:1px dashed var(--line); margin-top:8px; padding-top:4px; }
+button.danger { color:var(--err); } button.link.danger { color:var(--err); }
+.confirm-delete { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+input[type=date] { font:inherit; padding:10px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--fg); width:100%; }

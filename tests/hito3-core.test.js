@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDraft, setGrams, changeFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, validateDraft, previewTotals, toMealRecord } from '../frontend/js/core/draft.js';
+import { createDraft, setGrams, changeFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, validateDraft, previewTotals, toMealRecord, draftFromRecord, setDate, setMeal } from '../frontend/js/core/draft.js';
 import { defaultMeal, madridNow, MEALS } from '../frontend/js/core/meal-defaults.js';
 import { realFoods } from './helpers.js';
 
@@ -103,4 +103,27 @@ test('comida por defecto según la hora de Madrid (verano e invierno)', () => {
   assert.equal(at('2026-12-16T10:30:00Z'), 'comida');   // 11:30 CET
   assert.deepEqual(madridNow(new Date('2026-10-16T22:30:00Z')), { date: '2026-10-17', minutes: 30 });
   assert.deepEqual(MEALS, ['desayuno', 'comida', 'merienda', 'cena', 'otro']);
+});
+
+// ---------- Hito 4, fase 2: editar una comida guardada ----------
+test('draftFromRecord + toMealRecord: misma id y createdAt, fecha del borrador, updatedAt; alimento borrado a "sin resolver"', () => {
+  const rec = { id: 'r1', date: '2026-10-15', meal: 'comida', createdAt: '2026-10-15T12:00:00.000Z', text: 'frase', lines: [
+    { food_id: 'avena_copos', grams: 80, source_text: '80 g de avena' }, { food_id: 'ya_no_existe', grams: 35, source_text: 'algo' }, { food_id: 'huevo', grams: 100, source_text: '2 huevos' }] };
+  let d = draftFromRecord(rec, byId);
+  assert.deepEqual(d.lines.map((l) => [l.food_id, l.grams, l.confidence]), [['avena_copos', 80, 'guardado'], ['huevo', 100, 'guardado']]);
+  assert.deepEqual(d.unmatched, [{ text: 'ya_no_existe · 35 g', motivo: 'no_en_catalogo' }]);
+  assert.deepEqual(d.editing, { id: 'r1', createdAt: '2026-10-15T12:00:00.000Z', date: '2026-10-15' });
+  // al resolver el que falta con otro alimento, los gramos vienen del texto
+  assert.equal(resolveUnmatched(d, 0, 'kiwi_verde').lines.at(-1).grams, 35);
+  d = setDate(setMeal(removeLine(setGrams(d, 'l1', '90'), 'l2'), 'cena'), '2026-10-16');
+  const out = toMealRecord(d, { now: new Date('2026-10-16T20:00:00Z'), idGen: () => 'NO-USAR' });
+  assert.deepEqual(out, { id: 'r1', date: '2026-10-16', meal: 'cena', createdAt: '2026-10-15T12:00:00.000Z', updatedAt: '2026-10-16T20:00:00.000Z', text: 'frase', lines: [{ food_id: 'avena_copos', grams: 90, source_text: '80 g de avena' }] });
+});
+
+test('editar: fecha inválida o sin líneas no se puede guardar', () => {
+  const rec = { id: 'r1', date: '2026-10-15', meal: 'comida', createdAt: 'x', text: '', lines: [{ food_id: 'kiwi_verde', grams: 69, source_text: '' }] };
+  const d = draftFromRecord(rec, byId);
+  assert.equal(validateDraft(d).ok, true);
+  for (const bad of ['', '2026-13-01', '2026-02-30', '15/10/2026']) assert.deepEqual(validateDraft(setDate(d, bad)).problems, [{ key: null, code: 'fecha' }], bad);
+  assert.equal(validateDraft(removeLine(d, 'l1')).empty, true);
 });

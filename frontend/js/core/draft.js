@@ -93,10 +93,35 @@ export function lineProblem(line) {
   return null;
 }
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const validDate = (s) => {
+  if (!DATE.test(s ?? '')) return false;
+  const t = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(t.getTime()) && t.toISOString().slice(0, 10) === s; // descarta 2026-13-01 y 2026-02-30
+};
+
 export function validateDraft(d) {
   const problems = d.lines.map((l) => ({ key: l.key, code: lineProblem(l) })).filter((p) => p.code);
+  if (d.editing && !validDate(d.date)) problems.push({ key: null, code: 'fecha' });
   return { ok: d.lines.length > 0 && problems.length === 0, empty: d.lines.length === 0, problems };
 }
+
+// ---------- editar un registro guardado ----------
+// Borrador a partir de una comida guardada. Un alimento que ya no está en el documento pasa a "sin resolver"
+// con sus gramos en el texto (al elegir otro alimento, se rellenan solos).
+export function draftFromRecord(rec, foodsById) {
+  let d = { text: rec.text ?? '', meal: rec.meal, date: rec.date, lines: [], unmatched: [], warnings: [], nextKey: 1, editing: { id: rec.id, createdAt: rec.createdAt, date: rec.date } };
+  for (const l of rec.lines ?? []) {
+    if (!foodsById.has(l.food_id)) { d.unmatched.push({ text: `${l.food_id} · ${l.grams} g`, motivo: 'no_en_catalogo' }); continue; }
+    let line;
+    [d, line] = newLine(d, l.food_id, l.grams, l.source_text ?? '', 'guardado');
+    d.lines.push(line);
+  }
+  return d;
+}
+
+// Mover la comida a otro día ('YYYY-MM-DD').
+export const setDate = (d, date) => ({ ...d, date });
 
 // Energía y proteína de las líneas ya válidas (para la vista previa; el cálculo real es el de nutrients.js).
 export function previewTotals(d, foodsById) {
@@ -105,14 +130,10 @@ export function previewTotals(d, foodsById) {
 }
 
 // Registro que se guarda: solo alimentos y gramos (los nutrientes se calculan siempre del documento).
+// Al editar se conservan id y createdAt, se usa la fecha del borrador y se añade updatedAt.
 export function toMealRecord(d, { now = new Date(), idGen = () => globalThis.crypto.randomUUID() } = {}) {
   if (!validateDraft(d).ok) throw new Error('El borrador no es válido: revisa gramos y líneas');
-  return {
-    id: idGen(),
-    date: madridNow(now).date,
-    meal: d.meal,
-    createdAt: now.toISOString(),
-    text: d.text,
-    lines: d.lines.map((l) => ({ food_id: l.food_id, grams: l.grams, source_text: l.source_text })),
-  };
+  const lines = d.lines.map((l) => ({ food_id: l.food_id, grams: l.grams, source_text: l.source_text }));
+  if (d.editing) return { id: d.editing.id, date: d.date, meal: d.meal, createdAt: d.editing.createdAt, updatedAt: now.toISOString(), text: d.text, lines };
+  return { id: idGen(), date: madridNow(now).date, meal: d.meal, createdAt: now.toISOString(), text: d.text, lines };
 }

@@ -297,3 +297,84 @@ test('no coincide con tus alias: Guardar desactivado hasta pulsar "Sí, es ..." 
   assert.equal(t.btn('Sí, es'), undefined);
   assert.equal(t.btn('Guardar').disabled, false);
 });
+
+// ---------- Hito 4, fase 2: editar y borrar comidas guardadas ----------
+const AYER = MEAL('r1', '2026-10-15', 'comida', [['arroz_blanco_crudo', 150], ['kiwi_verde', 69], ['aceite_oliva', 10]]);
+const toAyer = async (t) => { await t.act(() => t.btn('Diario').click()); await t.act(() => t.$('button[aria-label="Día anterior"]').click()); };
+
+test('editar una comida pasada: gramos, quitar línea, cambiar comida y fecha; mismo id y createdAt', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await toAyer(t);
+  assert.match(t.$('section.meal').textContent, /Arroz blanco crudo · 150 g/);
+  await t.act(() => t.btn('Editar').click());
+  assert.match(t.$('header').textContent, /Editar comida/);
+  assert.equal(t.$('input[aria-label="Fecha"]').value, '2026-10-15');
+  assert.equal(t.$('input[aria-label="Fecha"]').max, '2026-10-16');
+  assert.equal(t.$$('li.card[data-key]').length, 3);
+  t.type(t.$$('input.grams')[0], '120');
+  await t.act(() => t.$$('button[aria-label^="Borrar"]')[1].click()); // quita el kiwi
+  await t.act(() => t.btn('Cena').click());
+  const fecha = t.$('input[aria-label="Fecha"]');
+  fecha.value = '2026-10-16'; fecha.dispatchEvent(new t.document.defaultView.Event('change', { bubbles: true }));
+  await t.act(() => t.btn('Guardar cambios').click());
+  // vuelve al diario del día en que queda la comida
+  assert.equal(t.$('.daylabel').textContent, 'Hoy');
+  assert.match(t.$('[role=status]').textContent, /Cambios guardados. La comida está ahora en este día/);
+  assert.match(t.$('section.meal').textContent, /Cena/);
+  const meals = await t.store.allMeals();
+  assert.deepEqual(meals, [{ ...AYER, date: '2026-10-16', meal: 'cena', updatedAt: NOW.toISOString(),
+    lines: [{ food_id: 'arroz_blanco_crudo', grams: 120, source_text: '' }, { food_id: 'aceite_oliva', grams: 10, source_text: '' }] }]);
+});
+
+test('editar: "Volver" descarta los cambios; sin líneas solo se puede borrar', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await toAyer(t);
+  await t.act(() => t.btn('Editar').click());
+  t.type(t.$$('input.grams')[0], '999');
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  assert.deepEqual(await t.store.allMeals(), [AYER]);
+  await t.act(() => t.btn('Editar').click());
+  for (let i = 0; i < 3; i++) await t.act(() => t.$('button[aria-label^="Borrar"]').click());
+  assert.equal(t.btn('Guardar cambios').disabled, true);
+  assert.match(t.root.textContent, /Añade al menos un alimento o borra la comida/);
+});
+
+test('borrar una comida desde el diario pide confirmación dentro de la app', { skip }, async () => {
+  const otra = MEAL('r2', '2026-10-15', 'cena', [['huevo', 100]]);
+  const t = await setup({ meals: [AYER, otra] });
+  await toAyer(t);
+  const borrarDe = (id) => t.$(`.registro[data-id="${id}"]`).querySelector('button.danger');
+  await t.act(() => borrarDe('r1').click());
+  assert.match(t.$('.registro[data-id="r1"]').textContent, /¿Borrar esta comida\?/);
+  await t.act(() => t.btn('Cancelar').click());
+  assert.equal((await t.store.allMeals()).length, 2);
+  await t.act(() => borrarDe('r1').click());
+  await t.act(() => t.btn('Sí, borrar').click());
+  assert.deepEqual((await t.store.allMeals()).map((m) => m.id), ['r2']);
+  assert.match(t.$('[role=status]').textContent, /Comida borrada/);
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  assert.equal(t.$$('.registro').length, 1);
+});
+
+test('borrar desde la pantalla de edición', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await toAyer(t);
+  await t.act(() => t.btn('Editar').click());
+  await t.act(() => t.btn('Borrar esta comida').click());
+  await t.act(() => t.btn('Sí, borrar').click());
+  assert.deepEqual(await t.store.allMeals(), []);
+  assert.match(t.root.textContent, /Sin registros este día/);
+});
+
+test('editar una comida con un alimento que ya no está en el documento: queda en "Sin resolver" con sus gramos', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('r3', '2026-10-15', 'comida', [['ya_no_existe', 35], ['kiwi_verde', 69]])] });
+  await toAyer(t);
+  assert.match(t.$('section.meal').textContent, /ya_no_existe · 35 g · sin dato/);
+  await t.act(() => t.btn('Editar').click());
+  assert.match(t.root.textContent, /«ya_no_existe · 35 g»/);
+  await t.act(() => t.btn('Buscar en mi documento').click());
+  t.type(t.$('.overlay input'), 'avena');
+  await t.act(() => t.$('.pick').click());
+  assert.equal(t.$$('input.grams').at(-1).value, '35');
+});

@@ -60,15 +60,22 @@ export function diaryReport(meals, foodsById, resolved, catalog) {
   const ids = [...new Set(meals.flatMap((m) => m.lines.map((l) => l.food_id)))];
   const nombre = (id) => foodOf(foodsById, id).nombre ?? id;
   const sinDatos = ids.filter((id) => !Object.keys(foodOf(foodsById, id).nutrients ?? {}).length).map(nombre);
+  // kcal de un conjunto de líneas: null si ninguna tiene dato; parcial si falta alguna.
+  const kcalDe = (lines) => {
+    const con = lines.filter((l) => l.kcal !== null);
+    return { kcal: con.length ? con.reduce((a, l) => a + l.kcal, 0) : null, kcalParcial: con.length < lines.length };
+  };
+  // Por comida y, dentro, por registro guardado (cada uno se edita o se borra por separado).
   const comidas = MEALS.map((meal) => {
-    const records = meals.filter((r) => r.meal === meal);
-    const lines = records.flatMap((r) => r.lines.map((l) => {
-      const food = foodOf(foodsById, l.food_id);
-      return { recordId: r.id, food_id: l.food_id, nombre: food.nombre ?? l.food_id, grams: l.grams, kcal: nutrientsForGrams(food, l.grams, ['energia_kcal']).energia_kcal };
-    }));
-    const conKcal = lines.filter((l) => l.kcal !== null);
-    return { meal, records, lines, kcal: conKcal.length ? conKcal.reduce((a, l) => a + l.kcal, 0) : null, kcalParcial: conKcal.length < lines.length };
-  }).filter((c) => c.records.length);
+    const registros = meals.filter((r) => r.meal === meal).map((record) => {
+      const lines = record.lines.map((l) => {
+        const food = foodOf(foodsById, l.food_id);
+        return { food_id: l.food_id, nombre: food.nombre ?? l.food_id, grams: l.grams, kcal: nutrientsForGrams(food, l.grams, ['energia_kcal']).energia_kcal };
+      });
+      return { id: record.id, record, lines, ...kcalDe(lines) };
+    });
+    return { meal, registros, ...kcalDe(registros.flatMap((r) => r.lines)) };
+  }).filter((c) => c.registros.length);
   return {
     rows, otros, comidas, sinDatos,
     avisosUl: rows.filter((r) => r.superaUl),

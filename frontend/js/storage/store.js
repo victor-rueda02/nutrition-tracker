@@ -1,7 +1,7 @@
 // Interfaz de almacenamiento (la implementan idb-store.js para el navegador y esta versión en memoria para tests).
 //   getCatalogRecord() -> { foods, extraHeaders, name, importedAt } | null     putCatalogRecord(rec)
 //   getSetting(key) -> valor | undefined                                       setSetting(key, value)
-//   addMeal(rec)   listMealsByDate('YYYY-MM-DD') -> [rec] por hora de creación  allMeals()   deleteMeal(id)
+//   addMeal(rec) inserta o sustituye (mismo id: así se guarda una comida editada)   listMealsByDate('YYYY-MM-DD') -> [rec] por hora de creación  allMeals()   deleteMeal(id)
 const clone = (v) => (v === undefined ? v : structuredClone(v));
 
 export function createMemoryStore() {
