@@ -13,13 +13,14 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [] } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido' } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
   const store = createMemoryStore();
   for (const m of meals) await store.addMeal(m);
   const calls = [];
+  const saved = []; // ficheros exportados (en el iPhone irían al menú Compartir)
   const queue = [...responses];
   const createAiClient = () => ({
     async interpretMeal(args) {
@@ -30,14 +31,14 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
     },
     async health() { return true; },
   });
-  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text() });
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; } });
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
   const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
   const type = (el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); };
   const act = async (fn) => { fn(); await app.whenIdle(); };
   const attach = async (inputEl, file) => { Object.defineProperty(inputEl, 'files', { value: [file] }); inputEl.dispatchEvent(new Event('change', { bubbles: true })); await app.whenIdle(); };
-  return { app, root, store, calls, document, $, $$, btn, type, act, attach };
+  return { app, root, store, calls, saved, document, $, $$, btn, type, act, attach };
 }
 
 const RESULT = { items: [ITEM('avena_copos', 80, '80 g de avena'), ITEM('huevo', 100, '2 huevos', { confidence: 'media', flags: ['variante_por_defecto'] })], unmatched: [{ text: 'un plátano', motivo: 'no_en_catalogo' }], warnings: [], model: 'm' };
@@ -377,4 +378,103 @@ test('editar una comida con un alimento que ya no está en el documento: queda e
   t.type(t.$('.overlay input'), 'avena');
   await t.act(() => t.$('.pick').click());
   assert.equal(t.$$('input.grams').at(-1).value, '35');
+});
+
+// ---------- Hito 4, paso 3: copia de seguridad ----------
+const fichero = (name, data) => ({ name, text: async () => (typeof data === 'string' ? data : JSON.stringify(data)) });
+const abrirDoc = (t) => t.act(() => t.btn('Documento').click());
+
+test('exportar el diario: copia JSON con todas las comidas y sin el token', { skip }, async () => {
+  const t = await setup({ meals: [AYER, MEAL('r2', '2026-10-16', 'cena', [['huevo', 100]])], conn: { endpoint: 'https://w', token: 'TOKEN-SECRETO' } });
+  await abrirDoc(t);
+  assert.match(t.root.textContent, /2 comidas guardadas/);
+  await t.act(() => t.btn('Exportar diario').click());
+  assert.equal(t.saved.length, 1);
+  assert.equal(t.saved[0].name, 'nutritiontracker-diario-2026-10-16.json');
+  assert.equal(t.saved[0].type, 'application/json');
+  assert.ok(!t.saved[0].text.includes('TOKEN-SECRETO'));
+  const data = JSON.parse(t.saved[0].text);
+  assert.deepEqual(data.comidas.map((m) => m.id).sort(), ['r1', 'r2']);
+  assert.match(t.$('p.ok[role=status]').textContent, /Copia del diario: 2 comidas/);
+});
+
+test('exportar: si cancelas el menú Compartir, se dice', { skip }, async () => {
+  const t = await setup({ meals: [AYER], shareResult: 'cancelado' });
+  await abrirDoc(t);
+  await t.act(() => t.btn('Exportar diario').click());
+  assert.match(t.$('p.ok[role=status]').textContent, /Exportación cancelada/);
+});
+
+test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }, async () => {
+  const t = await setup();
+  await abrirDoc(t);
+  await t.act(() => t.btn('Exportar documento (Excel)').click());
+  await t.act(() => t.btn('Exportar documento (CSV con comas)').click());
+  assert.deepEqual(t.saved.map((f) => [f.name, f.type]), [['nutritiontracker-alimentos-excel-2026-10-16.csv', 'text/csv'], ['nutritiontracker-alimentos-2026-10-16.csv', 'text/csv']]);
+  assert.ok(t.saved[0].text.startsWith('﻿id;nombre;'));
+  assert.match(t.saved[0].text, /aceite_oliva;.*;0,91;/);
+  assert.ok(t.saved[1].text.startsWith('﻿id,nombre,'));
+  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 64 alimentos/);
+});
+
+test('importar el diario: resumen antes de aplicar, fusión por id, nunca borra; repetir no duplica', { skip }, async () => {
+  const local = MEAL('local', '2026-10-14', 'desayuno', [['avena_copos', 80]]);
+  const t = await setup({ meals: [AYER, local] });
+  await abrirDoc(t);
+  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, exportedAt: 'x', objetivos: null, comidas: [
+    AYER, // igual
+    { ...MEAL('nueva', '2026-10-12', 'cena', [['huevo', 100], ['desconocido', 10]]) },
+    { ...AYER, id: 'r1', updatedAt: '2026-10-16T09:00:00.000Z', lines: [{ food_id: 'kiwi_verde', grams: 69, source_text: '' }] }, // repetido en la copia: error
+    { id: 'mal', date: '2026-10-12', meal: 'comida', createdAt: 'x', lines: [] },
+  ] };
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('copia.json', copia));
+  const r = t.$('section[aria-label="Importar copia"]').textContent;
+  assert.match(r, /«copia\.json»: 2 comidas válidas/);
+  assert.match(r, /1 nuevas/);
+  assert.match(r, /0 se actualizan/);
+  assert.match(r, /1 ya estaban igual/);
+  assert.match(r, /Alimentos que no están en tu documento \(saldrán sin datos\): desconocido/);
+  assert.match(r, /Comidas con error, no se importan \(2\)/);
+  assert.match(r, /Importar nunca borra nada/);
+  assert.equal((await t.store.allMeals()).length, 2); // nada aplicado todavía
+  await t.act(() => t.btn('Importar 1 comida').click());
+  assert.deepEqual((await t.store.allMeals()).map((m) => m.id).sort(), ['local', 'nueva', 'r1']);
+  assert.match(t.$('p.ok[role=status]').textContent, /Copia importada: 1 nuevas, 0 actualizadas/);
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('copia.json', copia));
+  assert.match(t.root.textContent, /No hay nada nuevo que importar/);
+  await t.act(() => t.btn('Cerrar').click());
+  assert.equal(t.$('section[aria-label="Importar copia"]'), null);
+});
+
+test('importar el diario: una comida más reciente en la copia sustituye a la del dispositivo', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await abrirDoc(t);
+  const editada = { ...AYER, meal: 'cena', updatedAt: '2026-10-16T09:00:00.000Z' };
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', [editada]));
+  assert.match(t.root.textContent, /1 se actualizan/);
+  await t.act(() => t.btn('Importar 1 comida').click());
+  assert.deepEqual(await t.store.allMeals(), [editada]);
+});
+
+test('importar el diario: fichero que no es una copia -> error claro y nada cambia', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await abrirDoc(t);
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('alimentos.json', { foods: [] }));
+  assert.match(t.$('[role=alert]').textContent, /«alimentos\.json»: No es una copia del diario/);
+  assert.deepEqual(await t.store.allMeals(), [AYER]);
+});
+
+test('importar el diario: los objetivos de la copia solo se restauran si en este dispositivo no hay', { skip }, async () => {
+  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: { perfil: 'mujer', valores: { energia_kcal: 1800 } } };
+  const sin = await setup();
+  await abrirDoc(sin);
+  await sin.attach(sin.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
+  assert.match(sin.root.textContent, /Se restaurarán los objetivos de la copia/);
+  await sin.act(() => sin.btn('Restaurar objetivos').click());
+  assert.deepEqual(await sin.store.getSetting('objetivos'), copia.objetivos);
+  const con = await setup({ objetivos: { perfil: 'hombre', valores: { energia_kcal: 2500 } } });
+  await abrirDoc(con);
+  await con.attach(con.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
+  assert.match(con.root.textContent, /Objetivos: se mantienen los de este dispositivo/);
+  assert.match(con.root.textContent, /No hay nada nuevo que importar/);
 });

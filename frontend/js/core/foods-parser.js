@@ -245,14 +245,16 @@ export function parseFoodsDocument(text, { catalog, filename = '' }) {
 // ---------- Exportación ----------
 export const csvHeader = (catalog, extraHeaders = []) => [...CORE_COLUMNS, ...catalog.keys, ...extraHeaders];
 
-export function foodsToCSV(foods, { catalog, extraHeaders = [], delimiter = ',', bom = true } = {}) {
+// decimalComma: números con coma decimal (para Excel en español, con delimiter ';').
+export function foodsToCSV(foods, { catalog, extraHeaders = [], delimiter = ',', bom = true, decimalComma = false } = {}) {
+  const num = (n) => (typeof n === 'number' ? (decimalComma ? String(n).replace('.', ',') : n) : '');
   const rows = [csvHeader(catalog, extraHeaders)];
   for (const f of foods) {
     rows.push([
       f.id, f.nombre, f.alias.join('|'), serializePortions(f.porciones), f.estado,
       f.varianteDefecto === true ? 'si' : f.varianteDefecto === false ? 'no' : '', f.grupo,
-      typeof f.densidad === 'number' ? f.densidad : '', f.pesoEnCrudo ? 'si' : '',
-      ...catalog.keys.map((k) => (typeof f.nutrients[k] === 'number' ? f.nutrients[k] : '')),
+      num(f.densidad), f.pesoEnCrudo ? 'si' : '',
+      ...catalog.keys.map((k) => num(f.nutrients[k])),
       ...extraHeaders.map((h) => f.extra[h] ?? ''),
     ]);
   }

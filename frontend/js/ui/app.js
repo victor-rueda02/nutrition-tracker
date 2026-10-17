@@ -5,7 +5,8 @@ import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
 import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, setDate, validateDraft, lineProblem, previewTotals, toMealRecord, draftFromRecord } from '../core/draft.js';
 import { MEALS, defaultMeal, madridNow } from '../core/meal-defaults.js';
-import { parseFoodsDocument, formatIssue } from '../core/foods-parser.js';
+import { parseFoodsDocument, formatIssue, foodsToCSV } from '../core/foods-parser.js';
+import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 import { looseKey } from '../core/text.js';
@@ -43,14 +44,28 @@ const ESTADO_TEXT = {
 const TIPO_TEXT = { min: 'al menos', max: 'como mucho', objetivo: 'objetivo' };
 
 // deps: { store, createAiClient, catalog, settings, targets (data/targets.json), objetivos (los tuyos, del almacén),
-//         initial: { foods, extraHeaders, docName }, conn, now, idGen, readFile }
+//         initial: { foods, extraHeaders, docName }, conn, now, idGen, readFile, saveFile }
 export function mountApp(root, deps) {
   const doc = root.ownerDocument;
   const now = deps.now ?? (() => new Date());
   const readFile = deps.readFile ?? ((f) => f.text());
+  // Entregar un fichero: en el iPhone, el menú Compartir ("Guardar en Archivos", AirDrop...); si no, descarga.
+  // Se llama directamente desde el toque del botón (Safari exige que compartir salga de un gesto del usuario).
+  const saveFile = deps.saveFile ?? (async ({ name, text, type }) => {
+    const win = doc.defaultView;
+    const file = new win.File([text], name, { type });
+    if (win.navigator.canShare?.({ files: [file] })) {
+      try { await win.navigator.share({ files: [file], title: name }); return 'compartido'; } catch (e) { if (e?.name === 'AbortError') return 'cancelado'; }
+    }
+    const url = win.URL.createObjectURL(new win.Blob([text], { type }));
+    const a = doc.createElement('a');
+    a.href = url; a.download = name; doc.body.append(a); a.click(); a.remove();
+    win.setTimeout(() => win.URL.revokeObjectURL(url), 10000);
+    return 'descargado';
+  });
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
-    text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) },
+    text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
     day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null,
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
@@ -174,6 +189,71 @@ export function mountApp(root, deps) {
       h('button', { class: 'link', onclick: () => { state.pendingDelete = null; render(); } }, 'Cancelar'));
   }
 
+  // Pantalla Documento: se cargan antes todas las comidas para que "Exportar" comparta en el mismo toque.
+  const openDoc = (msg = '') => track(deps.store.allMeals().then((all) => { state.allMeals = all; state.docMsg = msg; state.screen = 'doc'; render(); }));
+  const fecha = () => madridNow(now()).date;
+
+  function exportDiary() {
+    const text = backupToJSON(buildBackup({ meals: state.allMeals, objetivos: tieneObjetivos(state.objetivos) ? state.objetivos : null, now: now() }));
+    const n = state.allMeals.length;
+    return track(saveFile({ name: `nutritiontracker-diario-${fecha()}.json`, text, type: 'application/json' }).then((r) => {
+      state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Copia del diario: ${n} ${n === 1 ? 'comida' : 'comidas'}.`; render();
+    }));
+  }
+
+  function exportFoods(excel) {
+    const text = foodsToCSV(state.foods, { catalog: deps.catalog, extraHeaders: state.extraHeaders, delimiter: excel ? ';' : ',', decimalComma: excel, bom: true });
+    const name = `nutritiontracker-alimentos${excel ? '-excel' : ''}-${fecha()}.csv`;
+    return track(saveFile({ name, text, type: 'text/csv' }).then((r) => {
+      state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Documento exportado: ${state.foods.length} alimentos.`; render();
+    }));
+  }
+
+  function onBackupFile(file) {
+    if (!file) return;
+    return track((async () => {
+      state.allMeals = await deps.store.allMeals();
+      const parsed = parseBackup(await readFile(file));
+      const plan = parsed.ok ? planImport(state.allMeals, parsed.meals) : null;
+      const restaurarObjetivos = parsed.ok && tieneObjetivos(parsed.objetivos) && !tieneObjetivos(state.objetivos);
+      const desconocidos = parsed.ok ? new Set(parsed.meals.flatMap((m) => m.lines.map((l) => l.food_id)).filter((id) => !byId().has(id))) : new Set();
+      state.backupImport = { name: file.name, parsed, plan, restaurarObjetivos, desconocidos: [...desconocidos], applied: false };
+      state.docMsg = ''; render();
+    })());
+  }
+
+  function applyBackup() {
+    const b = state.backupImport;
+    return track((async () => {
+      for (const m of b.plan.escribir) await deps.store.addMeal(m);
+      if (b.restaurarObjetivos) { state.objetivos = b.parsed.objetivos; await deps.store.setSetting('objetivos', state.objetivos); }
+      state.backupImport = null;
+      const partes = [`${b.plan.nuevas.length} nuevas`, `${b.plan.actualizadas.length} actualizadas`];
+      await openDoc(`Copia importada: ${partes.join(', ')}${b.restaurarObjetivos ? '; objetivos restaurados' : ''}.`);
+    })());
+  }
+
+  function backupView(b) {
+    if (!b.parsed.ok) return h('section', { class: 'report' }, h('p', { class: 'error', role: 'alert' }, `«${b.name}»: ${b.parsed.error}`), h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, 'Cerrar'));
+    const { plan } = b;
+    const nada = plan.escribir.length === 0 && !b.restaurarObjetivos;
+    return h('section', { class: 'report', 'aria-label': 'Importar copia' },
+      h('p', {}, `«${b.name}»: ${b.parsed.meals.length} comidas válidas.`),
+      h('ul', { class: 'small' },
+        h('li', {}, `${plan.nuevas.length} nuevas`),
+        h('li', {}, `${plan.actualizadas.length} se actualizan (la copia tiene una versión más reciente)`),
+        h('li', {}, `${plan.iguales.length} ya estaban igual`),
+        plan.masAntiguas.length ? h('li', {}, `${plan.masAntiguas.length} más antiguas que las de este dispositivo: se mantienen las tuyas`) : null,
+        b.parsed.objetivos ? h('li', {}, b.restaurarObjetivos ? 'Se restaurarán los objetivos de la copia.' : 'Objetivos: se mantienen los de este dispositivo.') : null,
+        b.desconocidos.length ? h('li', { class: 'warn' }, `Alimentos que no están en tu documento (saldrán sin datos): ${b.desconocidos.join(', ')}`) : null),
+      b.parsed.errors.length ? h('details', { class: 'errors', open: true }, h('summary', {}, `Comidas con error, no se importan (${b.parsed.errors.length})`),
+        h('ul', {}, b.parsed.errors.slice(0, 30).map((e) => h('li', {}, `n.º ${e.index + 1}${e.id ? ` [${e.id}]` : ''}: ${e.message}`)))) : null,
+      h('p', { class: 'muted small' }, 'Importar nunca borra nada de este dispositivo.'),
+      h('div', { class: 'row' },
+        nada ? h('p', { class: 'muted' }, 'No hay nada nuevo que importar.') : h('button', { class: 'primary', onclick: () => applyBackup() }, plan.escribir.length ? `Importar ${plan.escribir.length} ${plan.escribir.length === 1 ? 'comida' : 'comidas'}` : 'Restaurar objetivos'),
+        h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, nada ? 'Cerrar' : 'Cancelar')));
+  }
+
   function editMeal(rec) {
     state.draft = draftFromRecord(rec, byId());
     state.pendingDelete = null; state.error = ''; state.screen = 'confirm'; render();
@@ -230,7 +310,7 @@ export function mountApp(root, deps) {
       back ? h('button', { class: 'link', onclick: back }, '‹ Volver') : h('strong', { class: 'brand' }, title),
       back ? h('strong', {}, title) : h('nav', {},
         h('button', { class: 'link', onclick: () => openDay(today()) }, 'Diario'),
-        h('button', { class: 'link', onclick: () => { state.screen = 'doc'; render(); } }, 'Documento')));
+        h('button', { class: 'link', onclick: () => openDoc() }, 'Documento')));
   }
 
   function openPicker({ title, onPick }) {
@@ -382,6 +462,7 @@ export function mountApp(root, deps) {
     const ep = h('input', { type: 'url', placeholder: 'https://nutrition-tracker-ai.TU-CUENTA.workers.dev', value: state.conn.endpoint ?? '', 'aria-label': 'Dirección del Worker' });
     const tk = h('input', { type: 'password', placeholder: 'Token compartido', value: state.conn.token ?? '', 'aria-label': 'Token', autocomplete: 'off' });
     const connMsg = h('p', { class: 'muted small', role: 'status' });
+    const backupIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true, 'aria-label': 'Elegir copia del diario', onchange: (e) => onBackupFile(e.target.files[0]) });
     const incompletos = state.foods.filter(incompleteInfo).length;
     return h('main', {},
       header('Documento', () => { state.screen = 'home'; render(); }),
@@ -393,7 +474,17 @@ export function mountApp(root, deps) {
       h('div', { class: 'row' },
         h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
         h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = (await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()) ? 'El Worker responde.' : 'El Worker no responde bien.'; } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
-      connMsg);
+      connMsg,
+      h('h2', {}, 'Copia de seguridad'),
+      h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). La copia no incluye el token.`),
+      state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
+        h('button', { class: 'secondary', onclick: () => backupIn.click() }, 'Importar diario'), backupIn),
+      state.backupImport ? backupView(state.backupImport) : null,
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(true) }, 'Exportar documento (Excel)'),
+        h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(false) }, 'Exportar documento (CSV con comas)')));
   }
 
   const dayLabel = (date) => {
