@@ -1,0 +1,307 @@
+[
+ {
+  "key": "energia_kcal",
+  "label": "Energía",
+  "group": "general"
+ },
+ {
+  "key": "agua_g",
+  "label": "Agua",
+  "group": "general"
+ },
+ {
+  "key": "alcohol_g",
+  "label": "Alcohol",
+  "group": "general"
+ },
+ {
+  "key": "cafeina_mg",
+  "label": "Cafeína",
+  "group": "general"
+ },
+ {
+  "key": "proteina_g",
+  "label": "Proteína",
+  "group": "hidratos y proteína"
+ },
+ {
+  "key": "hidratos_g",
+  "label": "Hidratos de carbono",
+  "group": "hidratos y proteína"
+ },
+ {
+  "key": "fibra_g",
+  "label": "Fibra",
+  "group": "hidratos y proteína"
+ },
+ {
+  "key": "azucares_g",
+  "label": "Azúcares",
+  "group": "hidratos y proteína"
+ },
+ {
+  "key": "almidon_g",
+  "label": "Almidón",
+  "group": "hidratos y proteína"
+ },
+ {
+  "key": "grasa_total_g",
+  "label": "Grasa total",
+  "group": "grasas"
+ },
+ {
+  "key": "grasas_saturadas_g",
+  "label": "Grasas saturadas",
+  "group": "grasas"
+ },
+ {
+  "key": "grasas_monoinsaturadas_g",
+  "label": "Grasas monoinsaturadas",
+  "group": "grasas"
+ },
+ {
+  "key": "grasas_poliinsaturadas_g",
+  "label": "Grasas poliinsaturadas",
+  "group": "grasas"
+ },
+ {
+  "key": "grasas_trans_g",
+  "label": "Grasas trans",
+  "group": "grasas"
+ },
+ {
+  "key": "colesterol_mg",
+  "label": "Colesterol",
+  "group": "grasas"
+ },
+ {
+  "key": "omega3_g",
+  "label": "Omega-3 total",
+  "group": "grasas"
+ },
+ {
+  "key": "omega6_g",
+  "label": "Omega-6 total",
+  "group": "grasas"
+ },
+ {
+  "key": "ala_g",
+  "label": "ALA (18:3 n-3)",
+  "group": "grasas"
+ },
+ {
+  "key": "epa_g",
+  "label": "EPA (20:5 n-3)",
+  "group": "grasas"
+ },
+ {
+  "key": "dha_g",
+  "label": "DHA (22:6 n-3)",
+  "group": "grasas"
+ },
+ {
+  "key": "vitamina_a_ug",
+  "label": "Vitamina A (RAE)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_c_mg",
+  "label": "Vitamina C",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_d_ug",
+  "label": "Vitamina D",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_e_mg",
+  "label": "Vitamina E",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_k_ug",
+  "label": "Vitamina K",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b1_mg",
+  "label": "Vitamina B1 (tiamina)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b2_mg",
+  "label": "Vitamina B2 (riboflavina)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b3_mg",
+  "label": "Vitamina B3 (niacina)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b5_mg",
+  "label": "Vitamina B5 (ác. pantoténico)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b6_mg",
+  "label": "Vitamina B6",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b9_ug",
+  "label": "Vitamina B9 (folato, DFE)",
+  "group": "vitaminas"
+ },
+ {
+  "key": "vitamina_b12_ug",
+  "label": "Vitamina B12",
+  "group": "vitaminas"
+ },
+ {
+  "key": "colina_mg",
+  "label": "Colina",
+  "group": "vitaminas"
+ },
+ {
+  "key": "calcio_mg",
+  "label": "Calcio",
+  "group": "minerales"
+ },
+ {
+  "key": "hierro_mg",
+  "label": "Hierro",
+  "group": "minerales"
+ },
+ {
+  "key": "magnesio_mg",
+  "label": "Magnesio",
+  "group": "minerales"
+ },
+ {
+  "key": "fosforo_mg",
+  "label": "Fósforo",
+  "group": "minerales"
+ },
+ {
+  "key": "potasio_mg",
+  "label": "Potasio",
+  "group": "minerales"
+ },
+ {
+  "key": "sodio_mg",
+  "label": "Sodio",
+  "group": "minerales"
+ },
+ {
+  "key": "zinc_mg",
+  "label": "Zinc",
+  "group": "minerales"
+ },
+ {
+  "key": "cobre_mg",
+  "label": "Cobre",
+  "group": "minerales"
+ },
+ {
+  "key": "manganeso_mg",
+  "label": "Manganeso",
+  "group": "minerales"
+ },
+ {
+  "key": "selenio_ug",
+  "label": "Selenio",
+  "group": "minerales"
+ },
+ {
+  "key": "triptofano_g",
+  "label": "Triptófano",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "treonina_g",
+  "label": "Treonina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "isoleucina_g",
+  "label": "Isoleucina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "leucina_g",
+  "label": "Leucina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "lisina_g",
+  "label": "Lisina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "metionina_g",
+  "label": "Metionina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "cistina_g",
+  "label": "Cistina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "fenilalanina_g",
+  "label": "Fenilalanina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "tirosina_g",
+  "label": "Tirosina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "valina_g",
+  "label": "Valina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "histidina_g",
+  "label": "Histidina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "arginina_g",
+  "label": "Arginina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "alanina_g",
+  "label": "Alanina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "acido_aspartico_g",
+  "label": "Ácido aspártico",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "acido_glutamico_g",
+  "label": "Ácido glutámico",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "glicina_g",
+  "label": "Glicina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "prolina_g",
+  "label": "Prolina",
+  "group": "aminoácidos"
+ },
+ {
+  "key": "serina_g",
+  "label": "Serina",
+  "group": "aminoácidos"
+ }
+]

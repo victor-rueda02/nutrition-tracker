@@ -1,0 +1,11 @@
+# Dependencias
+node_modules/
+
+# Secretos locales del Worker y variables de entorno: NUNCA al repositorio
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+
+# Estado local de wrangler
+.wrangler/

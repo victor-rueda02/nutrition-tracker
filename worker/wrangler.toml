@@ -1,0 +1,11 @@
+# Cloudflare Worker (plan gratuito).
+# Secrets (NO van aquí):  wrangler secret put GEMINI_API_KEY   y   wrangler secret put APP_TOKEN
+name = "nutrition-tracker-ai"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# Modelo de Gemini: se cambia SOLO aquí. Comprueba en Google AI Studio cuál está disponible en el plan gratuito.
+GEMINI_MODEL = "gemini-3.1-flash-lite"
+# Solo el ORIGEN (sin ruta ni barra final) de tu GitHub Pages, p. ej. https://tuusuario.github.io
+ALLOWED_ORIGIN = "https://CAMBIA-ESTO.github.io"

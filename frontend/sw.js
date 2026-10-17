@@ -1,0 +1,62 @@
+// Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
+// Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
+// Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
+const VERSION = 'nt-v1';
+const ASSETS = [
+  './',
+  'css/styles.css',
+  'icons/apple-touch-icon.png',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'index.html',
+  'js/ai-client.js',
+  'js/config.js',
+  'js/core/ai-contract.js',
+  'js/core/ai-validate.js',
+  'js/core/catalog.js',
+  'js/core/completeness.js',
+  'js/core/csv.js',
+  'js/core/draft.js',
+  'js/core/excluded.js',
+  'js/core/foods-parser.js',
+  'js/core/meal-defaults.js',
+  'js/core/numbers.js',
+  'js/core/nutrients.js',
+  'js/core/portions.js',
+  'js/core/schema.js',
+  'js/core/settings.js',
+  'js/core/text.js',
+  'js/main.js',
+  'js/storage/idb-store.js',
+  'js/storage/store.js',
+  'js/ui/app.js',
+  'manifest.webmanifest',
+  '../data/nutrients.json',
+  '../data/settings.json',
+  '../data/foods.csv'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(caches.open(VERSION).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()));
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  // Solo GET del mismo origen: las llamadas al Worker de IA (otro origen, POST) pasan sin tocar.
+  if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      const network = fetch(req).then((res) => {
+        if (res.ok) caches.open(VERSION).then((cache) => cache.put(req, res.clone()));
+        return res;
+      }).catch(() => cached);
+      return cached || network;
+    }));
+});

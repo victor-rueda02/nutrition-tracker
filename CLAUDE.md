@@ -1,0 +1,92 @@
+# CLAUDE.md — Contexto del proyecto NutritionTracker
+
+Lee este fichero entero antes de tocar código. Es la fuente de verdad sobre el objetivo, las reglas y el estado del proyecto. Si algo del código contradice este fichero, avísame antes de cambiar nada.
+
+## 1. Quién soy y qué quiero
+
+Soy Victor, ingeniero de telecomunicaciones. Uso Cronometer para registrar lo que como, pero es lento. Quiero una app propia en mi iPhone para registrar comidas en segundos: dicto la comida con el teclado de iOS (por ejemplo "para comer 170 g de arroz, 2 huevos y una cucharada de aceite"), una IA la traduce a alimentos de MI catálogo con gramos, confirmo, y se guarda. Lo que más me importa es que los micronutrientes sean completos y fiables, al igual que los macronutrientes y kcal.
+
+Voy a pesar casi todo lo que como, así que la entrada principal será en gramos ("150 g de arroz"); las porciones ("2 huevos") son un complemento. Uso personal, un único usuario, coste cero.
+
+Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea principal será pulir al máximo mi CSV (alias, porciones, variantes, nutrientes) para que dictar sea lo más rápido y preciso posible, así que la app debe facilitar ese pulido.
+
+## 2. Reglas no negociables
+
+1. **Mi documento es la única base de datos de alimentos.** Un CSV (o JSON con el mismo esquema) que yo mantengo. La app NUNCA consulta USDA, Open Food Facts ni nada en internet para obtener nutrientes, ni en tiempo de ejecución ni como fallback.
+2. **La IA solo identifica alimento y cantidad.** Nunca calcula calorías ni nutrientes, nunca inventa alimentos. Lo que no está en el catálogo va a "no reconocido".
+3. **Los nutrientes los calcula el código**, de forma determinista: valor por 100 g del documento × gramos / 100.
+4. **Celda vacía = sin dato (null), nunca 0.** Un 0 escrito es un 0 real. Los totales deben distinguirlo y avisar cuando se basan en alimentos sin dato.
+5. **Siempre hay confirmación editable** antes de guardar (cambiar gramos, cambiar alimento, borrar o añadir líneas).
+6. **A internet solo viajan mi frase y la lista compacta** del catálogo (id, nombre, alias, porciones, estado, grupo, defecto). Nunca nutrientes ni el diario.
+7. **Ninguna clave ni token en el repositorio ni en el frontend.** La clave de Gemini es un secret del Worker.
+8. **Todo debe funcionar en Windows y en Linux.** Yo trabajo en Windows (PowerShell). Rutas siempre con `fileURLToPath` / `path.resolve`, nunca `new URL(...).pathname`.
+9. **Coste cero**: GitHub Pages, Cloudflare Workers (plan gratuito), API gratuita de Gemini.
+10. **La cuota de Gemini es gratuita pero limitada.** Una sola llamada por dictado (más el único reintento si el JSON es inválido). Nada de llamadas en segundo plano, de autocompletado ni en los tests (los tests usan siempre el modelo simulado). Un 429 se muestra con un mensaje claro, conserva el texto y deja añadir a mano. El nombre del modelo sigue en una sola variable.
+
+## 3. Arquitectura
+
+- `frontend/`: PWA estática (HTML/CSS/JS sin frameworks), instalable en iOS, offline salvo la llamada a la IA. Mobile-first y en español. La lógica pura está en `frontend/js/core/` (sin DOM, testeable con Node). La app solo habla con la IA a través de `interpretMeal({texto, alimentos})` en `ai-client.js`.
+- `worker/`: Cloudflare Worker. `POST /parse` y `GET /health`. CORS restringido a mi dominio, token en la cabecera `X-App-Token`, un reintento si el JSON es inválido, 429 si Gemini se queda sin cuota. Proveedor aislado en `worker/src/providers/gemini.js`. Prompt y esquema en `worker/src/prompt.js` (para ajustar el comportamiento de la IA se edita SOLO ese fichero). Modelo en la variable `GEMINI_MODEL` de `wrangler.toml`.
+- `scripts/`: herramientas que ejecuto yo en mi ordenador (`try-phrases.mjs` para probar frases con Gemini real; el script de USDA cuando exista). La app no depende de ellos.
+- `data/`: `settings.json` (31 nutrientes obligatorios y umbral), `nutrients.json`, `targets.json`, plantilla, ejemplo y `SCHEMA.md`.
+- `tests/`: `node --test`. Dependencias solo de desarrollo (`jsdom`, `fake-indexeddb`).
+- Diario y documento importado: IndexedDB en el iPhone.
+- **Hosting decidido**: GitHub Pages con el repositorio público, publicando la raíz del repo. Me da igual que mi lista de alimentos sea pública, así que `data/foods.csv` va en el repositorio y se carga por defecto en la primera ejecución. Importar un documento desde el iPhone sigue funcionando y tiene prioridad sobre el del repo. Las claves y el token, en cambio, nunca van al repositorio.
+
+## 4. Mi documento de alimentos
+
+- Una fila por alimento. Columnas clave: `id`, `nombre`, `alias` (separados por `|`), `porciones` (`nombre:gramos|...`), `estado`, `grupo`, `variante_por_defecto`, y una columna por nutriente en snake_case con la unidad en el nombre (`energia_kcal`, `vitamina_b12_ug`, `magnesio_mg`...), valores por 100 g.
+- Columnas de trabajo (`cantidad_habitual_g`, `dias_de_uso_en_8`, `termino_busqueda_usda`, `tipo`, `incluir`, `notas`) se conservan al importar y exportar y no entran en cálculos.
+- `incluir=no`: no se envía a la IA. Si lo dicto, el motivo es "Excluido del catálogo (incluir=no)" y la app ofrece activarlo con un toque.
+- **Completitud**: solo cuentan los 31 obligatorios de `data/settings.json`; umbral 80 % configurable. Los incompletos se marcan "pendiente de completar" y se avisa al usarlos.
+- Estados válidos: `crudo`, `cocinado`, `tostado`, `procesado`.
+- CSV de Excel en español (punto y coma, coma decimal) debe funcionar.
+
+### Regla de variantes (crudo por defecto)
+- Una fila por estado con ids distintos (`merluza_cruda` / `merluza_cocida`), mismo `grupo`.
+- Si no digo el estado, se usa la variante con `variante_por_defecto=si` (crudo).
+- Si el alimento tiene una sola variante, no se baja la confianza. Solo se baja un nivel si había varias variantes y no dije el estado.
+- La variante cocinada solo si digo cocido, cocinado, asado, hervido, frito, plancha, horno...
+- Excepción: "pistachos" es por defecto `pistachos_tostados_sin_sal`; crudos solo si lo digo.
+- La regla la aplica el código, no el modelo.
+
+### Cortes y partes distintas son alimentos distintos
+- La pechuga de pollo y el muslo de pollo son alimentos diferentes. Nunca se aproxima uno con otro, ni pollo con pavo.
+- Si digo "pollo" sin la parte y hay varias en el catálogo, va a no reconocido con motivo "ambiguo" para que elija en la confirmación.
+- Lo mismo para cualquier otro corte o especie.
+
+## 5. Estado actual (17-10-2026)
+
+- **Hitos 1, 2 y 3 hechos**: parser y validador, cálculo, completitud, porciones, Worker, validación de la IA, reglas de variantes, frontend (dictado, confirmación editable, guardado, importar documento, pantalla de conexión, PWA).
+- **128 tests pasan en Windows y Linux** (`npm install` y `npm test`).
+- **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Ha destapado tres fallos (ver sección 6).
+- **El catálogo no tiene nutrientes todavía**: los 63 alimentos están pendientes de completar. Sin el script de USDA, la app no puede calcular nada útil.
+- **No probado aún**: la app en un iPhone/Safari real, el despliegue del Worker y el hosting.
+- **Ya tengo**: la clave de Gemini y la clave de FoodData Central. Las pongo yo como variables de entorno; no me las pidas.
+
+## 6. Trabajo pendiente, en este orden
+
+Comprueba primero en el código si alguno ya está hecho; no lo repitas.
+
+1. **"Tomate frito" se trata como estado cocinado.** El modelo toma "frito" del propio nombre y da confianza baja con `variante_no_disponible`. Corrige el prompt (las palabras que forman parte del nombre o alias no son estado) y añade una comprobación en código que ignore `estado_dicho` si la palabra de estado está dentro del alias del alimento elegido. Tests con "tomate frito" (no es estado) y "pollo frito" (sí lo es).
+2. **"Pechuga de pollo" se asigna a `muslo_pollo_con_piel`.** Como pechuga de pollo, así que:
+   - Añade a mi `data/foods.csv` la fila `pechuga_pollo_cruda` (pechuga de pollo sin piel, cruda; alias `pechuga de pollo` (sin "pechuga" a secas: es ambiguo entre pollo y pavo); grupo propio; `termino_busqueda_usda` = "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw"). Tienes mi permiso para este cambio.
+   - Quita el alias genérico `pollo` del muslo (deja `muslo de pollo|contramuslo`).
+   - Refuerza el prompt según "Cortes y partes distintas" (sección 4): "pechuga de pollo" → `pechuga_pollo_cruda`; "pollo" a secas → ambiguo; nunca aproximar entre cortes o especies.
+   - Tests: "pechuga de pollo", "muslo de pollo", "pollo" a secas y "pechuga de pavo".
+3. **Mililitros.** "5 ml de aceite" devuelve 5 g. Añade la columna opcional `densidad_g_ml` (aceite de oliva 0.91, leche entera 1.03), documentada en `SCHEMA.md`. La conversión ml → g se hace en código; sin densidad, va a no reconocido con motivo "sin_densidad". Con tests.
+4. **Script de USDA** (`scripts/`, manual, fuera de la app): dado un `termino_busqueda_usda`, devuelve candidatos (fdcId, descripción, tipo de dato, nº de nutrientes obligatorios rellenos), priorizando Foundation y SR Legacy y ordenados por completitud; dado un `fdcId`, genera la fila en el formato de mi CSV para que yo la revise. La clave de FoodData Central va en la variable de entorno `USDA_API_KEY`. Debe poder procesar mi CSV entero en lote y dejarme un informe de qué alimentos quedan incompletos.
+5. **Hito 4 (MVP)**: diario con totales de kcal, macros y micros y % de objetivos (`targets.json`), plantillas, "copiar comida de ayer", editar y borrar registros pasados, editar y añadir alimentos desde la app, pantalla de pendientes de completar, exportar e importar diario y documento, y README con los pasos exactos de despliegue (clave de Gemini, `wrangler deploy`, secrets y token, GitHub Pages publicando la raíz del repo, instalar en iPhone, importar mi documento).
+6. **Después del MVP: pulir el CSV.** Herramientas para mejorar el catálogo con poco esfuerzo: ver qué frases dictadas acabaron en no reconocido o con confianza baja (registro local, sin enviar nada fuera) para añadir alias o alimentos; editar alias, porciones y densidad desde la app; e informe de completitud de nutrientes. No empieces esto hasta que te lo pida.
+
+## 7. Cómo quiero que trabajes
+
+- Antes de un cambio grande, explícame en pocas líneas qué vas a hacer y espera mi OK. Cambios pequeños y correcciones, hazlos directamente.
+- Después de cada cambio, ejecuta `npm test`. No des una tarea por terminada con tests fallando.
+- Cada fallo corregido lleva su test de regresión.
+- No añadas dependencias de ejecución sin preguntarme. Las de desarrollo, solo si hacen falta.
+- No toques mis datos reales (mi `foods.csv`) sin preguntarme. Puedes modificar los ficheros de ejemplo y los fixtures.
+- No ejecutes `wrangler deploy` ni nada que publique o gaste cuota sin pedírmelo.
+- Si algo que pido contradice estas reglas o es mala idea, dímelo antes de hacerlo.
+- Háblame en español, de forma directa y concisa. Al acabar, dime qué cambiaste, qué probaste y qué falta.
+- Si aprendemos algo nuevo sobre el proyecto (una decisión, una regla), propón actualizar este fichero.
