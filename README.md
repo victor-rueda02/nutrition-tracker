@@ -70,8 +70,10 @@ Worker.
    Haz commit y push.
 2. Inicia sesión en Cloudflare (se abre el navegador): `npx wrangler login`
 3. Comprueba que el Worker se empaqueta (no publica nada): `npm run worker:check`
-4. Publica: `npm run worker:deploy`. La primera vez Cloudflare te pide elegir un subdominio `*.workers.dev`. Al terminar
-   muestra la dirección del Worker: `https://nutrition-tracker-ai.TU-SUBDOMINIO.workers.dev`.
+4. Publica **desde tu terminal**: `npm run worker:deploy`. La primera vez te pregunta qué subdominio `*.workers.dev` quieres
+   para tu cuenta: responde que sí y escribe uno libre (letras, números y guiones). Si se lanza sin terminal interactiva,
+   intenta registrar uno por su cuenta y falla si ese nombre está ocupado: vuelve a ejecutarlo tú. Al terminar muestra la
+   dirección del Worker: `https://nutrition-tracker-ai.TU-SUBDOMINIO.workers.dev`.
 5. Genera el token compartido entre la app y el Worker y guárdalo en tu gestor de contraseñas: `npm run token`
 6. Pon los dos secretos (te los pide por teclado; pégalos y pulsa Intro):
 
