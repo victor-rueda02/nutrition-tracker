@@ -4,13 +4,15 @@ import { normalizeText } from './text.js';
 
 export const MAX_GRAMS = 2000; // por encima se pide confirmación
 
-// Alimento -> forma compacta que viaja a internet: id, nombre, alias, porciones y datos de variante.
+// Alimento -> forma compacta que viaja a internet: id, nombre, alias, porciones y datos de variante
+// (estado, grupo, defecto, peso_en_crudo). Nunca nutrientes ni densidad.
 export function toCompact(food) {
   const c = { id: food.id, nombre: food.nombre };
   if (food.alias?.length) c.alias = [...food.alias];
   if (food.porciones?.length) c.porciones = food.porciones.map((p) => ({ nombre: p.nombre, gramos: p.gramos }));
   if (food.estado) c.estado = food.estado;
   if (food.grupo) { c.grupo = food.grupo; c.defecto = food.varianteDefecto === true; }
+  if (food.pesoEnCrudo) c.peso_en_crudo = true; // solo si está marcado; lo necesita la regla de variantes del worker
   return c;
 }
 

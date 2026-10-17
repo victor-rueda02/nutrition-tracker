@@ -51,11 +51,26 @@ export function stripNameStates(text, food) {
   return { text: t, states };
 }
 
+// ¿El texto dicho contiene el nombre o algún alias de alguno de estos alimentos? Sin acentos, sin mayúsculas
+// y tolerando plurales por palabra ("tomates fritos" ~ "tomate frito", "macarrones" ~ "macarrón").
+const words = (s) => normalizeText(s).split(/[^a-z0-9ñ]+/).filter(Boolean);
+const sameWord = (a, b) => a === b || a === `${b}s` || b === `${a}s` || a === `${b}es` || b === `${a}es`;
+export function mentionsFood(text, foods) {
+  const t = words(text);
+  return foods.some((f) => [f.nombre, ...(f.alias ?? [])].some((term) => {
+    const w = words(term);
+    if (!w.length) return false;
+    for (let i = 0; i + w.length <= t.length; i++) if (w.every((x, j) => sameWord(t[i + j], x))) return true;
+    return false;
+  }));
+}
+
 // Reglas de variante (ver conversación del hito 2):
 //  - Una sola variante y no dice estado: se respeta todo, sin bajar la confianza.
 //  - Varias variantes y no dice estado: la marcada "defecto" (crudo) y confianza -1 nivel.
 //  - Dice estado (cocido, asado...): la variante de ese estado; si no existe, la de defecto con confianza "baja".
 //  - Las palabras de estado que son parte del nombre o alias del alimento elegido no cuentan (stripNameStates).
+//  - Alimento con peso_en_crudo: las palabras de cocinado se ignoran (se pesa en crudo).
 export function resolveVariant(item, index) {
   const flags = [];
   const modelFood = index.byId.get(item.food_id);
@@ -65,6 +80,10 @@ export function resolveVariant(item, index) {
   let said = detectEstado(stripped.text);
   let modelSaid = ['crudo', 'cocinado', 'tostado'].includes(item.estado_dicho) ? item.estado_dicho : null;
   if (!said && stripped.states.has(modelSaid)) modelSaid = null; // el modelo tomó el estado del propio nombre
+  // peso_en_crudo: "a la plancha" dice cómo lo cociné, no cómo lo pesé. Se queda en esta fila, sin bajar la confianza.
+  if (modelFood.peso_en_crudo && (said === 'cocinado' || (!said && modelSaid === 'cocinado'))) {
+    return { food_id: modelFood.id, confidence: item.confidence, flags: [] };
+  }
   let confidence = item.confidence;
 
   if (!said && modelSaid) { flags.push('estado_discrepante'); confidence = 'baja'; } // el modelo vio un estado que no consta en su fragmento
@@ -123,6 +142,16 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     const base = { food_id: raw.food_id, source_text: text, confidence: CONF.includes(raw.confidence) ? raw.confidence : 'baja', estado_dicho: raw.estado_dicho };
     const v = resolveVariant(base, index);
     const flags = [...v.flags];
+    let confidence = v.confidence;
+    // Lo dicho debe nombrar al alimento (o a una variante de su grupo): si no, el modelo eligió por su cuenta
+    // ("150 g de pechuga" -> pechuga de pollo). Se marca para confirmar; sirve también para descubrir alias que faltan.
+    const modelFood = index.byId.get(raw.food_id);
+    const family = modelFood.grupo ? index.groups.get(modelFood.grupo) : [modelFood];
+    if (!mentionsFood(text, [...family, index.byId.get(v.food_id)])) {
+      flags.push('sin_alias');
+      confidence = 'baja';
+      warnings.push(`${v.food_id}: "${text}" no coincide con tus alias`);
+    }
     // Volumen: aquí no se convierte (la densidad no viaja a internet); lo convierte la app al crear el borrador.
     const amount = unidad === 'ml' ? { grams: null, ml: qty } : { grams: qty };
     if (qty > maxGrams) { flags.push('gramos_altos'); warnings.push(`${v.food_id}: ${qty} ${unidad} supera ${maxGrams}, confirma la cantidad`); }
@@ -130,8 +159,8 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     if (v.flags.includes('variante_no_disponible')) warnings.push(`${raw.food_id}: dijiste un estado para el que no hay variante en el documento`);
     if (v.flags.includes('sin_variante_por_defecto')) warnings.push(`${raw.food_id}: grupo sin variante_por_defecto`);
     items.push({
-      food_id: v.food_id, ...amount, source_text: text, confidence: v.confidence, flags,
-      requiresConfirmation: v.confidence === 'baja' || flags.some((f) => ['gramos_altos', 'variante_no_disponible', 'estado_discrepante', 'unidad_discrepante'].includes(f)),
+      food_id: v.food_id, ...amount, source_text: text, confidence, flags,
+      requiresConfirmation: confidence === 'baja' || flags.some((f) => ['gramos_altos', 'variante_no_disponible', 'estado_discrepante', 'unidad_discrepante', 'sin_alias'].includes(f)),
     });
   }
   return { items, unmatched, warnings };

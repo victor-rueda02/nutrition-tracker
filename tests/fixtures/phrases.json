@@ -47,5 +47,14 @@
     "modelo_simulado": { "items": [
       { "food_id": "aceite_oliva", "cantidad": 5, "unidad": "ml", "source_text": "5 ml de aceite", "confidence": "alta", "estado_dicho": "ninguno" },
       { "food_id": "leche_entera", "cantidad": 200, "unidad": "ml", "source_text": "200 ml de leche", "confidence": "alta", "estado_dicho": "ninguno" } ], "unmatched": [] },
-    "esperado": { "items": [ ["aceite_oliva", null, "alta"], ["leche_entera", null, "alta"] ], "unmatched": [] } }
+    "esperado": { "items": [ ["aceite_oliva", null, "alta"], ["leche_entera", null, "alta"] ], "unmatched": [] } },
+  { "frase": "180 g de pollo, 100 g de pavo y 150 g de pechuga",
+    "modelo_simulado": { "items": [
+      { "food_id": "pechuga_pollo_cruda", "cantidad": 150, "unidad": "g", "source_text": "150 g de pechuga", "confidence": "alta", "estado_dicho": "ninguno" } ],
+      "unmatched": [ { "text": "180 g de pollo", "motivo": "ambiguo" }, { "text": "100 g de pavo", "motivo": "ambiguo" } ] },
+    "esperado": { "items": [ ["pechuga_pollo_cruda", 150, "baja"] ], "unmatched": [ ["180 g de pollo", "ambiguo"], ["100 g de pavo", "ambiguo"] ] } },
+  { "frase": "200 g de pechuga de pollo a la plancha",
+    "modelo_simulado": { "items": [
+      { "food_id": "pechuga_pollo_cruda", "cantidad": 200, "unidad": "g", "source_text": "200 g de pechuga de pollo a la plancha", "confidence": "alta", "estado_dicho": "cocinado" } ], "unmatched": [] },
+    "esperado": { "items": [ ["pechuga_pollo_cruda", 200, "alta"] ], "unmatched": [] } }
 ]

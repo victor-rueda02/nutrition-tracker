@@ -46,6 +46,7 @@ function sanitizeFoods(list) {
     }
     if (typeof f.estado === 'string' && f.estado) c.estado = f.estado;
     if (typeof f.grupo === 'string' && f.grupo) { c.grupo = f.grupo; c.defecto = f.defecto === true; }
+    if (f.peso_en_crudo === true) c.peso_en_crudo = true;
     out.push(c);
   }
   return out;

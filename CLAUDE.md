@@ -17,7 +17,7 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 3. **Los nutrientes los calcula el código**, de forma determinista: valor por 100 g del documento × gramos / 100.
 4. **Celda vacía = sin dato (null), nunca 0.** Un 0 escrito es un 0 real. Los totales deben distinguirlo y avisar cuando se basan en alimentos sin dato.
 5. **Siempre hay confirmación editable** antes de guardar (cambiar gramos, cambiar alimento, borrar o añadir líneas).
-6. **A internet solo viajan mi frase y la lista compacta** del catálogo (id, nombre, alias, porciones, estado, grupo, defecto). Nunca nutrientes ni el diario.
+6. **A internet solo viajan mi frase y la lista compacta** del catálogo (id, nombre, alias, porciones, estado, grupo, defecto y `peso_en_crudo` cuando está marcado). Nunca nutrientes, densidad ni el diario.
 7. **Ninguna clave ni token en el repositorio ni en el frontend.** La clave de Gemini es un secret del Worker.
 8. **Todo debe funcionar en Windows y en Linux.** Yo trabajo en Windows (PowerShell). Rutas siempre con `fileURLToPath` / `path.resolve`, nunca `new URL(...).pathname`.
 9. **Coste cero**: GitHub Pages, Cloudflare Workers (plan gratuito), API gratuita de Gemini.
@@ -48,7 +48,13 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 - Si el alimento tiene una sola variante, no se baja la confianza. Solo se baja un nivel si había varias variantes y no dije el estado.
 - La variante cocinada solo si digo cocido, cocinado, asado, hervido, frito, plancha, horno...
 - Excepción: "pistachos" es por defecto `pistachos_tostados_sin_sal`; crudos solo si lo digo.
+- **Peso en crudo**: si un alimento tiene `peso_en_crudo=si`, lo peso siempre en crudo aunque diga cómo lo cociné ("pechuga de pollo a la plancha"): las palabras de cocinado se ignoran, se queda en esa fila, sin bajar la confianza y sin el aviso "variante no disponible". Marcado en `pechuga_pollo_cruda`; lo iré aplicando a otros al pulir el CSV.
+- Las palabras de estado que forman parte del nombre o de un alias ("tomate frito") no son estado, salvo que coincidan con el estado del propio alimento ("pistachos crudos").
 - La regla la aplica el código, no el modelo.
+
+### Lo dicho debe coincidir con el alimento
+- Si lo que dije no contiene el nombre ni ningún alias del alimento elegido (ni de otra variante de su grupo), la línea pasa a confianza baja con el aviso "no coincide con tus alias" y pide confirmación. La comparación ignora acentos, mayúsculas y plurales.
+- En "no reconocido", el texto es el fragmento exacto con su cantidad ("180 g de pollo"); al elegir el alimento, los gramos se rellenan solos.
 
 ### Cortes y partes distintas son alimentos distintos
 - La pechuga de pollo y el muslo de pollo son alimentos diferentes. Nunca se aproxima uno con otro, ni pollo con pavo.
@@ -58,8 +64,8 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 ## 5. Estado actual (17-10-2026)
 
 - **Hitos 1, 2 y 3 hechos**: parser y validador, cálculo, completitud, porciones, Worker, validación de la IA, reglas de variantes, frontend (dictado, confirmación editable, guardado, importar documento, pantalla de conexión, PWA).
-- **142 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
-- **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Destapó tres fallos, ya corregidos (puntos 1–3 de la sección 6): palabras de estado dentro del nombre ("tomate frito"), cortes y especies (`pechuga_pollo_cruda`; "pollo", "pavo" y "pechuga" a secas son ambiguos) y mililitros (el modelo devuelve `cantidad` + `unidad`; la app convierte ml → g con `densidad_g_ml`, que no viaja a la IA). Pendiente de volver a probar esas correcciones con Gemini real.
+- **153 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
+- **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Destapó tres fallos, ya corregidos (puntos 1–3 de la sección 6): palabras de estado dentro del nombre ("tomate frito"), cortes y especies (`pechuga_pollo_cruda`; "pollo", "pavo" y "pechuga" a secas son ambiguos) y mililitros (el modelo devuelve `cantidad` + `unidad`; la app convierte ml → g con `densidad_g_ml`, que no viaja a la IA). Reprobado con Gemini real: "150 g de pechuga" acababa en pechuga de pollo; corregido con el prompt y la comprobación de alias (sección 4). Añadida la columna `peso_en_crudo`.
 - **El catálogo no tiene nutrientes todavía**: los 64 alimentos están pendientes de completar. Sin el script de USDA, la app no puede calcular nada útil.
 - **Repositorio git** creado en local (rama `main`). Aún no está en GitHub.
 - **`try-phrases.mjs`** toma el modelo de `GEMINI_MODEL` en `worker/wrangler.toml` (o de la variable de entorno del mismo nombre).
@@ -79,7 +85,7 @@ Comprueba primero en el código si alguno ya está hecho; no lo repitas.
 3. **Mililitros.** "5 ml de aceite" devuelve 5 g. Añade la columna opcional `densidad_g_ml` (aceite de oliva 0.91, leche entera 1.03), documentada en `SCHEMA.md`. La conversión ml → g se hace en código; sin densidad, va a no reconocido con motivo "sin_densidad". Con tests.
 4. **Script de USDA** (`scripts/`, manual, fuera de la app): dado un `termino_busqueda_usda`, devuelve candidatos (fdcId, descripción, tipo de dato, nº de nutrientes obligatorios rellenos), priorizando Foundation y SR Legacy y ordenados por completitud; dado un `fdcId`, genera la fila en el formato de mi CSV para que yo la revise. La clave de FoodData Central va en la variable de entorno `USDA_API_KEY`. Debe poder procesar mi CSV entero en lote y dejarme un informe de qué alimentos quedan incompletos.
 5. **Hito 4 (MVP)**: diario con totales de kcal, macros y micros y % de objetivos (`targets.json`), plantillas, "copiar comida de ayer", editar y borrar registros pasados, editar y añadir alimentos desde la app, pantalla de pendientes de completar, exportar e importar diario y documento, y README con los pasos exactos de despliegue (clave de Gemini, `wrangler deploy`, secrets y token, GitHub Pages publicando la raíz del repo, instalar en iPhone, importar mi documento).
-6. **Después del MVP: pulir el CSV.** Herramientas para mejorar el catálogo con poco esfuerzo: ver qué frases dictadas acabaron en no reconocido o con confianza baja (registro local, sin enviar nada fuera) para añadir alias o alimentos; editar alias, porciones y densidad desde la app; e informe de completitud de nutrientes. No empieces esto hasta que te lo pida.
+6. **Después del MVP: pulir el CSV.** Herramientas para mejorar el catálogo con poco esfuerzo: ver qué frases dictadas acabaron en no reconocido, con confianza baja o con el aviso "no coincide con tus alias" (`sin_alias`) (registro local, sin enviar nada fuera) para añadir alias o alimentos; editar alias, porciones y densidad desde la app; e informe de completitud de nutrientes. No empieces esto hasta que te lo pida.
 
 ## 7. Cómo quiero que trabajes
 

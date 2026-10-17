@@ -1,7 +1,7 @@
 // Esquema del documento de alimentos (ver data/SCHEMA.md).
 
 // Columnas básicas, en el orden en que se exportan.
-export const CORE_COLUMNS = ['id', 'nombre', 'alias', 'porciones', 'estado', 'variante_por_defecto', 'grupo', 'densidad_g_ml'];
+export const CORE_COLUMNS = ['id', 'nombre', 'alias', 'porciones', 'estado', 'variante_por_defecto', 'grupo', 'densidad_g_ml', 'peso_en_crudo'];
 
 // Densidad (g/ml) para convertir volúmenes. Fuera de este rango se avisa (casi seguro un error de unidad).
 export const DENSIDAD_RANGO = [0.3, 2.5];

@@ -132,10 +132,14 @@ function buildFoods(table, columns, nHeaders, catalog, report, delimiter) {
       if (densidad < DENSIDAD_RANGO[0] || densidad > DENSIDAD_RANGO[1]) warn('densidad_g_ml', `densidad ${densidad} g/ml fuera de lo habitual (${DENSIDAD_RANGO.join('–')}): ¿error de unidad?`);
     }
 
+    // peso_en_crudo: si = lo peso siempre en crudo; las palabras de cocinado no cambian de variante. Vacío = no.
+    const crudo = parseBool(val.peso_en_crudo);
+    if (crudo.invalid) warn('peso_en_crudo', `valor "${val.peso_en_crudo}" no válido (usa si/no); se toma como no`);
+
     const extra = {};
     for (const h of extraHeaders) if (val[h]) extra[h] = val[h];
 
-    foods.push({ id, nombre: val.nombre, alias, porciones, estado, varianteDefecto: bool.value, grupo, densidad, nutrients, extra });
+    foods.push({ id, nombre: val.nombre, alias, porciones, estado, varianteDefecto: bool.value, grupo, densidad, pesoEnCrudo: crudo.value === true, nutrients, extra });
   });
   return { foods, extraHeaders };
 }
@@ -247,7 +251,7 @@ export function foodsToCSV(foods, { catalog, extraHeaders = [], delimiter = ',',
     rows.push([
       f.id, f.nombre, f.alias.join('|'), serializePortions(f.porciones), f.estado,
       f.varianteDefecto === true ? 'si' : f.varianteDefecto === false ? 'no' : '', f.grupo,
-      typeof f.densidad === 'number' ? f.densidad : '',
+      typeof f.densidad === 'number' ? f.densidad : '', f.pesoEnCrudo ? 'si' : '',
       ...catalog.keys.map((k) => (typeof f.nutrients[k] === 'number' ? f.nutrients[k] : '')),
       ...extraHeaders.map((h) => f.extra[h] ?? ''),
     ]);
@@ -258,7 +262,7 @@ export function foodsToCSV(foods, { catalog, extraHeaders = [], delimiter = ',',
 export function foodsToJSON(foods) {
   const out = foods.map((f) => ({
     id: f.id, nombre: f.nombre, alias: f.alias, porciones: f.porciones, estado: f.estado,
-    variante_por_defecto: f.varianteDefecto, grupo: f.grupo, densidad_g_ml: f.densidad ?? null, ...f.nutrients, ...f.extra,
+    variante_por_defecto: f.varianteDefecto, grupo: f.grupo, densidad_g_ml: f.densidad ?? null, peso_en_crudo: f.pesoEnCrudo === true, ...f.nutrients, ...f.extra,
   }));
   return JSON.stringify({ formatVersion: 1, foods: out }, null, 2);
 }

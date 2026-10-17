@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { detectVolumen, toCompact } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, stripNameStates } from '../frontend/js/core/ai-validate.js';
-import { createDraft, mlToGrams, resolveUnmatched, lineProblem } from '../frontend/js/core/draft.js';
+import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText } from '../frontend/js/core/draft.js';
 import { parseFoodsCSV, foodsToCSV, foodsToJSON } from '../frontend/js/core/foods-parser.js';
 import { normalizeText } from '../frontend/js/core/text.js';
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA } from '../worker/src/prompt.js';
@@ -34,11 +34,12 @@ test('pollo frito: "frito" sí es estado cuando no forma parte del nombre', () =
   const r = one(line('pollo_crudo', '200 g de pollo frito', { estado_dicho: 'cocinado' }), list);
   assert.equal(r.food_id, 'pollo_cocinado');
   assert.equal(r.confidence, 'alta');
-  // En el documento real solo hay pechuga cruda: dijo un estado sin variante -> baja y aviso.
-  const p = run([line('pechuga_pollo_cruda', '200 g de pechuga de pollo frita', { estado_dicho: 'cocinado' })]);
-  assert.equal(p.items[0].food_id, 'pechuga_pollo_cruda');
-  assert.equal(p.items[0].confidence, 'baja');
-  assert.ok(p.items[0].flags.includes('variante_no_disponible'));
+  // En el documento real, un alimento sin variante cocinada ni peso_en_crudo: estado sin variante -> baja y aviso.
+  const p = run([line('merluza_cruda', '200 g de merluza frita', { estado_dicho: 'cocinado' })]);
+  assert.equal(p.items[0].food_id, 'merluza_cocida'); // merluza sí tiene variante cocinada
+  const k = run([line('kiwi_verde', 'un kiwi frito', { estado_dicho: 'cocinado' })]);
+  assert.equal(k.items[0].confidence, 'baja');
+  assert.ok(k.items[0].flags.includes('variante_no_disponible'));
 });
 
 test('el estado del propio alimento en su alias sí cuenta ("pistachos crudos", "merluza cruda")', () => {
@@ -134,4 +135,88 @@ test('app: más de 2000 g tras convertir ml exige confirmación', () => {
   const d = draftOf([line('leche_entera', '2 litros de leche', { cantidad: 2000, unidad: 'ml' })]);
   assert.equal(d.lines[0].grams, 2060);
   assert.equal(lineProblem(d.lines[0]), 'gramos_altos');
+});
+
+// ---------- Frase 3 con Gemini real: "150 g de pechuga" acabó en pechuga de pollo con confianza alta ----------
+test('lo dicho no nombra al alimento elegido: confianza baja, aviso "no coincide con tus alias" y confirmación', () => {
+  const r = run([line('pechuga_pollo_cruda', '150 g de pechuga', { cantidad: 150 })]);
+  assert.equal(r.items[0].food_id, 'pechuga_pollo_cruda');
+  assert.equal(r.items[0].confidence, 'baja');
+  assert.ok(r.items[0].flags.includes('sin_alias'));
+  assert.equal(r.items[0].requiresConfirmation, true);
+  assert.deepEqual(r.warnings, ['pechuga_pollo_cruda: "150 g de pechuga" no coincide con tus alias']);
+});
+
+test('coincidencia con nombre o alias: sin acentos, sin mayúsculas, con plurales y con variantes del grupo', () => {
+  const ok = [
+    ['pechuga_pollo_cruda', '200 G DE PECHUGAS DE POLLO'],
+    ['salsa_tomate_frito', 'unos tomates fritos'],
+    ['jamon_curado', '30 g de jamon serrano'],
+    ['pistachos_crudos', 'un puñado de pistachos'], // "pistachos" es alias de otra variante del grupo
+    ['merluza_cocida', 'merluza'],
+    ['pasta_seca', '125 g de macarrón'],
+    ['pasta_seca', '125 g de macarrones'],
+    ['huevo', '2 huevos'],
+    ['leche_entera', '2500 g de leche entera'],
+  ];
+  for (const [id, text] of ok) assert.ok(!one(line(id, text)).flags.includes('sin_alias'), text);
+  for (const [id, text] of [['muslo_pollo_con_piel', '180 g de pollo'], ['pechuga_pavo_cruda', '100 g de pavo'], ['kiwi_verde', 'una fruta']]) {
+    assert.ok(one(line(id, text)).flags.includes('sin_alias'), text);
+  }
+});
+
+test('prompt: "pechuga" a secas es ambiguo y los no reconocidos llevan su cantidad', () => {
+  for (const s of ['"Pechuga" a secas SIEMPRE es ambiguo', '"150 g de pechuga"', 'nunca solo "pollo"']) assert.ok(SYSTEM_PROMPT.includes(s), s);
+});
+
+test('gramos del texto de un no reconocido: se rellenan al elegir el alimento', () => {
+  const aceite = byId.get('aceite_oliva');
+  assert.equal(gramsFromText('180 g de pollo'), 180);
+  assert.equal(gramsFromText('180 gramos de pollo'), 180);
+  assert.equal(gramsFromText('0,5 kg de arroz'), 500);
+  assert.equal(gramsFromText('20 ml de aceite', aceite), 18.2);
+  assert.equal(gramsFromText('20 ml de tomate frito', byId.get('salsa_tomate_frito')), null); // sin densidad
+  for (const t of ['un puñado de pistachos', '100 g de pavo y 50 g de pollo', 'pollo', '']) assert.equal(gramsFromText(t), null, t);
+  const d = createDraft({ meal: 'comida', result: { items: [], unmatched: [{ text: '180 g de pollo', motivo: 'ambiguo' }], warnings: [] }, foodsById: byId });
+  const r = resolveUnmatched(d, 0, 'pechuga_pollo_cruda', null, byId.get('pechuga_pollo_cruda'));
+  assert.deepEqual([r.lines[0].food_id, r.lines[0].grams, r.lines[0].source_text], ['pechuga_pollo_cruda', 180, '180 g de pollo']);
+  assert.equal(resolveUnmatched(d, 0, 'pechuga_pollo_cruda', 200).lines[0].grams, 200); // los gramos dados mandan
+});
+
+// ---------- peso_en_crudo: "a la plancha" dice cómo lo cociné, no cómo lo pesé ----------
+test('peso_en_crudo: pechuga de pollo a la plancha se queda en cruda, confianza alta y sin avisos', () => {
+  for (const estado_dicho of ['cocinado', 'ninguno']) {
+    const r = run([line('pechuga_pollo_cruda', '200 g de pechuga de pollo a la plancha', { cantidad: 200, estado_dicho })]);
+    assert.deepEqual([r.items[0].food_id, r.items[0].grams, r.items[0].confidence], ['pechuga_pollo_cruda', 200, 'alta'], estado_dicho);
+    assert.deepEqual(r.items[0].flags, []);
+    assert.equal(r.items[0].requiresConfirmation, false);
+    assert.deepEqual(r.warnings, []);
+  }
+});
+
+test('sin peso_en_crudo, el arroz cocido sigue avisando', () => {
+  const r = run([line('arroz_blanco_crudo', '150 g de arroz cocido', { cantidad: 150, estado_dicho: 'cocinado' })]);
+  assert.equal(r.items[0].confidence, 'baja');
+  assert.ok(r.items[0].flags.includes('variante_no_disponible'));
+  assert.equal(r.warnings.length, 1);
+});
+
+test('peso_en_crudo con variante cocinada en el grupo: se queda en la fila marcada', () => {
+  const list = [{ id: 'a_crudo', nombre: 'A', estado: 'crudo', grupo: 'a', defecto: true, peso_en_crudo: true },
+    { id: 'a_cocido', nombre: 'A', estado: 'cocinado', grupo: 'a', defecto: false }];
+  const r = one(line('a_crudo', 'a al horno', { estado_dicho: 'cocinado' }), list);
+  assert.deepEqual([r.food_id, r.confidence, r.flags], ['a_crudo', 'alta', []]);
+});
+
+test('peso_en_crudo: columna si/no (vacío = no), se exporta y solo viaja a la IA si está marcado', () => {
+  assert.equal(byId.get('pechuga_pollo_cruda').pesoEnCrudo, true);
+  assert.equal(realFoods.filter((f) => f.pesoEnCrudo).length, 1);
+  assert.equal(realList.find((f) => f.id === 'pechuga_pollo_cruda').peso_en_crudo, true);
+  assert.ok(realList.filter((f) => f.id !== 'pechuga_pollo_cruda').every((f) => !('peso_en_crudo' in f)));
+
+  const r = parseFoodsCSV(csv('id,nombre,peso_en_crudo', 'a,A,si', 'b,B,no', 'c,C,', 'd,D,quizá'), { catalog });
+  assert.deepEqual(r.foods.map((f) => f.pesoEnCrudo), [true, false, false, false]);
+  assert.equal(r.report.warnings.filter((w) => w.field === 'peso_en_crudo').length, 1);
+  assert.deepEqual(parseFoodsCSV(foodsToCSV(r.foods, { catalog }), { catalog }).foods.map((f) => f.pesoEnCrudo), [true, false, false, false]);
+  assert.deepEqual(JSON.parse(foodsToJSON(r.foods)).foods.map((f) => f.peso_en_crudo), [true, false, false, false]);
 });

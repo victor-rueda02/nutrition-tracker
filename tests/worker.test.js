@@ -67,13 +67,14 @@ test('flujo correcto: devuelve JSON validado; la clave no aparece en la respuest
 });
 
 test('al proveedor solo viaja la frase y la lista compacta: los nutrientes se eliminan aunque el cliente los envíe', async () => {
-  const sucio = realList.map((f) => ({ ...f, nutrients: { proteina_g: 12.5 }, energia_kcal: 777, extra: { notas: 'secreto' } }));
+  const sucio = realList.map((f) => ({ ...f, nutrients: { proteina_g: 12.5 }, energia_kcal: 777, densidad: 9.87, extra: { notas: 'secreto' } }));
   const cm = model(good);
   await handleRequest(req({ body: { texto: 'un kiwi', alimentos: sucio, diario: [{ dia: '2026-10-16' }] } }), env, { callModel: cm });
   const { user, system } = cm.calls[0].args;
-  for (const leak of ['proteina_g', '12.5', '777', 'secreto', 'nutrients', '2026-10-16', 'CLAVE-SECRETA-XYZ']) { assert.ok(!user.includes(leak), leak); assert.ok(!system.includes(leak), leak); }
+  for (const leak of ['proteina_g', '12.5', '777', 'secreto', 'nutrients', '2026-10-16', 'CLAVE-SECRETA-XYZ', '9.87', 'densidad']) { assert.ok(!user.includes(leak), leak); assert.ok(!system.includes(leak), leak); }
   assert.ok(user.includes('un kiwi'));
   assert.ok(user.includes('"id":"kiwi_verde"'));
+  assert.ok(user.includes('"peso_en_crudo":true')); // dato de variante permitido (regla 6)
 });
 
 test('reintenta UNA vez si el JSON es inválido', async () => {

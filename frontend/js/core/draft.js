@@ -4,6 +4,7 @@ import { parseNumber } from './numbers.js';
 import { MAX_GRAMS } from './ai-contract.js';
 import { sumLines } from './nutrients.js';
 import { madridNow } from './meal-defaults.js';
+import { normalizeText } from './text.js';
 
 const mapLine = (d, key, fn) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? fn(l) : l)) });
 const newLine = (d, food_id, grams = null, source_text = '', confidence = 'manual') => {
@@ -59,10 +60,26 @@ export function addLine(d, food_id, grams = null, source_text = '') {
 
 export const dropUnmatched = (d, index) => ({ ...d, unmatched: d.unmatched.filter((_, i) => i !== index) });
 
-// Un "no reconocido" resuelto con un alimento del documento pasa a ser una línea (sin gramos si no se conocen).
-export function resolveUnmatched(d, index, food_id, grams = null) {
+// Gramos escritos en el texto de una línea ("180 g de pollo", "0,5 kg", "20 ml" con densidad). Solo si hay UNA
+// cantidad clara; si no, null y se teclean a mano. Determinista: no adivina "un puñado" ni "medio kilo".
+const QTY = /(\d+(?:[.,]\d+)?)\s*(g|gr|grs|gramos?|kg|kilos?|kilogramos?|ml|mililitros?)\b/g;
+export function gramsFromText(text, food = null) {
+  const found = [...normalizeText(text).matchAll(QTY)];
+  if (found.length !== 1) return null;
+  const n = parseNumber(found[0][1]);
+  if (n.status !== 'ok' || !(n.value > 0)) return null;
+  const unit = found[0][2];
+  if (unit.startsWith('k')) return n.value * 1000;
+  if (unit.startsWith('m')) return positive(food?.densidad) ? mlToGrams(n.value, food.densidad) : null;
+  return n.value;
+}
+
+// Un "no reconocido" resuelto con un alimento del documento pasa a ser una línea. Si no se dan los gramos,
+// se toman del texto dicho cuando lo dice claro ("180 g de pollo" -> 180); si no, la línea queda sin gramos.
+export function resolveUnmatched(d, index, food_id, grams = null, food = null) {
   const u = d.unmatched[index];
-  return addLine(dropUnmatched(d, index), food_id, grams, u?.text ?? '');
+  const g = grams ?? gramsFromText(u?.text ?? '', food);
+  return addLine(dropUnmatched(d, index), food_id, g, u?.text ?? '');
 }
 
 export function lineProblem(line) {

@@ -19,6 +19,7 @@ const FLAG_TEXT = {
   gramos_altos: 'Cantidad muy alta: confírmala',
   convertido_ml: 'Convertido de ml a g con la densidad de tu documento',
   unidad_discrepante: 'Dijiste un volumen pero la IA lo pasó como gramos: revisa la cantidad',
+  sin_alias: 'No coincide con tus alias: revisa que sea este alimento',
 };
 const MOTIVO_TEXT = { no_en_catalogo: 'No está en tu documento', ambiguo: 'No lo tengo claro', sin_porcion: 'Falta la cantidad en gramos', excluido_catalogo: 'Excluido del catálogo (incluir=no)', sin_densidad: 'Dijiste ml y este alimento no tiene densidad_g_ml en tu documento' };
 const MEAL_LABEL = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena', otro: 'Otro' };
@@ -255,13 +256,13 @@ export function mountApp(root, deps) {
       const actions = [];
       if (u.food_id && byId().has(u.food_id)) {
         const f = byId().get(u.food_id);
-        actions.push(h('button', { class: 'secondary', onclick: () => { state.draft = resolveUnmatched(state.draft, i, u.food_id); render(); } }, `Poner gramos de «${f.nombre}»`));
+        actions.push(h('button', { class: 'secondary', onclick: () => { state.draft = resolveUnmatched(state.draft, i, u.food_id, null, f); render(); } }, `Poner gramos de «${f.nombre}»`));
       }
       for (const id of u.candidates ?? []) {
         const f = byId().get(id);
         if (f) actions.push(h('button', { class: 'secondary', onclick: () => track((async () => { await activate(id); await reprocess(); })()) }, `Activar «${f.nombre}»`));
       }
-      actions.push(h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Buscar en mi documento', onPick: (f) => { state.draft = resolveUnmatched(state.draft, i, f.id); render(); } }) }, 'Buscar en mi documento'));
+      actions.push(h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Buscar en mi documento', onPick: (f) => { state.draft = resolveUnmatched(state.draft, i, f.id, null, f); render(); } }) }, 'Buscar en mi documento'));
       actions.push(h('button', { class: 'link', onclick: () => { state.draft = dropUnmatched(state.draft, i); render(); } }, 'Descartar'));
       return h('li', { class: 'card unmatched' }, h('div', {}, `«${u.text}»`), h('div', { class: 'muted small' }, MOTIVO_TEXT[u.motivo] ?? u.motivo), h('div', { class: 'row wrap' }, actions));
     };

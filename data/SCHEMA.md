@@ -20,6 +20,7 @@ Es la única fuente de nutrientes de la app. La app no consulta ninguna base de 
 | `variante_por_defecto` | no | `si`/`no`. Qué variante se elige cuando no dices el estado. |
 | `grupo` | no | Slug común a las variantes del mismo alimento (`arroz_blanco` para `arroz_blanco_crudo` y `arroz_blanco_cocido`). Con 2 o más miembros, debe haber exactamente una con `variante_por_defecto=si`. |
 | `densidad_g_ml` | no | Gramos por mililitro (`0.91` aceite de oliva, `1.03` leche entera). Si dictas un volumen ("5 ml de aceite"), la app lo convierte a gramos con este valor: gramos = ml × densidad. Sin densidad, la línea va a "no reconocido" con motivo `sin_densidad` y pones los gramos a mano. La densidad no se envía a la IA. Un valor no numérico o ≤ 0 se ignora con aviso; fuera de 0,3–2,5 se avisa. |
+| `peso_en_crudo` | no | `si`/`no` (vacío = `no`). `si` = este alimento lo pesas siempre en crudo: si dictas "a la plancha", "al horno"... se queda en esta fila, sin bajar la confianza ni avisar ("a la plancha" dice cómo lo cocinaste, no cómo lo pesaste). Se envía a la IA solo cuando es `si`. |
 
 ## Columnas de nutrientes (valor por 100 g)
 Nombre en `snake_case` con la unidad al final: `_g`, `_mg`, `_ug` (µg) o `_kcal`. La lista completa y las etiquetas
