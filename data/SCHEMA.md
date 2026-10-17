@@ -28,7 +28,7 @@ están en `data/nutrients.json` (61 columnas: energía, macros, grasas, vitamina
 Para añadir un nutriente, añade una entrada a ese fichero.
 
 ## Columnas de trabajo y desconocidas
-`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8` se conservan al
+`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id` y `fuente_usda` (las dos últimas las rellena `scripts/usda.mjs`: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron) se conservan al
 importar y exportar y no intervienen en ningún cálculo. Cualquier otra cabecera desconocida también se conserva,
 con un aviso (si parece un nutriente con la unidad cambiada, el aviso sugiere la correcta).
 

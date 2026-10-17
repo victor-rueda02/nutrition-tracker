@@ -9,3 +9,6 @@ node_modules/
 
 # Estado local de wrangler
 .wrangler/
+
+# Caché de respuestas de USDA (scripts/usda.mjs)
+usda/cache/

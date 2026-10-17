@@ -12,6 +12,7 @@ export const LEGACY_HEADERS = { porciones_sugeridas: 'porciones' };
 // Columnas de trabajo: se conservan al importar/exportar y no intervienen en ningún cálculo.
 export const WORK_COLUMNS = [
   'termino_busqueda_usda', 'tipo', 'incluir', 'notas', 'cantidad_habitual_g', 'dias_de_uso_en_8',
+  'fdc_id', 'fuente_usda', // los rellena scripts/usda.mjs (de dónde sale cada dato)
 ];
 
 export const ESTADOS = ['crudo', 'cocinado', 'procesado', 'tostado'];
