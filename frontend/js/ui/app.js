@@ -1,4 +1,5 @@
-// Interfaz: pantallas Inicio (dictado) -> Confirmación (editable) -> Guardar, más Documento (importar + conexión) y Hoy.
+// Interfaz: pantallas Inicio (dictado) -> Confirmación (editable) -> Guardar, más Diario (totales del día frente a los
+// objetivos), Objetivos y Documento (importar + conexión).
 // Sin frameworks: DOM con textContent (nunca innerHTML con datos). Toda la lógica de negocio está en js/core.
 import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
@@ -9,6 +10,9 @@ import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
+import { loadTargets, resolveTargets, referenceValue } from '../core/targets.js';
+import { diaryReport, shiftDate } from '../core/diary.js';
+import { parseNumber } from '../core/numbers.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -25,16 +29,30 @@ const MOTIVO_TEXT = { no_en_catalogo: 'No está en tu documento', ambiguo: 'No l
 const MEAL_LABEL = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena', otro: 'Otro' };
 const nf0 = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 });
 const nf1 = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
+const UNIT_LABEL = { g: 'g', mg: 'mg', ug: 'µg', kcal: 'kcal' };
+// Decimales según el tamaño: 2.350 kcal, 61,2 g, 0,84 mg.
+const fmtNum = (v, unit) => (unit === 'kcal' || Math.abs(v) >= 100 ? nf0 : Math.abs(v) >= 10 ? nf1 : nf2).format(v);
+const fmtQty = (v, unit) => `${fmtNum(v, unit)} ${UNIT_LABEL[unit] ?? unit}`;
+const MACROS = ['energia_kcal', 'proteina_g', 'grasa_total_g', 'grasas_saturadas_g', 'hidratos_g', 'azucares_g', 'fibra_g'];
+const ESTADO_TEXT = {
+  cumplido: 'Objetivo cumplido', por_debajo: 'Por debajo', dentro: 'Dentro del máximo', excedido: 'Por encima del máximo',
+  en_objetivo: 'En objetivo', por_encima: 'Por encima', sin_dato: 'Sin dato', sin_objetivo: '',
+};
+const TIPO_TEXT = { min: 'al menos', max: 'como mucho', objetivo: 'objetivo' };
 
-// deps: { store, createAiClient, catalog, settings, initial: { foods, extraHeaders, docName }, conn, now, idGen, readFile }
+// deps: { store, createAiClient, catalog, settings, targets (data/targets.json), objetivos (los tuyos, del almacén),
+//         initial: { foods, extraHeaders, docName }, conn, now, idGen, readFile }
 export function mountApp(root, deps) {
   const doc = root.ownerDocument;
   const now = deps.now ?? (() => new Date());
   const readFile = deps.readFile ?? ((f) => f.text());
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
-    text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, today: [],
+    text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) },
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) },
   };
+  const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
   const track = (p) => { pending = pending.then(() => p, () => p); return p; };
   const whenIdle = async () => { let last; do { last = pending; await last.catch(() => {}); } while (last !== pending); };
@@ -49,7 +67,7 @@ export function mountApp(root, deps) {
       else if (['checked', 'disabled', 'selected'].includes(k)) e[k] = !!v;
       else e.setAttribute(k, v === true ? '' : v);
     }
-    for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : doc.createTextNode(String(c)));
+    for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) e.append(c.nodeType ? c : doc.createTextNode(String(c)));
     return e;
   };
 
@@ -120,7 +138,25 @@ export function mountApp(root, deps) {
     })());
   }
 
-  async function loadToday() { state.today = await deps.store.listMealsByDate(madridNow(now()).date); }
+  const today = () => madridNow(now()).date;
+  async function loadDay(date) { state.day = date; state.dayMeals = await deps.store.listMealsByDate(date); }
+  const openDay = (date) => track(loadDay(date).then(() => { state.screen = 'diary'; render(); }));
+
+  // Guarda tus objetivos. Vacío = referencia; un valor no válido no se guarda y se dice cuál.
+  async function saveObjetivos(perfil, inputs) {
+    const valores = {};
+    const malos = [];
+    for (const [clave, raw] of Object.entries(inputs)) {
+      if (!String(raw).trim()) continue;
+      const n = parseNumber(raw);
+      if (n.status === 'ok' && n.value > 0) valores[clave] = n.value;
+      else malos.push(targets.list.find((t) => t.clave === clave)?.label ?? clave);
+    }
+    if (malos.length) return { ok: false, msg: `No guardado: valor no válido en ${malos.join(', ')}.` };
+    state.objetivos = { perfil, valores };
+    await deps.store.setSetting('objetivos', state.objetivos);
+    return { ok: true, msg: 'Guardado.' };
+  }
 
   function onFile(file) {
     if (!file) return;
@@ -156,7 +192,7 @@ export function mountApp(root, deps) {
     return h('header', { class: 'top' },
       back ? h('button', { class: 'link', onclick: back }, '‹ Volver') : h('strong', { class: 'brand' }, title),
       back ? h('strong', {}, title) : h('nav', {},
-        h('button', { class: 'link', onclick: () => track(loadToday().then(() => { state.screen = 'today'; render(); })) }, 'Hoy'),
+        h('button', { class: 'link', onclick: () => openDay(today()) }, 'Diario'),
         h('button', { class: 'link', onclick: () => { state.screen = 'doc'; render(); } }, 'Documento')));
   }
 
@@ -318,17 +354,88 @@ export function mountApp(root, deps) {
       connMsg);
   }
 
-  function todayScreen() {
-    const groups = MEALS.map((m) => [m, state.today.filter((r) => r.meal === m)]).filter(([, r]) => r.length);
+  const dayLabel = (date) => {
+    if (date === today()) return 'Hoy';
+    if (date === shiftDate(today(), -1)) return 'Ayer';
+    const [y, m, d] = date.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
+  };
+
+  // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
+  function nutrientRow(r) {
+    const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
+    const objetivo = r.valor === null ? '' : ` / ${fmtQty(r.valor, r.unit)}`;
+    const fill = h('span', {});
+    fill.style.width = `${Math.min(1, r.pct ?? 0) * 100}%`;
+    const pct = r.pct !== null && r.estado !== 'sin_dato' ? `${nf0.format(r.pct * 100)} %` : '';
+    return h('li', { class: r.superaUl ? 'nut over-ul' : 'nut', 'data-clave': r.clave },
+      h('div', { class: 'row between' }, h('span', {}, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', {}, valor, h('span', { class: 'muted' }, objetivo))),
+      h('div', { class: `meter ${r.estado}`, role: 'img', 'aria-label': pct || 'sin dato' }, fill),
+      h('div', { class: 'small' },
+        h('span', { class: `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
+        r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null));
+  }
+
+  function diaryScreen() {
+    const rep = diaryReport(state.dayMeals, byId(), resolveTargets(targets, state.objetivos), deps.catalog);
+    const macros = rep.rows.filter((r) => MACROS.includes(r.clave));
+    const micros = rep.rows.filter((r) => !MACROS.includes(r.clave));
     return h('main', {},
-      header('Hoy', () => { state.screen = 'home'; render(); }),
-      groups.length === 0 ? h('p', { class: 'muted' }, 'Todavía no has registrado nada hoy.') : groups.map(([m, recs]) => h('section', {}, h('h2', {}, MEAL_LABEL[m]),
-        h('ul', { class: 'cards' }, recs.flatMap((r) => r.lines.map((l) => h('li', { class: 'card' }, `${byId().get(l.food_id)?.nombre ?? l.food_id} · ${nf1.format(l.grams)} g`)))))));
+      header('Diario', () => { state.screen = 'home'; render(); }),
+      h('nav', { class: 'daynav row between', 'aria-label': 'Día' },
+        h('button', { class: 'icon', 'aria-label': 'Día anterior', onclick: () => openDay(shiftDate(state.day, -1)) }, '‹'),
+        h('strong', { class: 'daylabel' }, dayLabel(state.day)),
+        h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, '›')),
+      state.day !== today() ? h('button', { class: 'link', onclick: () => openDay(today()) }, 'Ir a hoy') : null,
+      state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
+        rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
+          h('ul', {}, rep.avisosUl.map((r) => h('li', {}, `${r.label}: ${fmtQty(r.total, r.unit)} (UL ${fmtQty(r.ul, r.unit)})`, r.notaUl ? h('div', { class: 'small muted' }, r.notaUl) : null)))) : null,
+        rep.parciales.length ? h('p', { class: 'warn small' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
+        h('h2', {}, 'Energía y macros'), h('ul', { class: 'nuts' }, macros.map(nutrientRow)),
+        h('h2', {}, 'Micronutrientes'), h('ul', { class: 'nuts' }, micros.map(nutrientRow)),
+        h('details', {}, h('summary', {}, 'Otros nutrientes'),
+          h('ul', {}, rep.otros.map((o) => h('li', {}, `${o.label}: ${o.total === null ? 'sin dato' : fmtQty(o.total, o.unit)}${o.parcial && o.total !== null ? ' (parcial)' : ''}`)))),
+        h('h2', {}, 'Comidas'),
+        rep.comidas.map((c) => h('section', { class: 'card meal' },
+          h('div', { class: 'row between' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, c.kcal === null ? 'sin dato de kcal' : `${nf0.format(c.kcal)} kcal${c.kcalParcial ? ' (parcial)' : ''}`)),
+          h('ul', { class: 'lines' }, c.lines.map((l) => h('li', {}, `${l.nombre} · ${nf1.format(l.grams)} g · ${l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`}`))))),
+      ],
+      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
+  }
+
+  function objetivosScreen() {
+    const own = state.objetivos.valores ?? {};
+    const perfilActual = resolveTargets(targets, state.objetivos)[0]?.perfil ?? targets.perfilPorDefecto;
+    const perfilSel = h('select', { 'aria-label': 'Perfil de referencia' },
+      Object.entries(targets.perfiles).map(([k, label]) => h('option', { value: k, selected: k === perfilActual }, label)));
+    const inputs = new Map();
+    const msg = h('p', { class: 'small', role: 'status' });
+    const campo = (t) => {
+      const ref = referenceValue(targets, t.clave, { perfil: perfilActual, valores: own });
+      const unit = UNIT_LABEL[t.unit] ?? t.unit;
+      const input = h('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t.label} (${unit})`, value: own[t.clave] === undefined ? '' : nf2.format(own[t.clave]).replace(/\./g, ''), placeholder: ref === null ? '' : fmtNum(ref, t.unit) });
+      inputs.set(t.clave, input);
+      return h('li', { class: 'card' },
+        h('label', {}, h('span', {}, `${t.label} (${unit}) · ${TIPO_TEXT[t.tipo]}`), input),
+        h('div', { class: 'small muted' }, [ref === null ? '' : `Referencia: ${fmtQty(ref, t.unit)}`, t.ul !== null ? `UL: ${fmtQty(t.ul, t.unit)}` : '', t.nota].filter(Boolean).join(' · ')));
+    };
+    const save = (vaciar) => track((async () => {
+      const r = await saveObjetivos(perfilSel.value, vaciar ? {} : Object.fromEntries([...inputs].map(([k, el]) => [k, el.value])));
+      if (r.ok) { render(); root.querySelector('[role=status]').textContent = r.msg; } else msg.textContent = r.msg;
+    })());
+    return h('main', {},
+      header('Objetivos', () => openDay(state.day)),
+      h('label', {}, 'Perfil de referencia (EFSA)', perfilSel),
+      h('p', { class: 'muted small' }, 'Vacío = valor de referencia. Tus objetivos se guardan en este dispositivo. B1, niacina y ALA se calculan con tu objetivo de kcal. Los UL no cambian.'),
+      h('h2', {}, 'Energía y macros'), h('ul', { class: 'cards' }, targets.list.filter((t) => MACROS.includes(t.clave)).map(campo)),
+      h('h2', {}, 'Micronutrientes'), h('ul', { class: 'cards' }, targets.list.filter((t) => !MACROS.includes(t.clave)).map(campo)),
+      h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => save(false) }, 'Guardar'), h('button', { class: 'secondary', onclick: () => save(true) }, 'Restablecer')),
+      msg);
   }
 
   // ---------- render ----------
   function render() {
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, today: todayScreen };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen };
     root.replaceChildren(screens[state.screen]());
   }
   render();

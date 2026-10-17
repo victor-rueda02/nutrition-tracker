@@ -14,7 +14,7 @@ test('service worker: precachea TODOS los ficheros de la app (y solo ficheros qu
   const list = [...sw.match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   for (const a of list) if (a !== './') assert.ok(existsSync(resolve(fe, a)), `no existe: ${a}`);
   for (const f of walk(fe).map(rel).filter((p) => p !== 'sw.js')) assert.ok(list.includes(f), `falta en ASSETS: ${f}`);
-  for (const d of ['../data/nutrients.json', '../data/settings.json', '../data/foods.csv']) assert.ok(list.includes(d), d);
+  for (const d of ['../data/nutrients.json', '../data/settings.json', '../data/targets.json', '../data/foods.csv']) assert.ok(list.includes(d), d);
 });
 
 test('manifiesto e iconos: iOS/Android instalable (PNG con el tamaño declarado)', () => {

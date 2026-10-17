@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
-import { realFoods, catalog, settings } from './helpers.js';
+import { realFoods, catalog, settings, readFile } from './helpers.js';
+
+const TARGETS = JSON.parse(readFile('../data/targets.json'));
 
 const jsdom = await import('jsdom').catch(() => null);
 const skip = jsdom ? false : 'falta jsdom (npm install)';
@@ -11,11 +13,12 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [] } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
   const store = createMemoryStore();
+  for (const m of meals) await store.addMeal(m);
   const calls = [];
   const queue = [...responses];
   const createAiClient = () => ({
@@ -27,7 +30,7 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
     },
     async health() { return true; },
   });
-  const app = mountApp(root, { store, createAiClient, catalog, settings, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text() });
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text() });
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
   const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
@@ -204,14 +207,81 @@ test('conexión: se guarda el Worker y el token (no van en el repositorio)', { s
   assert.match(t.root.textContent, /El Worker responde/);
 });
 
-test('Hoy: lista lo guardado hoy por comida', { skip }, async () => {
+// ---------- Diario (hito 4, fase 1) ----------
+const MEAL = (id, date, meal, lines) => ({ id, date, meal, createdAt: `${date}T08:00:00Z`, text: '', lines: lines.map(([food_id, grams]) => ({ food_id, grams, source_text: '' })) });
+const fila = (t, clave) => t.$(`li.nut[data-clave="${clave}"]`);
+
+test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y con navegación entre días', { skip }, async () => {
   const t = await setup({ responses: [RESULT] });
   t.type(t.$('textarea'), 'x');
   await t.act(() => t.btn('Procesar').click());
+  await t.act(() => t.btn('Guardar').click()); // 80 g de avena + 100 g de huevo
+  await t.act(() => t.btn('Diario').click());
+  assert.equal(t.$('.daylabel').textContent, 'Hoy');
+  assert.equal(t.$('button[aria-label="Día siguiente"]').disabled, true);
+  // 80 g de avena (379 kcal) + 100 g de huevo (143 kcal) = 446 kcal; objetivo de referencia 2000 kcal
+  assert.match(fila(t, 'energia_kcal').textContent, /446 kcal \/ 2000 kcal/);
+  assert.match(fila(t, 'energia_kcal').textContent, /Por debajo · 22 %/);
+  assert.match(fila(t, 'vitamina_b12_ug').textContent, /µg/);
+  assert.ok(fila(t, 'epa_dha'));
+  assert.match(t.$('section.meal').textContent, /Desayuno.*446 kcal/);
+  assert.match(t.$('section.meal').textContent, /Avena \(copos\/molida\) · 80 g · 303 kcal/);
+  assert.equal(t.$('.alert-ul'), null);
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  assert.match(t.root.textContent, /Sin registros este día/);
+  await t.act(() => t.btn('Ir a hoy').click());
+  assert.equal(t.$('.daylabel').textContent, 'Hoy');
+});
+
+test('Diario: superar un UL es un aviso distinto de "objetivo cumplido"', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] }); // 981 µg de vitamina A por 100 g
+  await t.act(() => t.btn('Diario').click());
+  assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado/);
+  assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\): 3924 µg \(UL 3000 µg\)/);
+  assert.match(t.$('.alert-ul').textContent, /retinol preformado/);
+  const a = fila(t, 'vitamina_a_ug');
+  assert.ok(a.classList.contains('over-ul'));
+  assert.match(a.textContent, /Objetivo cumplido/);
+  assert.match(a.textContent, /⚠ Supera el máximo tolerable \(UL 3000 µg\)/);
+  assert.ok(!fila(t, 'vitamina_c_mg').classList.contains('over-ul'));
+});
+
+test('Diario: un alimento sin datos deja los totales parciales y se dice cuál', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['coca_cola', 330]])] });
+  await t.act(() => t.btn('Diario').click());
+  assert.match(t.root.textContent, /Totales parciales: faltan datos de Coca-Cola Classic/);
+  assert.match(fila(t, 'energia_kcal').textContent, /parcial/);
+  assert.match(t.$('section.meal').textContent, /Coca-Cola Classic · 330 g · sin dato/);
+});
+
+test('Objetivos: perfil hombre por defecto; tus kcal y macros se guardan y el diario los usa; perfil mujer', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['arroz_blanco_crudo', 100]])] });
+  await t.act(() => t.btn('Diario').click());
+  assert.match(fila(t, 'hierro_mg').textContent, /\/ 11 mg/);
+  await t.act(() => t.btn('Objetivos').click());
+  assert.equal(t.$('select').value, 'hombre');
+  const kcal = t.$('input[aria-label="Energía (kcal)"]');
+  assert.equal(kcal.placeholder, '2000');
+  kcal.value = '2500';
+  t.$('input[aria-label="Proteína (g)"]').value = '150,5';
   await t.act(() => t.btn('Guardar').click());
-  await t.act(() => t.btn('Hoy').click());
-  assert.match(t.root.textContent, /Desayuno/);
-  assert.match(t.root.textContent, /80 g/);
+  assert.match(t.$('[role=status]').textContent, /Guardado/);
+  assert.deepEqual(await t.store.getSetting('objetivos'), { perfil: 'hombre', valores: { energia_kcal: 2500, proteina_g: 150.5 } });
+  assert.equal(t.$('input[aria-label="Vitamina B1 (tiamina) (mg)"]').placeholder, '1,05'); // 0,1 mg/MJ con 2500 kcal
+  t.$('input[aria-label="Calcio (mg)"]').value = 'mucho';
+  await t.act(() => t.btn('Guardar').click());
+  assert.match(t.$('[role=status]').textContent, /No guardado: valor no válido en Calcio/);
+  t.$('input[aria-label="Calcio (mg)"]').value = '';
+  t.$('select').value = 'mujer';
+  await t.act(() => t.btn('Guardar').click());
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.match(fila(t, 'energia_kcal').textContent, /\/ 2500 kcal/);
+  assert.match(fila(t, 'proteina_g').textContent, /\/ 151 g|\/ 150,5 g/);
+  assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/);
+  await t.act(() => t.btn('Objetivos').click());
+  await t.act(() => t.btn('Restablecer').click());
+  assert.deepEqual((await t.store.getSetting('objetivos')).valores, {});
 });
 
 test('no coincide con tus alias: Guardar desactivado hasta pulsar "Sí, es ..." (editar gramos no basta)', { skip }, async () => {

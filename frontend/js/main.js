@@ -27,7 +27,13 @@ async function boot() {
         await store.putCatalogRecord(rec);
       } catch { rec = { foods: [], extraHeaders: [], name: '' }; }
     }
-    mountApp(root, { store, createAiClient, catalog, settings, initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {} });
+    let targets = null; // sin targets.json el diario muestra totales, pero sin objetivos
+    try { targets = JSON.parse(await fetchText('targets.json')); } catch { /* se sigue sin objetivos */ }
+    mountApp(root, {
+      store, createAiClient, catalog, settings, targets,
+      objetivos: (await store.getSetting('objetivos')) ?? {},
+      initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
+    });
   } catch (e) {
     root.textContent = `No se pudo iniciar la app: ${e.message}`;
   }

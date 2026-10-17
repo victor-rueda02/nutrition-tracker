@@ -13,6 +13,7 @@ import { buildCompactList } from '../frontend/js/core/ai-contract.js';
 import { createDraft } from '../frontend/js/core/draft.js';
 import { handleRequest } from '../worker/src/index.js';
 import { callGemini } from '../worker/src/providers/gemini.js';
+import { geminiModel } from './gemini-model.mjs';
 
 // Rutas siempre con fileURLToPath/resolve (new URL(...).pathname rompe en Windows: "/C:/...").
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -30,9 +31,7 @@ const names = new Map(foods.map((f) => [f.id, f.nombre]));
 
 const foodsById = new Map(foods.map((f) => [f.id, f]));
 
-// El modelo sale de UN sitio: GEMINI_MODEL de worker/wrangler.toml (o la variable de entorno, si la pones).
-const tomlModel = read(fromRoot('worker', 'wrangler.toml')).match(/^\s*GEMINI_MODEL\s*=\s*"([^"]+)"/m)?.[1];
-const model = process.env.GEMINI_MODEL || tomlModel;
+const model = geminiModel(root);
 if (!model) { console.error('No encuentro GEMINI_MODEL en worker/wrangler.toml.'); process.exit(1); }
 const env = { APP_TOKEN: 'local', ALLOWED_ORIGIN: 'http://localhost', GEMINI_MODEL: model, GEMINI_API_KEY: process.env.GEMINI_API_KEY ?? 'simulado' };
 const phrases = simulated

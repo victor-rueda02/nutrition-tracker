@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v1';
+const VERSION = 'nt-v2';
 const ASSETS = [
   './',
   'css/styles.css',
@@ -16,6 +16,7 @@ const ASSETS = [
   'js/core/catalog.js',
   'js/core/completeness.js',
   'js/core/csv.js',
+  'js/core/diary.js',
   'js/core/draft.js',
   'js/core/excluded.js',
   'js/core/foods-parser.js',
@@ -25,6 +26,7 @@ const ASSETS = [
   'js/core/portions.js',
   'js/core/schema.js',
   'js/core/settings.js',
+  'js/core/targets.js',
   'js/core/text.js',
   'js/main.js',
   'js/storage/idb-store.js',
@@ -33,6 +35,7 @@ const ASSETS = [
   'manifest.webmanifest',
   '../data/nutrients.json',
   '../data/settings.json',
+  '../data/targets.json',
   '../data/foods.csv'
 ];
 

@@ -1,0 +1,49 @@
+{
+  "_comentario": "Objetivos diarios por defecto. Tus objetivos (pantalla Objetivos) se guardan en el iPhone y tienen prioridad. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
+  "fuentes": {
+    "ir_ue": "Ingestas de referencia para un adulto medio, Reglamento (UE) 1169/2011, anexo XIII",
+    "efsa": "EFSA, valores dietéticos de referencia para adultos (PRI o AI) y niveles máximos tolerables (UL)"
+  },
+  "perfil_por_defecto": "hombre",
+  "perfiles": { "hombre": "Hombre adulto", "mujer": "Mujer adulta (premenopáusica)" },
+  "objetivos": [
+    { "clave": "energia_kcal", "tipo": "objetivo", "valor": 2000, "fuente": "ir_ue" },
+    { "clave": "proteina_g", "tipo": "min", "valor": 50, "fuente": "ir_ue" },
+    { "clave": "grasa_total_g", "tipo": "objetivo", "valor": 70, "fuente": "ir_ue" },
+    { "clave": "grasas_saturadas_g", "tipo": "max", "valor": 20, "fuente": "ir_ue" },
+    { "clave": "hidratos_g", "tipo": "objetivo", "valor": 260, "fuente": "ir_ue" },
+    { "clave": "azucares_g", "tipo": "max", "valor": 90, "fuente": "ir_ue" },
+    { "clave": "fibra_g", "tipo": "min", "valor": 25, "fuente": "efsa" },
+
+    { "clave": "vitamina_a_ug", "tipo": "min", "hombre": 750, "mujer": 650, "ul": 3000, "fuente": "efsa",
+      "nota_ul": "El UL es para retinol preformado (alimentos de origen animal, enriquecidos y suplementos); tu columna es RAE e incluye carotenos, así que puede avisar de más." },
+    { "clave": "vitamina_c_mg", "tipo": "min", "hombre": 110, "mujer": 95, "fuente": "efsa" },
+    { "clave": "vitamina_d_ug", "tipo": "min", "valor": 15, "ul": 100, "fuente": "efsa" },
+    { "clave": "vitamina_e_mg", "tipo": "min", "hombre": 13, "mujer": 11, "ul": 300, "fuente": "efsa" },
+    { "clave": "vitamina_k_ug", "tipo": "min", "valor": 70, "fuente": "efsa" },
+    { "clave": "vitamina_b1_mg", "tipo": "min", "por_mj": 0.1, "fuente": "efsa" },
+    { "clave": "vitamina_b2_mg", "tipo": "min", "valor": 1.6, "fuente": "efsa" },
+    { "clave": "vitamina_b3_mg", "tipo": "min", "por_mj": 1.6, "fuente": "efsa",
+      "nota": "La EFSA la expresa en equivalentes de niacina (incluye la que se forma a partir del triptófano); tu columna es niacina preformada, así que el % real es mayor." },
+    { "clave": "vitamina_b5_mg", "tipo": "min", "valor": 5, "fuente": "efsa" },
+    { "clave": "vitamina_b6_mg", "tipo": "min", "hombre": 1.7, "mujer": 1.6, "ul": 12, "fuente": "efsa" },
+    { "clave": "vitamina_b9_ug", "tipo": "min", "valor": 330, "ul": 1000, "fuente": "efsa",
+      "nota_ul": "El UL es para ácido fólico añadido (enriquecidos y suplementos), no para el folato natural; tu columna es folato total (DFE), así que puede avisar de más." },
+    { "clave": "vitamina_b12_ug", "tipo": "min", "valor": 4, "fuente": "efsa" },
+    { "clave": "colina_mg", "tipo": "min", "valor": 400, "fuente": "efsa" },
+
+    { "clave": "calcio_mg", "tipo": "min", "valor": 950, "ul": 2500, "fuente": "efsa", "nota": "950 mg desde los 25 años; 1000 mg de 18 a 24." },
+    { "clave": "hierro_mg", "tipo": "min", "hombre": 11, "mujer": 16, "fuente": "efsa" },
+    { "clave": "magnesio_mg", "tipo": "min", "hombre": 350, "mujer": 300, "fuente": "efsa" },
+    { "clave": "fosforo_mg", "tipo": "min", "valor": 550, "fuente": "efsa" },
+    { "clave": "potasio_mg", "tipo": "min", "valor": 3500, "fuente": "efsa" },
+    { "clave": "sodio_mg", "tipo": "max", "valor": 2000, "fuente": "efsa", "nota": "Ingesta segura y adecuada de la EFSA: tómalo como máximo." },
+    { "clave": "zinc_mg", "tipo": "min", "hombre": 11.7, "mujer": 9.3, "ul": 25, "fuente": "efsa", "nota": "Con una ingesta media de fitatos (600 mg/día)." },
+    { "clave": "cobre_mg", "tipo": "min", "hombre": 1.6, "mujer": 1.3, "ul": 5, "fuente": "efsa" },
+    { "clave": "manganeso_mg", "tipo": "min", "valor": 3, "fuente": "efsa" },
+    { "clave": "selenio_ug", "tipo": "min", "valor": 70, "ul": 255, "fuente": "efsa" },
+
+    { "clave": "ala_g", "tipo": "min", "pct_energia": 0.5, "fuente": "efsa" },
+    { "clave": "epa_dha", "etiqueta": "EPA + DHA", "suma": ["epa_g", "dha_g"], "unidad": "g", "tipo": "min", "valor": 0.25, "fuente": "efsa" }
+  ]
+}
