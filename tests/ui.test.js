@@ -590,3 +590,73 @@ test('Repetir: sin gramos o con más de 2000 g no se puede añadir, y se dice po
   assert.equal(t.$('.bar button.primary').disabled, false);
   assert.equal(input.classList.contains('bad'), false);
 });
+
+// ---------- Plantillas ----------
+test('plantillas: guardar una comida del Diario, verla en Plantillas y usarla con "Repetir"', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  await t.act(() => t.btn('Guardar como plantilla').click());
+  const nombre = t.$('input[aria-label="Nombre de la plantilla"]');
+  assert.equal(nombre.placeholder, 'Por ejemplo: Comida habitual');
+  await t.act(() => t.btn('Guardar plantilla').click());
+  assert.match(t.$('[role=alert]').textContent, /Ponle un nombre/);
+  t.$('input[aria-label="Nombre de la plantilla"]').value = 'Arroz con kiwi';
+  await t.act(() => t.btn('Guardar plantilla').click());
+  assert.match(t.$('p.ok[role=status]').textContent, /Plantilla «Arroz con kiwi» guardada/);
+  assert.deepEqual((await t.store.getSetting('plantillas')).map((p) => [p.nombre, p.meal, p.lines.length]), [['Arroz con kiwi', 'comida', 3]]);
+  // repetir el nombre: no se guarda
+  await t.act(() => t.btn('Guardar como plantilla').click());
+  t.$('input[aria-label="Nombre de la plantilla"]').value = 'ARROZ CON KIWI';
+  await t.act(() => t.btn('Guardar plantilla').click());
+  assert.match(t.$('[role=alert]').textContent, /Ya tienes una plantilla/);
+  await t.act(() => t.btn('Cancelar').click());
+  // usarla desde Inicio -> Plantillas
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Plantillas').click());
+  assert.match(t.$('.plantilla').textContent, /Arroz con kiwi/);
+  assert.match(t.$('.plantilla').textContent, /Comida · \d+ kcal/);
+  await t.act(() => t.btn('Usar').click());
+  assert.match(t.$('header').textContent, /Usar plantilla/);
+  assert.equal(t.$('.source-label').textContent, 'De: plantilla «Arroz con kiwi»');
+  assert.equal(t.$('button[aria-label="Día de origen anterior"]'), null);
+  assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'origen');
+  t.type(t.$$('.repeat-item input.grams')[0], '100');
+  await t.act(() => t.btn('Añadir 3 alimentos').click());
+  assert.match(t.$('p.ok[role=status]').textContent, /Añadidos 3 alimentos de la plantilla «Arroz con kiwi»/);
+  const hoy = (await t.store.allMeals()).filter((m) => m.date === '2026-10-16');
+  assert.deepEqual(hoy.map((m) => [m.meal, m.text, m.lines[0].grams]), [['comida', 'Plantilla: Arroz con kiwi', 100]]);
+  assert.equal(t.calls.length, 0);
+});
+
+test('plantillas: lista vacía, borrar con confirmación y "Volver" desde Usar regresa a Plantillas', { skip }, async () => {
+  const t = await setup();
+  await t.act(() => t.btn('Plantillas').click());
+  assert.match(t.root.textContent, /Aún no tienes plantillas/);
+  await t.store.setSetting('plantillas', [{ id: 'p1', nombre: 'Desayuno', meal: 'desayuno', createdAt: '', lines: [{ food_id: 'avena_copos', grams: 80 }] }]);
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Plantillas').click());
+  await t.act(() => t.btn('Usar').click());
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.match(t.$('header').textContent, /Plantillas/);
+  await t.act(() => t.$('.plantilla button.danger').click());
+  assert.match(t.root.textContent, /¿Borrar esta plantilla\?/);
+  await t.act(() => t.btn('Sí, borrar').click());
+  assert.deepEqual(await t.store.getSetting('plantillas'), []);
+  assert.match(t.$('p.ok[role=status]').textContent, /Plantilla «Desayuno» borrada/);
+});
+
+test('copia de seguridad con plantillas: se exportan y al importar se añaden las nuevas', { skip }, async () => {
+  const P = { id: 'p1', nombre: 'Desayuno', meal: 'desayuno', createdAt: '', lines: [{ food_id: 'avena_copos', grams: 80 }] };
+  const t = await setup();
+  await t.store.setSetting('plantillas', [P]);
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Exportar diario').click());
+  assert.deepEqual(JSON.parse(t.saved[0].text).plantillas, [P]);
+  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: null, plantillas: [P, { ...P, id: 'p2', nombre: 'Cena' }] };
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
+  assert.match(t.root.textContent, /1 plantillas nuevas/);
+  await t.act(() => t.btn('Importar 1 plantilla').click());
+  assert.deepEqual((await t.store.getSetting('plantillas')).map((x) => x.nombre), ['Cena', 'Desayuno']);
+  assert.match(t.$('p.ok[role=status]').textContent, /1 plantilla/);
+});

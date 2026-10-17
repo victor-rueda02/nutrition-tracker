@@ -11,9 +11,9 @@ export const PASOS = [-10, -5, 5, 10];
 const MIN_GRAMOS = 1;
 const redondea = (x) => Math.round(x * 10) / 10;
 
-// Estado de la pantalla a partir de las comidas guardadas de un día (o de una sola, desde el Diario).
-// Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
-export function createRepeat({ meals, sourceDate, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null }) {
+// Estado de la pantalla a partir de las comidas guardadas de un día (o de una sola, desde el Diario), o de una
+// plantilla (template = { id, nombre }). Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
+export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null }) {
   let n = 0;
   const groups = MEALS.map((meal) => ({
     meal,
@@ -22,7 +22,7 @@ export function createRepeat({ meals, sourceDate, foodsById, targetDate, targetM
       return { key: `i${++n}`, food_id: l.food_id, nombre: foodsById.get(l.food_id)?.nombre ?? l.food_id, grams: l.grams, checked: known, known };
     })),
   })).filter((g) => g.items.length);
-  return { sourceDate, recordId, targetDate, targetMeal, groups };
+  return { sourceDate, recordId, template, targetDate, targetMeal, groups };
 }
 
 const mapItem = (r, key, fn) => ({ ...r, groups: r.groups.map((g) => ({ ...g, items: g.items.map((i) => (i.key === key ? fn(i) : i)) })) });
@@ -60,13 +60,14 @@ export function validateRepeat(r) {
 // Registros a guardar (mismo formato que el resto del diario). Con "Como en el origen", uno por comida; si no, uno.
 export function toRecords(r, { now = new Date(), idGen = () => globalThis.crypto.randomUUID() } = {}) {
   if (!validateRepeat(r).ok) throw new Error('Nada válido que añadir: revisa los gramos, la fecha y la comida');
-  const linea = (i) => ({ food_id: i.food_id, grams: i.grams, source_text: `repetido de ${r.sourceDate}` });
+  const origen = r.template ? `plantilla «${r.template.nombre}»` : `repetido de ${r.sourceDate}`;
+  const linea = (i) => ({ food_id: i.food_id, grams: i.grams, source_text: origen });
   const grupos = r.targetMeal === DESTINO_ORIGEN
     ? r.groups.map((g) => ({ meal: g.meal, items: g.items.filter((i) => i.checked) }))
     : [{ meal: r.targetMeal, items: allItems(r).filter((i) => i.checked) }];
   return grupos.filter((g) => g.items.length).map((g, n) => ({
     id: idGen(), date: r.targetDate, meal: g.meal,
     createdAt: new Date(now.getTime() + n).toISOString(), // en orden, aunque se guarden a la vez
-    text: `Repetido de ${r.sourceDate}`, lines: g.items.map(linea),
+    text: r.template ? `Plantilla: ${r.template.nombre}` : `Repetido de ${r.sourceDate}`, lines: g.items.map(linea),
   }));
 }

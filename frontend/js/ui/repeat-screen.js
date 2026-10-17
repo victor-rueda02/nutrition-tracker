@@ -68,8 +68,8 @@ export function repeatScreen(ui) {
     MEALS.map((m) => h('option', { value: m, selected: r.targetMeal === m }, ui.MEAL_LABEL[m])));
 
   const screen = h('main', { class: 'repeat' },
-    ui.header('Repetir', ui.back),
-    h('nav', { class: 'row between repeat-source', 'aria-label': 'Día de origen' },
+    ui.header(r.template ? 'Usar plantilla' : 'Repetir', ui.back),
+    r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between repeat-source', 'aria-label': 'Día de origen' },
       h('button', { class: 'icon', 'aria-label': 'Día de origen anterior', onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, -1)) }, '‹'),
       h('strong', { class: 'source-label' }, `De: ${ui.dayLabel(r.sourceDate)}`),
       h('button', { class: 'icon', 'aria-label': 'Día de origen siguiente', disabled: r.sourceDate >= ui.today(), onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, 1)) }, '›')),
