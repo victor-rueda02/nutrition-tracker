@@ -8,7 +8,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   mapNutrients, usdaNutrients, coincidencia, suggest, sortCandidates, searchPlan, createUsdaClient, findCandidates,
-  eleccionCSV, readEleccion, applyUsda, runCandidatos, runFilas, informeMarkdown, ELECCION_HEADER, FNDDS,
+  eleccionCSV, readEleccion, applyUsda, runCandidatos, runFilas, informeMarkdown, ELECCION_HEADER, FNDDS, searchQuery,
 } from '../scripts/usda-lib.mjs';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { completenessReport } from '../frontend/js/core/completeness.js';
@@ -84,7 +84,7 @@ test('sugerido: Foundation/SR ≥ 80 %; si no, FNDDS (estimado); si no, el más 
   assert.deepEqual([e.candidato.fdcId, e.estado], [3, 'completo_estimado']);
   const i = suggest([cand({ fdcId: 1, ratio: 0.5 }), cand({ fdcId: 2, ratio: 0.6 })], threshold);
   assert.deepEqual([i.candidato.fdcId, i.estado], [2, 'incompleto']);
-  assert.deepEqual(suggest([], threshold), { candidato: null, estado: 'sin_candidatos' });
+  assert.deepEqual(suggest([], threshold), { candidato: null, estado: 'sin_candidatos', motivo: 'USDA no devolvió resultados para el término' });
 });
 
 test('coincidencia con el término: ignora mayúsculas y puntuación', () => {
@@ -204,4 +204,53 @@ test('CLI sin USDA_API_KEY: mensaje claro con el nombre de la variable', () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /Falta la variable USDA_API_KEY/);
   assert.match(r.stderr, /--env-file=\.env/);
+});
+
+test('eleccion.csv explica el sugerido: completitud y parecido al término', () => {
+  const s = suggest([cand({ fdcId: 1, ratio: 1, obligatorios: 31, coincidencia: 0.5 }), cand({ fdcId: 2, ratio: 0.9, obligatorios: 28, coincidencia: 1 })], threshold);
+  assert.equal(s.motivo, 'Foundation/SR Legacy ≥ 80 % (el más parecido al término, 100 %): completitud 28/31 (90 %), parecido al término 100 %');
+  assert.match(suggest([cand({ ratio: 0.5, obligatorios: 15 })], threshold).motivo, /ninguno llega al 80 %.*; el más completo/);
+  const text = eleccionCSV([{ id: 'a', nombre: 'A', termino: 't', estado: s.estado, motivo: s.motivo, candidato: s.candidato, candidatos: [s.candidato] }]);
+  const [head, row] = text.replace(/^﻿/, '').split('\r\n').map((l) => l.split(';'));
+  const at = (name) => row[head.indexOf(name)];
+  assert.deepEqual([at('sugerido'), at('sugerido_obligatorios'), at('sugerido_parecido'), at('c1_parecido')], ['2', '28/31', '100 %', '100 %']);
+  assert.equal(at('motivo_sugerido'), s.motivo);
+});
+
+// Regresión de la primera ejecución real: la chía (incompleta) se cambiaba por sésamo (completo).
+test('sugerido: primero el parecido; nunca otro alimento completo en lugar del correcto incompleto', async () => {
+  const termino = 'Seeds, chia seeds, dried';
+  const api = fakeApi((url, body) => ({ foods: body.dataType.includes(FNDDS) ? [] : [
+    usdaFood(1, 'Seeds, sesame seeds, whole, dried', 'SR Legacy'),
+    usdaFood(2, 'Seeds, chia seeds, dried', 'SR Legacy', { keys: required.slice(0, 20) }),
+    ...[3, 4, 5, 6, 7].map((id) => usdaFood(id, `Seeds, other ${id}, dried`, 'SR Legacy')),
+  ] }));
+  const client = createUsdaClient({ apiKey: 'k', fetchImpl: api.fetchImpl });
+  const r = await findCandidates(client, termino, { map, required, threshold });
+  assert.deepEqual([r.estado, r.candidato.fdcId], ['incompleto', 2]);
+  assert.match(r.motivo, /ninguno llega al 80 %/);
+  assert.ok(r.candidatos.some((c) => c.fdcId === 2)); // el sugerido aparece aunque no esté entre los 5 más completos
+  assert.equal(r.candidatos.length, 5);
+  assert.equal(client.calls, 2); // sin un parecido completo, también se mira FNDDS
+});
+
+test('la búsqueda quita los signos que USDA interpreta como sintaxis ("/" daba HTTP 400)', async () => {
+  assert.equal(searchQuery('Sauce, pasta, spaghetti/marinara, ready-to-serve'), 'Sauce, pasta, spaghetti marinara, ready-to-serve');
+  assert.equal(searchQuery('Cookies, butter (aprox.)'), 'Cookies, butter aprox.');
+  const api = fakeApi(() => ({ foods: [usdaFood(1, 'Sauce, pasta, spaghetti/marinara, ready-to-serve', 'SR Legacy')] }));
+  const r = await findCandidates(createUsdaClient({ apiKey: 'k', fetchImpl: api.fetchImpl }), 'Sauce, pasta, spaghetti/marinara, ready-to-serve', { map, required, threshold });
+  assert.equal(api.calls[0].body.query, 'Sauce, pasta, spaghetti marinara, ready-to-serve');
+  assert.equal(r.candidato.coincidencia, 1); // el parecido se mide con el término original
+});
+
+// Regresión de la primera ejecución real: "Ham, serrano" sugería "Peppers, serrano"; "commercial" no casaba con "commercially".
+test('parecido: categoría de USDA (primera palabra) y palabras con el mismo comienzo', () => {
+  assert.ok(coincidencia('Ham, serrano', 'Peppers, serrano, raw') < coincidencia('Ham, serrano', 'Ham, sliced, regular'));
+  assert.equal(coincidencia('Bread, whole-wheat, commercial', 'Bread, whole-wheat, commercially prepared'), 1);
+  assert.equal(coincidencia('Seeds, chia seeds, dried', 'Seeds, chia seeds, dried'), 1);
+  assert.ok(coincidencia('Seeds, chia seeds, dried', 'Seeds, sesame seeds, whole, dried') < 1);
+  assert.equal(coincidencia('Rice, white', 'Rice'), 0.5); // "white" no está; la categoría sí
+  assert.ok(coincidencia('Apples, raw, with skin', 'Apples, raw, without skin') < 1); // "with" no es "without"
+  const s = suggest([cand({ fdcId: 1, ratio: 1, coincidencia: coincidencia('Ham, serrano', 'Peppers, serrano, raw') }), cand({ fdcId: 2, ratio: 0.7, coincidencia: coincidencia('Ham, serrano', 'Ham, sliced, regular') })], threshold);
+  assert.deepEqual([s.candidato.fdcId, s.estado], [2, 'incompleto']);
 });

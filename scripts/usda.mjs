@@ -17,7 +17,7 @@ import { loadSettings } from '../frontend/js/core/settings.js';
 import { parseFoodsDocument, foodsToCSV } from '../frontend/js/core/foods-parser.js';
 import { completenessReport } from '../frontend/js/core/completeness.js';
 import {
-  createUsdaClient, findCandidates, runCandidatos, runFilas, eleccionCSV, informeMarkdown, mapNutrients, countRequired, applyUsda, UsdaError, FNDDS,
+  createUsdaClient, findCandidates, runCandidatos, runFilas, eleccionCSV, informeMarkdown, mapNutrients, countRequired, applyUsda, UsdaError, FNDDS, pct,
 } from './usda-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -56,7 +56,6 @@ const loadFoods = () => {
   if (!parsed.report.ok) throw new UsdaError(`${path} tiene errores; corrígelos antes (importa el documento en la app para verlos)`);
   return parsed;
 };
-const pct = (r) => `${Math.round(r * 100)} %`;
 const linea = (c) => `${c.fdcId} · ${c.obligatorios}/${c.total} · ${c.tipo}${c.estimado ? ' (estimado)' : ''} · ${c.descripcion}`;
 
 try {

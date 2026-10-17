@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { detectVolumen, toCompact } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, stripNameStates } from '../frontend/js/core/ai-validate.js';
-import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText } from '../frontend/js/core/draft.js';
+import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText, validateDraft, setGrams, confirmFood, changeFood, toMealRecord } from '../frontend/js/core/draft.js';
 import { parseFoodsCSV, foodsToCSV, foodsToJSON } from '../frontend/js/core/foods-parser.js';
 import { normalizeText } from '../frontend/js/core/text.js';
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA } from '../worker/src/prompt.js';
@@ -219,4 +219,18 @@ test('peso_en_crudo: columna si/no (vacío = no), se exporta y solo viaja a la I
   assert.equal(r.report.warnings.filter((w) => w.field === 'peso_en_crudo').length, 1);
   assert.deepEqual(parseFoodsCSV(foodsToCSV(r.foods, { catalog }), { catalog }).foods.map((f) => f.pesoEnCrudo), [true, false, false, false]);
   assert.deepEqual(JSON.parse(foodsToJSON(r.foods)).foods.map((f) => f.peso_en_crudo), [true, false, false, false]);
+});
+
+// Una línea "no coincide con tus alias" no se guarda sin un gesto explícito (ni por defecto).
+test('sin_alias: la línea no se puede guardar hasta confirmar el alimento o cambiarlo; editar gramos no basta', () => {
+  const d = draftOf([line('pechuga_pollo_cruda', '150 g de pechuga', { cantidad: 150 }), line('kiwi_verde', 'un kiwi', { cantidad: 69 })]);
+  const [l1, l2] = d.lines;
+  assert.deepEqual([l1.needsReview, l2.needsReview], [true, false]);
+  assert.deepEqual(validateDraft(d).problems, [{ key: l1.key, code: 'sin_revisar' }]);
+  assert.throws(() => toMealRecord(d));
+  assert.equal(validateDraft(setGrams(d, l1.key, '160')).ok, false);
+  assert.equal(validateDraft(confirmFood(d, l1.key)).ok, true);
+  const cambiado = changeFood(d, l1.key, 'pechuga_pavo_cruda');
+  assert.equal(validateDraft(cambiado).ok, true);
+  assert.equal(cambiado.lines[0].grams, 150);
 });

@@ -9,7 +9,7 @@ import { normalizeText } from './text.js';
 const mapLine = (d, key, fn) => ({ ...d, lines: d.lines.map((l) => (l.key === key ? fn(l) : l)) });
 const newLine = (d, food_id, grams = null, source_text = '', confidence = 'manual') => {
   const key = `l${d.nextKey}`;
-  return [{ ...d, nextKey: d.nextKey + 1 }, { key, food_id, grams, source_text, confidence, flags: [], confirmedHigh: false }];
+  return [{ ...d, nextKey: d.nextKey + 1 }, { key, food_id, grams, source_text, confidence, flags: [], confirmedHigh: false, needsReview: false }];
 };
 
 const positive = (x) => typeof x === 'number' && Number.isFinite(x) && x > 0;
@@ -34,6 +34,8 @@ export function createDraft({ text = '', meal, result = { items: [], unmatched: 
     let line;
     [d, line] = newLine(d, it.food_id, grams, it.source_text ?? '', it.confidence ?? 'baja');
     line.flags = flags;
+    // Lo dicho no coincide con tus alias: no se guarda hasta que confirmes el alimento o lo cambies (confirmFood/changeFood).
+    line.needsReview = flags.includes('sin_alias');
     d.lines.push(line);
   }
   return d;
@@ -49,7 +51,9 @@ export function setGrams(d, key, raw) {
 }
 
 // Al cambiar el alimento a mano, los avisos de la IA dejan de aplicar.
-export const changeFood = (d, key, food_id) => mapLine(d, key, (l) => ({ ...l, food_id, flags: [], confidence: 'manual' }));
+export const changeFood = (d, key, food_id) => mapLine(d, key, (l) => ({ ...l, food_id, flags: [], confidence: 'manual', needsReview: false }));
+// "Sí, es este alimento": gesto explícito para una línea marcada sin_alias (editar los gramos no cuenta).
+export const confirmFood = (d, key) => mapLine(d, key, (l) => ({ ...l, needsReview: false }));
 export const confirmHigh = (d, key, value) => mapLine(d, key, (l) => ({ ...l, confirmedHigh: !!value }));
 export const removeLine = (d, key) => ({ ...d, lines: d.lines.filter((l) => l.key !== key) });
 
@@ -83,6 +87,7 @@ export function resolveUnmatched(d, index, food_id, grams = null, food = null) {
 }
 
 export function lineProblem(line) {
+  if (line.needsReview) return 'sin_revisar';
   if (!(line.grams > 0)) return 'sin_gramos';
   if (line.grams > MAX_GRAMS && !line.confirmedHigh) return 'gramos_altos';
   return null;

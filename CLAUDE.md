@@ -54,6 +54,7 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 
 ### Lo dicho debe coincidir con el alimento
 - Si lo que dije no contiene el nombre ni ningún alias del alimento elegido (ni de otra variante de su grupo), la línea pasa a confianza baja con el aviso "no coincide con tus alias" y pide confirmación. La comparación ignora acentos, mayúsculas y plurales.
+- Esa línea **no se puede guardar** hasta que la toque explícitamente: pulsar "Sí, es «alimento»" o cambiar el alimento. Editar los gramos no basta.
 - En "no reconocido", el texto es el fragmento exacto con su cantidad ("180 g de pollo"); al elegir el alimento, los gramos se rellenan solos.
 
 ### Cortes y partes distintas son alimentos distintos
@@ -64,10 +65,10 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 ## 5. Estado actual (17-10-2026)
 
 - **Hitos 1, 2 y 3 hechos**: parser y validador, cálculo, completitud, porciones, Worker, validación de la IA, reglas de variantes, frontend (dictado, confirmación editable, guardado, importar documento, pantalla de conexión, PWA).
-- **168 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
+- **174 tests pasan** (`npm install` y `npm test`; comprobado en Windows).
 - **Gemini real probado** con `try-phrases.mjs`: separa bien los alimentos, convierte unidades y no inventa. Destapó tres fallos, ya corregidos (puntos 1–3 de la sección 6): palabras de estado dentro del nombre ("tomate frito"), cortes y especies (`pechuga_pollo_cruda`; "pollo", "pavo" y "pechuga" a secas son ambiguos) y mililitros (el modelo devuelve `cantidad` + `unidad`; la app convierte ml → g con `densidad_g_ml`, que no viaja a la IA). Reprobado con Gemini real: "150 g de pechuga" acababa en pechuga de pollo; corregido con el prompt y la comprobación de alias (sección 4). Añadida la columna `peso_en_crudo`.
 - **El catálogo no tiene nutrientes todavía**: los 64 alimentos están pendientes de completar.
-- **Script de USDA hecho** (`scripts/usda.mjs` + `usda-lib.mjs`, mapeo en `data/usda-map.json`): `candidatos` → `usda/eleccion.csv` (; y BOM, eliges el `fdcId` en Excel) → `filas` → `usda/foods.propuesto.csv` + `usda/informe.md`. Nunca toca `data/foods.csv`. Caché en `usda/cache/` (ignorada por git). Decisiones: omega3/omega6 vacíos; 4 alternativas (energía Atwater, vitamina D desde UI, folato total sin ácido fólico, ALA 18:3) anotadas en informe y `fuente_usda`; FNDDS como tercera opción marcada "estimado"; candidatos ordenados por completitud. Pendiente: primera ejecución real (la clave de USDA en `.env` tiene un formato inválido).
+- **Script de USDA hecho** (`scripts/usda.mjs` + `usda-lib.mjs`, mapeo en `data/usda-map.json`): `candidatos` → `usda/eleccion.csv` (; y BOM, eliges el `fdcId` en Excel) → `filas` → `usda/foods.propuesto.csv` + `usda/informe.md`. Nunca toca `data/foods.csv`. Caché en `usda/cache/` (ignorada por git). Decisiones: omega3/omega6 vacíos; 4 alternativas (energía Atwater, vitamina D desde UI, folato total sin ácido fólico, ALA 18:3) anotadas en informe y `fuente_usda`; FNDDS como tercera opción marcada "estimado"; candidatos ordenados por completitud. Sugerido: primero los candidatos más parecidos al término (la categoría de USDA, primera palabra, debe coincidir); entre ellos, Foundation/SR Legacy ≥ 80 %, luego FNDDS, luego el más completo; el motivo se escribe en `eleccion.csv`. **`candidatos` ejecutado sobre el CSV real (17-10-2026)**: 48 con sugerido completo, 1 incompleto (chía), 0 sin candidatos, 15 omitidos. Pendiente: que yo revise y elija en `usda/eleccion.csv` y ejecutar `filas`.
 - **Repositorio git** creado en local (rama `main`). Aún no está en GitHub.
 - **`try-phrases.mjs`** toma el modelo de `GEMINI_MODEL` en `worker/wrangler.toml` (o de la variable de entorno del mismo nombre).
 - **No probado aún**: la app en un iPhone/Safari real y el hosting. El Worker nunca se ha desplegado; el primer despliegue se hará con el README del hito 4.

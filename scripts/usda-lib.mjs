@@ -58,12 +58,19 @@ export const countRequired = (values, required) => required.filter((k) => typeof
 
 // ---------- Candidatos ----------
 const palabras = (s) => normalizeText(s).split(/[^a-z0-9%]+/).filter((w) => w.length > 1);
+// Una palabra casa con otra igual o, si ambas tienen 5+ letras, con la que empieza por ella ("commercial" ~ "commercially";
+// con 4 letras "with" casaría con "without").
+const casa = (a, b) => a === b || (Math.min(a.length, b.length) >= 5 && (a.startsWith(b) || b.startsWith(a)));
 // Parte de las palabras del término que aparecen en la descripción de USDA (0..1). Solo para elegir el sugerido.
+// USDA nombra "Categoría, tipo, ...": si la categoría del término ("Ham") no está en la primera parte de la
+// descripción ("Peppers, serrano"), es otro alimento aunque comparta palabras, y el parecido se reduce a la mitad.
 export function coincidencia(termino, descripcion) {
   const t = palabras(termino);
   if (!t.length) return 0;
-  const d = new Set(palabras(descripcion));
-  return t.filter((w) => d.has(w)).length / t.length;
+  const d = palabras(descripcion);
+  const ratio = t.filter((w) => d.some((x) => casa(w, x))).length / t.length;
+  const categoria = palabras(descripcion.split(',')[0]);
+  return categoria.some((x) => casa(t[0], x)) ? ratio : ratio / 2;
 }
 
 export function toCandidate(food, { termino, map, required }) {
@@ -80,16 +87,30 @@ export const sortCandidates = (cands) => [...cands].sort((a, b) => (a.estimado -
 
 // Sugerido: Foundation/SR Legacy con completitud >= umbral (el que más se parece al término; a igualdad, el más
 // completo). Si no hay ninguno, FNDDS con completitud >= umbral (marcado "estimado"). Si tampoco, el más completo.
+// "motivo" explica la elección (va a eleccion.csv).
+export const pct = (r) => `${Math.round(r * 100)} %`;
+const datos = (c) => `completitud ${c.obligatorios}/${c.total} (${pct(c.ratio)}), parecido al término ${pct(c.coincidencia)}`;
+// Primero el parecido: solo cuentan los candidatos más parecidos al término (si el correcto está incompleto, se
+// sugiere incompleto antes que otro alimento completo: nunca "sésamo" por "chía"). Entre ellos, por este orden:
+// Foundation/SR Legacy ≥ umbral; FNDDS ≥ umbral (estimado); el más completo.
 export function suggest(cands, threshold) {
-  const best = (list) => [...list].sort((a, b) => (b.coincidencia - a.coincidencia) || (b.ratio - a.ratio))[0];
+  if (!cands.length) return { candidato: null, estado: 'sin_candidatos', motivo: 'USDA no devolvió resultados para el término' };
+  const top = Math.max(...cands.map((c) => c.coincidencia));
+  const relevantes = cands.filter((c) => c.coincidencia + 1e-9 >= top);
+  const masCompleto = (list) => [...list].sort((a, b) => b.ratio - a.ratio)[0];
   const ok = (c) => c.ratio + 1e-9 >= threshold;
-  const principal = best(cands.filter((c) => !c.estimado && ok(c)));
-  if (principal) return { candidato: principal, estado: 'completo' };
-  const estimado = best(cands.filter((c) => c.estimado && ok(c)));
-  if (estimado) return { candidato: estimado, estado: 'completo_estimado' };
-  if (!cands.length) return { candidato: null, estado: 'sin_candidatos' };
-  return { candidato: [...cands].sort((a, b) => (b.ratio - a.ratio) || (b.coincidencia - a.coincidencia))[0], estado: 'incompleto' };
+  const umbral = pct(threshold);
+  const entre = relevantes.length === 1 ? `(el más parecido al término, ${pct(top)})` : `entre los ${relevantes.length} más parecidos al término (${pct(top)})`;
+  const principal = masCompleto(relevantes.filter((c) => !c.estimado && ok(c)));
+  if (principal) return { candidato: principal, estado: 'completo', motivo: `Foundation/SR Legacy ≥ ${umbral} ${entre}: ${datos(principal)}` };
+  const estimado = masCompleto(relevantes.filter((c) => c.estimado && ok(c)));
+  if (estimado) return { candidato: estimado, estado: 'completo_estimado', motivo: `ningún Foundation/SR Legacy ≥ ${umbral} ${entre}; FNDDS (estimado): ${datos(estimado)}` };
+  const mejor = masCompleto(relevantes);
+  return { candidato: mejor, estado: 'incompleto', motivo: `ninguno llega al ${umbral} ${entre}; el más completo: ${datos(mejor)}` };
 }
+
+// La búsqueda de USDA interpreta / ( ) [ ] { } " ~ * ? : ^ ! + & | \ como sintaxis (la "/" da HTTP 400).
+export const searchQuery = (termino) => termino.replace(/[\\/()[\]{}"~*?:^!+&|]/g, ' ').replace(/\s+/g, ' ').trim();
 
 // Alimentos del documento que se buscan y motivo de los que no.
 export function searchPlan(foods) {
@@ -147,28 +168,33 @@ export function createUsdaClient({ apiKey, fetchImpl = fetch, cacheDir = null })
 // Candidatos de un término: primero Foundation + SR Legacy; FNDDS solo si ninguno llega al umbral (ahorra llamadas).
 export async function findCandidates(client, termino, { map, required, threshold, pageSize = 10 }) {
   const ctx = { termino, map, required };
-  let cands = (await client.search(termino, PRINCIPALES, pageSize)).map((f) => toCandidate(f, ctx));
-  if (!cands.some((c) => c.ratio + 1e-9 >= threshold)) {
-    cands = cands.concat((await client.search(termino, [FNDDS], MAX_CANDIDATOS)).map((f) => toCandidate(f, ctx)));
+  const query = searchQuery(termino);
+  let cands = (await client.search(query, PRINCIPALES, pageSize)).map((f) => toCandidate(f, ctx));
+  if (suggest(cands, threshold).estado !== 'completo') {
+    cands = cands.concat((await client.search(query, [FNDDS], MAX_CANDIDATOS)).map((f) => toCandidate(f, ctx)));
   }
   const sugerencia = suggest(cands, threshold);
-  return { candidatos: sortCandidates(cands).slice(0, MAX_CANDIDATOS), ...sugerencia };
+  // Lista por completitud, pero el sugerido siempre aparece (si no está entre los 5 primeros, ocupa el último hueco).
+  const lista = sortCandidates(cands).slice(0, MAX_CANDIDATOS);
+  const s = sugerencia.candidato;
+  if (s && !lista.includes(s)) lista.splice(MAX_CANDIDATOS - 1, 1, s);
+  return { candidatos: lista, ...sugerencia };
 }
 
 // ---------- usda/eleccion.csv (para Excel en español: punto y coma y BOM) ----------
 const tipoTexto = (c) => (c.estimado ? `${c.tipo} (estimado)` : c.tipo);
 const oblTexto = (c) => `${c.obligatorios}/${c.total}`;
-export const ELECCION_HEADER = ['id', 'nombre', 'termino_busqueda_usda', 'fdcId', 'estado', 'sugerido', 'sugerido_descripcion', 'sugerido_tipo', 'sugerido_obligatorios',
-  ...Array.from({ length: MAX_CANDIDATOS }, (_, i) => [`c${i + 1}_fdcId`, `c${i + 1}_descripcion`, `c${i + 1}_tipo`, `c${i + 1}_obligatorios`]).flat()];
+export const ELECCION_HEADER = ['id', 'nombre', 'termino_busqueda_usda', 'fdcId', 'estado', 'sugerido', 'sugerido_descripcion', 'sugerido_tipo', 'sugerido_obligatorios', 'sugerido_parecido', 'motivo_sugerido',
+  ...Array.from({ length: MAX_CANDIDATOS }, (_, i) => [`c${i + 1}_fdcId`, `c${i + 1}_descripcion`, `c${i + 1}_tipo`, `c${i + 1}_obligatorios`, `c${i + 1}_parecido`]).flat()];
 
 export function eleccionCSV(rows) {
   const out = [ELECCION_HEADER];
   for (const r of rows) {
     const s = r.candidato;
-    const cells = [r.id, r.nombre, r.termino, '', r.estado, s?.fdcId ?? '', s?.descripcion ?? '', s ? tipoTexto(s) : '', s ? oblTexto(s) : ''];
+    const cells = [r.id, r.nombre, r.termino, '', r.estado, s?.fdcId ?? '', s?.descripcion ?? '', s ? tipoTexto(s) : '', s ? oblTexto(s) : '', s ? pct(s.coincidencia) : '', r.motivo ?? ''];
     for (let i = 0; i < MAX_CANDIDATOS; i++) {
       const c = r.candidatos?.[i];
-      cells.push(c?.fdcId ?? '', c?.descripcion ?? '', c ? tipoTexto(c) : '', c ? oblTexto(c) : '');
+      cells.push(c?.fdcId ?? '', c?.descripcion ?? '', c ? tipoTexto(c) : '', c ? oblTexto(c) : '', c ? pct(c.coincidencia) : '');
     }
     out.push(cells);
   }
@@ -226,7 +252,6 @@ export function applyUsda(foods, elegidos, usdaById, { map, sobrescribir = false
 // La completitud se calcula con el mismo código que la app (completenessReport), para que coincida con
 // "pendiente de completar".
 export function informeMarkdown({ report, resultado, plan, elegidosIds, errores = [], labels, fecha }) {
-  const pct = (r) => `${Math.round(r * 100)} %`;
   const perFood = new Map(report.perFood.map((p) => [p.id, p]));
   const omitidos = plan.filter((p) => p.omitido);
   const sinElegir = plan.filter((p) => !p.omitido && !elegidosIds.has(p.food.id));

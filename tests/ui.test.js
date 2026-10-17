@@ -210,3 +210,17 @@ test('Hoy: lista lo guardado hoy por comida', { skip }, async () => {
   assert.match(t.root.textContent, /Desayuno/);
   assert.match(t.root.textContent, /80 g/);
 });
+
+test('no coincide con tus alias: Guardar desactivado hasta pulsar "Sí, es ..." (editar gramos no basta)', { skip }, async () => {
+  const t = await setup({ responses: [{ ...RESULT, items: [ITEM('pechuga_pollo_cruda', 150, '150 g de pechuga', { flags: ['sin_alias'], confidence: 'baja' })], unmatched: [] }] });
+  t.type(t.$('textarea'), 'x');
+  await t.act(() => t.btn('Procesar').click());
+  assert.match(t.root.textContent, /No coincide con tus alias/);
+  assert.equal(t.btn('Guardar').disabled, true);
+  assert.match(t.root.textContent, /Confirma o cambia los alimentos que no coinciden con tus alias/);
+  t.type(t.$('li.card[data-key] input.grams'), '160');
+  assert.equal(t.btn('Guardar').disabled, true);
+  await t.act(() => t.btn('Sí, es «Pechuga de pollo sin piel cruda»').click());
+  assert.equal(t.btn('Sí, es'), undefined);
+  assert.equal(t.btn('Guardar').disabled, false);
+});

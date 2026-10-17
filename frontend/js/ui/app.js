@@ -2,7 +2,7 @@
 // Sin frameworks: DOM con textContent (nunca innerHTML con datos). Toda la lógica de negocio está en js/core.
 import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
-import { createDraft, setGrams, changeFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, validateDraft, lineProblem, previewTotals, toMealRecord } from '../core/draft.js';
+import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, validateDraft, lineProblem, previewTotals, toMealRecord } from '../core/draft.js';
 import { MEALS, defaultMeal, madridNow } from '../core/meal-defaults.js';
 import { parseFoodsDocument, formatIssue } from '../core/foods-parser.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
@@ -213,7 +213,7 @@ export function mountApp(root, deps) {
       const t = previewTotals(state.draft, byId());
       totalsEl.textContent = `Total: ${fmtTotal(t, 'energia_kcal', 'kcal', nf0)} · ${fmtTotal(t, 'proteina_g', 'g de proteína', nf1)}`;
       saveBtn.disabled = !v.ok || state.busy;
-      hint.textContent = v.empty ? 'Añade al menos un alimento.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
+      hint.textContent = v.empty ? 'Añade al menos un alimento.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
     };
 
     const lineCard = (line) => {
@@ -234,8 +234,9 @@ export function mountApp(root, deps) {
         const isHigh = cur.grams > MAX_GRAMS;
         high.hidden = !isHigh;
         high.replaceChildren(h('input', { type: 'checkbox', checked: cur.confirmedHigh, onchange: (e) => { state.draft = confirmHigh(state.draft, line.key, e.target.checked); paint(); paintFooter(); } }), ` Confirmo ${nf0.format(cur.grams ?? 0)} g`);
-        gramsIn.classList.toggle('bad', lineProblem(cur) !== null);
-        gramsIn.setAttribute('aria-invalid', String(lineProblem(cur) !== null));
+        const badGrams = lineProblem({ ...cur, needsReview: false }) !== null; // solo problemas de gramos
+        gramsIn.classList.toggle('bad', badGrams);
+        gramsIn.setAttribute('aria-invalid', String(badGrams));
       };
       gramsIn.addEventListener('input', (e) => { state.draft = setGrams(state.draft, line.key, e.target.value); paint(); paintFooter(); });
       const inc = incompleteInfo(food);
@@ -245,7 +246,9 @@ export function mountApp(root, deps) {
           h('button', { class: 'icon', 'aria-label': `Borrar ${food.nombre}`, onclick: () => { state.draft = removeLine(state.draft, line.key); render(); } }, '✕')),
         line.source_text ? h('div', { class: 'muted small' }, `«${line.source_text}»`) : null,
         h('div', { class: 'row' }, gramsIn, h('span', {}, 'g'), h('span', { class: `badge ${line.confidence}` }, line.confidence)),
-        flagsFor(line), high,
+        flagsFor(line),
+        line.needsReview ? h('button', { class: 'secondary review', onclick: () => { state.draft = confirmFood(state.draft, line.key); render(); } }, `Sí, es «${food.nombre}»`) : null,
+        high,
         inc ? h('div', { class: 'flag' }, `Alimento incompleto (${inc.filled}/${inc.total} nutrientes): los totales de micronutrientes no serán completos`) : null,
         prev);
       paint();
