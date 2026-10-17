@@ -56,5 +56,10 @@
   { "frase": "200 g de pechuga de pollo a la plancha",
     "modelo_simulado": { "items": [
       { "food_id": "pechuga_pollo_cruda", "cantidad": 200, "unidad": "g", "source_text": "200 g de pechuga de pollo a la plancha", "confidence": "alta", "estado_dicho": "cocinado" } ], "unmatched": [] },
-    "esperado": { "items": [ ["pechuga_pollo_cruda", 200, "alta"] ], "unmatched": [] } }
+    "esperado": { "items": [ ["pechuga_pollo_cruda", 200, "alta"] ], "unmatched": [] } },
+  { "frase": "1 manzana y 2 huevos",
+    "modelo_simulado": { "items": [
+      { "food_id": "manzana_con_piel", "cantidad": 1, "unidad": "g", "source_text": "1 manzana", "confidence": "alta", "estado_dicho": "ninguno" },
+      { "food_id": "huevo", "cantidad": 100, "unidad": "g", "source_text": "2 huevos", "confidence": "alta", "estado_dicho": "ninguno" } ], "unmatched": [] },
+    "esperado": { "items": [ ["huevo", 100, "alta"] ], "unmatched": [ ["1 manzana", "sin_porcion"] ] } }
 ]

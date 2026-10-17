@@ -38,3 +38,7 @@ export function detectEstado(text) {
 // ¿La línea expresa un volumen? ("5 ml", "medio litro", "2 cl", "0,5 l"). Para detectar que el modelo lo pasó como gramos.
 const VOLUMEN = /(\b(ml|mililitros?|cl|centilitros?|litros?)\b|\d\s*l\b)/;
 export const detectVolumen = (text) => VOLUMEN.test(normalizeText(text));
+
+// ¿La línea dice un peso? ("150 g", "150gr", "200 gramos", "medio kilo", "1,5 kg").
+const PESO = /(\b(g|gr|grs|gramos?|kg|kgs|kilos?|kilogramos?)\b|\d\s*(g|gr|kg)\b)/;
+export const detectPeso = (text) => PESO.test(normalizeText(text));

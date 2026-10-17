@@ -1,6 +1,6 @@
 // Validación en código de la respuesta de la IA + elección determinista de variante crudo/cocinado.
 // La IA propone; aquí se descarta lo inválido y se aplican las reglas de variantes.
-import { MAX_GRAMS, detectEstado, detectVolumen } from './ai-contract.js';
+import { MAX_GRAMS, detectEstado, detectVolumen, detectPeso } from './ai-contract.js';
 import { normalizeText } from './text.js';
 
 const CONF = ['alta', 'media', 'baja'];
@@ -62,6 +62,17 @@ export function mentionsFood(text, foods) {
     if (!w.length) return false;
     for (let i = 0; i + w.length <= t.length; i++) if (w.every((x, j) => sameWord(t[i + j], x))) return true;
     return false;
+  }));
+}
+
+// ¿Los gramos salen de una porción de alguno de estos alimentos? Múltiplos de ¼ o ⅓ de porción ("medio vaso",
+// "2 huevos", "un tercio de yogur"), con un 1 % de tolerancia por redondeos.
+export function fromPortion(grams, foods) {
+  const cerca = (r, paso) => Math.abs(r - Math.round(r / paso) * paso) <= 0.01 * Math.max(r, 1);
+  return foods.some((f) => (f.porciones ?? []).some((p) => {
+    if (!(p.gramos > 0)) return false;
+    const r = grams / p.gramos;
+    return r >= 0.25 - 1e-9 && (cerca(r, 0.25) || cerca(r, 1 / 3));
   }));
 }
 
@@ -143,10 +154,17 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     const v = resolveVariant(base, index);
     const flags = [...v.flags];
     let confidence = v.confidence;
-    // Lo dicho debe nombrar al alimento (o a una variante de su grupo): si no, el modelo eligió por su cuenta
-    // ("150 g de pechuga" -> pechuga de pollo). Se marca para confirmar; sirve también para descubrir alias que faltan.
     const modelFood = index.byId.get(raw.food_id);
     const family = modelFood.grupo ? index.groups.get(modelFood.grupo) : [modelFood];
+    // Sin unidad de peso ni de volumen en lo dicho ("1 manzana", "2 huevos"), el número son unidades, NUNCA gramos:
+    // solo vale si los gramos salen de una porción del alimento; si no, a "sin porción" para que pongas los gramos.
+    if (!detectPeso(text) && !detectVolumen(text) && (unidad === 'ml' || !fromPortion(qty, [...family, index.byId.get(v.food_id)]))) {
+      unmatched.push({ text: text || v.food_id, motivo: 'sin_porcion', food_id: v.food_id });
+      warnings.push(`${v.food_id}: "${text}" no dice gramos y no hay una porción que dé ${qty} ${unidad}: pon los gramos`);
+      continue;
+    }
+    // Lo dicho debe nombrar al alimento (o a una variante de su grupo): si no, el modelo eligió por su cuenta
+    // ("150 g de pechuga" -> pechuga de pollo). Se marca para confirmar; sirve también para descubrir alias que faltan.
     if (!mentionsFood(text, [...family, index.byId.get(v.food_id)])) {
       flags.push('sin_alias');
       confidence = 'baja';

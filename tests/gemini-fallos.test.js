@@ -18,7 +18,7 @@ const draftOf = (items) => createDraft({ meal: 'comida', result: run(items), foo
 
 // ---------- 1. "tomate frito": la palabra de estado es parte del nombre ----------
 test('tomate frito: "frito" es parte del alias, no un estado (aunque el modelo diga cocinado)', () => {
-  for (const [text, estado_dicho] of [['70 g de tomate frito', 'cocinado'], ['70 g de tomate frito', 'ninguno'], ['unos tomates fritos', 'cocinado']]) {
+  for (const [text, estado_dicho] of [['70 g de tomate frito', 'cocinado'], ['70 g de tomate frito', 'ninguno'], ['70 g de tomates fritos', 'cocinado']]) {
     const r = run([line('salsa_tomate_frito', text, { cantidad: 70, estado_dicho })]);
     assert.equal(r.items[0].food_id, 'salsa_tomate_frito', text);
     assert.equal(r.items[0].confidence, 'alta', text);
@@ -37,13 +37,13 @@ test('pollo frito: "frito" sí es estado cuando no forma parte del nombre', () =
   // En el documento real, un alimento sin variante cocinada ni peso_en_crudo: estado sin variante -> baja y aviso.
   const p = run([line('merluza_cruda', '200 g de merluza frita', { estado_dicho: 'cocinado' })]);
   assert.equal(p.items[0].food_id, 'merluza_cocida'); // merluza sí tiene variante cocinada
-  const k = run([line('kiwi_verde', 'un kiwi frito', { estado_dicho: 'cocinado' })]);
+  const k = run([line('kiwi_verde', 'un kiwi frito', { cantidad: 69, estado_dicho: 'cocinado' })]);
   assert.equal(k.items[0].confidence, 'baja');
   assert.ok(k.items[0].flags.includes('variante_no_disponible'));
 });
 
 test('el estado del propio alimento en su alias sí cuenta ("pistachos crudos", "merluza cruda")', () => {
-  const c = one(line('pistachos_crudos', 'pistachos crudos', { estado_dicho: 'crudo' }));
+  const c = one(line('pistachos_crudos', '30 g de pistachos crudos', { estado_dicho: 'crudo' }));
   assert.equal(c.food_id, 'pistachos_crudos');
   assert.equal(c.confidence, 'alta');
   const m = one(line('merluza_cruda', '200 g de merluza cruda', { estado_dicho: 'crudo' }));
@@ -150,17 +150,17 @@ test('lo dicho no nombra al alimento elegido: confianza baja, aviso "no coincide
 test('coincidencia con nombre o alias: sin acentos, sin mayúsculas, con plurales y con variantes del grupo', () => {
   const ok = [
     ['pechuga_pollo_cruda', '200 G DE PECHUGAS DE POLLO'],
-    ['salsa_tomate_frito', 'unos tomates fritos'],
+    ['salsa_tomate_frito', '70 g de tomates fritos'],
     ['jamon_curado', '30 g de jamon serrano'],
-    ['pistachos_crudos', 'un puñado de pistachos'], // "pistachos" es alias de otra variante del grupo
-    ['merluza_cocida', 'merluza'],
+    ['pistachos_crudos', '30 g de pistachos'], // "pistachos" es alias de otra variante del grupo
+    ['merluza_cocida', '200 g de merluza'],
     ['pasta_seca', '125 g de macarrón'],
     ['pasta_seca', '125 g de macarrones'],
     ['huevo', '2 huevos'],
     ['leche_entera', '2500 g de leche entera'],
   ];
   for (const [id, text] of ok) assert.ok(!one(line(id, text)).flags.includes('sin_alias'), text);
-  for (const [id, text] of [['muslo_pollo_con_piel', '180 g de pollo'], ['pechuga_pavo_cruda', '100 g de pavo'], ['kiwi_verde', 'una fruta']]) {
+  for (const [id, text] of [['muslo_pollo_con_piel', '180 g de pollo'], ['pechuga_pavo_cruda', '100 g de pavo'], ['kiwi_verde', '100 g de una fruta']]) {
     assert.ok(one(line(id, text)).flags.includes('sin_alias'), text);
   }
 });
@@ -204,7 +204,7 @@ test('sin peso_en_crudo, el arroz cocido sigue avisando', () => {
 test('peso_en_crudo con variante cocinada en el grupo: se queda en la fila marcada', () => {
   const list = [{ id: 'a_crudo', nombre: 'A', estado: 'crudo', grupo: 'a', defecto: true, peso_en_crudo: true },
     { id: 'a_cocido', nombre: 'A', estado: 'cocinado', grupo: 'a', defecto: false }];
-  const r = one(line('a_crudo', 'a al horno', { estado_dicho: 'cocinado' }), list);
+  const r = one(line('a_crudo', '100 g de a al horno', { estado_dicho: 'cocinado' }), list);
   assert.deepEqual([r.food_id, r.confidence, r.flags], ['a_crudo', 'alta', []]);
 });
 
@@ -233,4 +233,37 @@ test('sin_alias: la línea no se puede guardar hasta confirmar el alimento o cam
   const cambiado = changeFood(d, l1.key, 'pechuga_pavo_cruda');
   assert.equal(validateDraft(cambiado).ok, true);
   assert.equal(cambiado.lines[0].grams, 150);
+});
+
+// ---------- Real: "1 manzana" se guardó como 1 g (la manzana no tiene porción) ----------
+test('sin unidad de peso o volumen, el número NUNCA son gramos: sin porción aplicable -> "sin porción"', () => {
+  for (const [cantidad, unidad] of [[1, 'g'], [120, 'g'], [1, 'ml']]) {
+    const r = run([line('manzana_con_piel', '1 manzana', { cantidad, unidad })]);
+    assert.deepEqual(r.items, [], `${cantidad} ${unidad}`);
+    assert.deepEqual(r.unmatched, [{ text: '1 manzana', motivo: 'sin_porcion', food_id: 'manzana_con_piel' }]);
+    assert.match(r.warnings[0], /no dice gramos/);
+  }
+  // "150 de arroz": tampoco son gramos si no lo dice
+  assert.equal(run([line('arroz_blanco_crudo', '150 de arroz', { cantidad: 150 })]).unmatched[0].motivo, 'sin_porcion');
+  // y en la confirmación no se rellenan gramos que nadie dijo
+  const d = createDraft({ meal: 'comida', result: run([line('manzana_con_piel', '1 manzana', { cantidad: 1 })]), foodsById: byId });
+  assert.equal(resolveUnmatched(d, 0, 'manzana_con_piel', null, byId.get('manzana_con_piel')).lines[0].grams, null);
+});
+
+test('sin unidad pero con porción: vale si los gramos salen de la porción (¼, ⅓, ½, 1, 2...)', () => {
+  const ok = [['huevo', '2 huevos', 100], ['kiwi_verde', 'un kiwi', 69], ['aceite_oliva', 'una cucharada de aceite', 13.5], ['aceite_oliva', 'una cucharadita de aceite', 4.5],
+    ['leche_entera', 'medio vaso de leche', 125], ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 50.4]];
+  for (const [id, text, cantidad] of ok) assert.deepEqual(run([line(id, text, { cantidad })]).items.map((i) => [i.food_id, i.grams]), [[id, cantidad]], text);
+  // gramos que no salen de ninguna porción, o ml sin haber dicho un volumen ("un vaso" es una porción en gramos)
+  for (const [id, text, cantidad, unidad] of [['huevo', '2 huevos', 2, 'g'], ['kiwi_verde', 'un kiwi', 100, 'g'], ['leche_entera', 'un vaso de leche', 250, 'ml']]) {
+    assert.equal(run([line(id, text, { cantidad, unidad })]).unmatched[0]?.motivo, 'sin_porcion', text);
+  }
+});
+
+test('con unidad de peso o volumen dicha, se respetan los gramos aunque no haya porción', () => {
+  for (const text of ['150 g de manzana', '150gr de manzana', '150 gramos de manzana', 'medio kilo de manzanas', '0,2 kg de manzana']) {
+    assert.equal(run([line('manzana_con_piel', text, { cantidad: 150 })]).items.length, 1, text);
+  }
+  assert.equal(run([line('leche_entera', '200 ml de leche', { cantidad: 200, unidad: 'ml' })]).items[0].ml, 200);
+  assert.ok(SYSTEM_PROMPT.includes('NUNCA son gramos') && SYSTEM_PROMPT.includes('"1 manzana"'));
 });

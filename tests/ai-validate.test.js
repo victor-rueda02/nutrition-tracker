@@ -41,7 +41,7 @@ test('detectEstado: cocinado, crudo, tostado, nada y ambiguo', () => {
 
 // ---------- reglas de variantes (petición de Victor) ----------
 test('una sola variante y sin estado: no se baja la confianza', () => {
-  const r = one(line('kiwi_verde', 'un kiwi'));
+  const r = one(line('kiwi_verde', 'un kiwi', { cantidad: 69 })); // 1 porción "unidad"
   assert.equal(r.food_id, 'kiwi_verde');
   assert.equal(r.confidence, 'alta');
   assert.deepEqual(r.flags, []);
@@ -53,8 +53,8 @@ test('varias variantes y sin estado: variante por defecto (crudo) y confianza -1
   assert.equal(r.food_id, 'merluza_cruda');
   assert.equal(r.confidence, 'media');
   assert.ok(r.flags.includes('variante_por_defecto'));
-  assert.equal(one(line('patata_cruda', 'patatas', { confidence: 'media' })).confidence, 'baja');
-  assert.equal(one(line('patata_cruda', 'patatas', { confidence: 'baja' })).confidence, 'baja');
+  assert.equal(one(line('patata_cruda', '200 g de patatas', { confidence: 'media' })).confidence, 'baja');
+  assert.equal(one(line('patata_cruda', '200 g de patatas', { confidence: 'baja' })).confidence, 'baja');
 });
 
 test('si el modelo elige la cocinada pero no lo dije: se corrige a la de defecto', () => {
@@ -65,7 +65,7 @@ test('si el modelo elige la cocinada pero no lo dije: se corrige a la de defecto
 });
 
 test('digo cocido/asado/plancha: variante cocinada y confianza sin cambios', () => {
-  for (const [food, text] of [['merluza_cruda', 'merluza cocida'], ['merluza_cruda', 'merluza a la plancha'], ['patata_cruda', 'patata asada'], ['patata_cruda', 'unas patatas hervidas']]) {
+  for (const [food, text] of [['merluza_cruda', '200 g de merluza cocida'], ['merluza_cruda', '200 g de merluza a la plancha'], ['patata_cruda', '200 g de patata asada'], ['patata_cruda', '200 g de patatas hervidas']]) {
     const r = one(line(food, text, { estado_dicho: 'cocinado' }));
     assert.equal(r.food_id, food.replace('cruda', food.startsWith('merluza') ? 'cocida' : 'asada'), text);
     assert.equal(r.confidence, 'alta', text);
@@ -73,20 +73,20 @@ test('digo cocido/asado/plancha: variante cocinada y confianza sin cambios', () 
 });
 
 test('digo crudo y el modelo eligió la cocinada: se corrige a crudo sin bajar confianza', () => {
-  const r = one(line('merluza_cocida', 'merluza cruda', { estado_dicho: 'crudo' }));
+  const r = one(line('merluza_cocida', '200 g de merluza cruda', { estado_dicho: 'crudo' }));
   assert.equal(r.food_id, 'merluza_cruda');
   assert.equal(r.confidence, 'alta');
 });
 
 test('pistachos: por defecto los tostados sin sal; crudos solo si lo digo', () => {
-  const t = one(line('pistachos_crudos', 'pistachos tostados', { estado_dicho: 'tostado' }));
+  const t = one(line('pistachos_crudos', '30 g de pistachos tostados', { estado_dicho: 'tostado' }));
   assert.equal(t.food_id, 'pistachos_tostados_sin_sal');
   assert.equal(t.confidence, 'alta');
-  const d = one(line('pistachos_crudos', 'unos pistachos'));
+  const d = one(line('pistachos_crudos', '30 g de pistachos'));
   assert.equal(d.food_id, 'pistachos_tostados_sin_sal');
   assert.equal(d.confidence, 'media');
   assert.ok(d.flags.includes('variante_cambiada'));
-  const c = one(line('pistachos_tostados_sin_sal', 'pistachos crudos', { estado_dicho: 'crudo' }));
+  const c = one(line('pistachos_tostados_sin_sal', '30 g de pistachos crudos', { estado_dicho: 'crudo' }));
   assert.equal(c.food_id, 'pistachos_crudos');
   assert.equal(c.confidence, 'alta');
 });
@@ -98,7 +98,7 @@ test('digo un estado que no existe en el documento: confianza baja y aviso', () 
   assert.ok(arroz.items[0].flags.includes('variante_no_disponible'));
   assert.equal(arroz.items[0].requiresConfirmation, true);
   assert.equal(arroz.warnings.length, 1);
-  const kiwi = one(line('kiwi_verde', 'un kiwi asado', { estado_dicho: 'cocinado' }));
+  const kiwi = one(line('kiwi_verde', 'un kiwi asado', { cantidad: 69, estado_dicho: 'cocinado' }));
   assert.equal(kiwi.confidence, 'baja');
 });
 
@@ -111,7 +111,7 @@ test('el modelo dice un estado que no consta en su fragmento: se ignora, baja y 
 
 test('grupo con varias variantes y ninguna por defecto: respeta al modelo, confianza -1 y aviso', () => {
   const list = [{ id: 'a_crudo', nombre: 'A', grupo: 'a', estado: 'crudo', defecto: false }, { id: 'a_cocido', nombre: 'A', grupo: 'a', estado: 'cocinado', defecto: false }];
-  const r = run([line('a_cocido', 'a')], list);
+  const r = run([line('a_cocido', '100 g de a')], list);
   assert.equal(r.items[0].food_id, 'a_cocido');
   assert.equal(r.items[0].confidence, 'media');
   assert.ok(r.items[0].flags.includes('sin_variante_por_defecto'));
@@ -120,7 +120,7 @@ test('grupo con varias variantes y ninguna por defecto: respeta al modelo, confi
 
 // ---------- validación de la respuesta ----------
 test('food_id inexistente: descartado y pasa a no reconocido', () => {
-  const r = run([line('plátano_inventado', 'un plátano'), line('kiwi_verde', 'un kiwi')]);
+  const r = run([line('plátano_inventado', 'un plátano'), line('kiwi_verde', 'un kiwi', { cantidad: 69 })]);
   assert.deepEqual(r.items.map((i) => i.food_id), ['kiwi_verde']);
   assert.deepEqual(r.unmatched, [{ text: 'un plátano', motivo: 'no_en_catalogo' }]);
   assert.equal(r.warnings.length, 1);
@@ -143,7 +143,7 @@ test('más de 2000 g por línea: se conserva pero exige confirmación', () => {
 });
 
 test('confianza inválida -> baja; unmatched se normaliza', () => {
-  assert.equal(one(line('kiwi_verde', 'kiwi', { confidence: 'altísima' })).confidence, 'baja');
+  assert.equal(one(line('kiwi_verde', '100 g de kiwi', { confidence: 'altísima' })).confidence, 'baja');
   const r = run([], realList, [{ text: ' un puñado de pistachos ', motivo: 'sin_porcion', food_id: 'pistachos_crudos' }, { text: 'x', motivo: 'rarisimo', food_id: 'no_existe' }, { text: '' }, null]);
   assert.deepEqual(r.unmatched, [{ text: 'un puñado de pistachos', motivo: 'sin_porcion', food_id: 'pistachos_crudos' }, { text: 'x', motivo: 'no_en_catalogo' }]);
 });
