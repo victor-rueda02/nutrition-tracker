@@ -270,33 +270,34 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
   assert.match(t.$('section.meal').textContent, /Coca-Cola Classic · 330 g · sin dato/);
 });
 
-test('Objetivos: perfil hombre por defecto; tus kcal y macros se guardan y el diario los usa; perfil mujer', { skip }, async () => {
-  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['arroz_blanco_crudo', 100]])] });
+test('Objetivos: sin plan, editar kcal y macros crea «Mis objetivos» desde hoy; el diario de hoy los usa y el de ayer no; perfil mujer', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['arroz_blanco_crudo', 100]]), MEAL('a', '2026-10-15', 'comida', [['arroz_blanco_crudo', 100]])] });
   await t.act(() => t.btn('Diario').click());
+  assert.match(t.$('.objetivos-dia').textContent, /Objetivos: referencias EFSA/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 11 mg/);
   await t.act(() => t.btn('Objetivos').click());
-  assert.equal(t.$('select').value, 'hombre');
-  const kcal = t.$('input[aria-label="Energía (kcal)"]');
-  assert.equal(kcal.placeholder, '2000');
-  kcal.value = '2500';
-  t.$('input[aria-label="Proteína (g)"]').value = '150,5';
+  assert.match(t.root.textContent, /Ningún periodo de tu plan cubre hoy/);
+  assert.match(t.root.textContent, /Sin plan: se usan las referencias EFSA/);
+  assert.equal(t.btn('Exportar plan').disabled, true);
+  t.$('input[aria-label="Energía: objetivo"]').value = '2500';
+  t.$('input[aria-label="Proteína: mínimo"]').value = '150,5';
   await t.act(() => t.btn('Guardar').click());
   assert.match(t.$('[role=status]').textContent, /Guardado/);
-  assert.deepEqual(await t.store.getSetting('objetivos'), { perfil: 'hombre', valores: { energia_kcal: 2500, proteina_g: 150.5 } });
-  assert.equal(t.$('input[aria-label="Vitamina B1 (tiamina) (mg)"]').placeholder, '1,05'); // 0,1 mg/MJ con 2500 kcal
-  t.$('input[aria-label="Calcio (mg)"]').value = 'mucho';
+  const plan = await t.store.getSetting('plan_objetivos');
+  assert.deepEqual(plan.periodos, [{ id: 'objetivos_20261016', nombre: 'Mis objetivos', inicio: '2026-10-16', valores: { energia_kcal: { objetivo: 2500 }, proteina_g: { min: 150.5 } } }]);
+  t.$('input[aria-label="Hidratos de carbono: mínimo"]').value = 'mucho';
   await t.act(() => t.btn('Guardar').click());
-  assert.match(t.$('[role=status]').textContent, /No guardado: valor no válido en Calcio/);
-  t.$('input[aria-label="Calcio (mg)"]').value = '';
-  t.$('select').value = 'mujer';
-  await t.act(() => t.btn('Guardar').click());
+  assert.match(t.$('[role=alert]').textContent, /Valor no válido en Hidratos de carbono \(mínimo\)/);
+  await t.act(() => { const s = t.$('select[aria-label="Perfil de referencia"]'); s.value = 'mujer'; s.dispatchEvent(new t.document.defaultView.Event('change')); });
+  assert.equal((await t.store.getSetting('plan_objetivos')).perfil, 'mujer');
   await t.act(() => t.btn('‹ Volver').click());
+  assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Mis objetivos/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2500 kcal/);
   assert.match(fila(t, 'proteina_g').textContent, /\/ 151 g|\/ 150,5 g/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/);
-  await t.act(() => t.btn('Objetivos').click());
-  await t.act(() => t.btn('Restablecer').click());
-  assert.deepEqual((await t.store.getSetting('objetivos')).valores, {});
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click()); // ayer: antes del periodo
+  assert.match(fila(t, 'energia_kcal').textContent, /\/ 2000 kcal/);
+  assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/); // el perfil es del plan entero
 });
 
 test('no coincide con tus alias: Guardar desactivado hasta pulsar "Sí, es ..." (editar gramos no basta)', { skip }, async () => {
@@ -479,16 +480,18 @@ test('importar el diario: fichero que no es una copia -> error claro y nada camb
 });
 
 test('importar el diario: los objetivos de la copia solo se restauran si en este dispositivo no hay', { skip }, async () => {
-  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: { perfil: 'mujer', valores: { energia_kcal: 1800 } } };
+  // copia antigua (objetivos de la pantalla anterior): se convierten en un plan desde su primera comida
+  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [AYER], objetivos: { perfil: 'mujer', valores: { energia_kcal: 1800 } } };
   const sin = await setup();
   await abrirDoc(sin);
   await sin.attach(sin.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
   assert.match(sin.root.textContent, /Se restaurarán los objetivos de la copia/);
-  await sin.act(() => sin.btn('Restaurar objetivos').click());
-  assert.deepEqual(await sin.store.getSetting('objetivos'), copia.objetivos);
+  await sin.act(() => sin.btn('Importar 1 comida').click());
+  const plan = await sin.store.getSetting('plan_objetivos');
+  assert.deepEqual([plan.perfil, plan.periodos[0].inicio, plan.periodos[0].valores], ['mujer', AYER.date, { energia_kcal: { objetivo: 1800 } }]);
   const con = await setup({ objetivos: { perfil: 'hombre', valores: { energia_kcal: 2500 } } });
   await abrirDoc(con);
-  await con.attach(con.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
+  await con.attach(con.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', { ...copia, comidas: [] }));
   assert.match(con.root.textContent, /Objetivos: se mantienen los de este dispositivo/);
   assert.match(con.root.textContent, /No hay nada nuevo que importar/);
 });
