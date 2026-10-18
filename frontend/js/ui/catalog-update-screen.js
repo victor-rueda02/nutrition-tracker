@@ -23,6 +23,7 @@ export function catalogUpdateScreen(ui) {
         h('li', {}, `${plan.nuevos.length} nuevos`),
         h('li', {}, `${plan.actualizados.length} actualizados`),
         plan.retirados.length ? h('li', {}, `${plan.retirados.length} ya no están publicados: se mantienen en tu dispositivo (pueden estar en tu diario)`) : null,
+        plan.propios?.length ? h('li', {}, `${plan.propios.length} creados en este dispositivo (Estimar con IA, recetas): se mantienen`) : null,
         h('li', {}, plan.conflictos.length ? `${plan.conflictos.length} ${plan.conflictos.length === 1 ? 'conflicto' : 'conflictos'}: elige abajo` : 'Sin conflictos: se conservan los cambios que hiciste desde la app')),
       h('p', { class: 'muted small' }, 'Nada cambia hasta que pulses «Actualizar». Tu diario no se toca.')),
     lista('Nuevos', plan.nuevos, (i) => i.nombre),

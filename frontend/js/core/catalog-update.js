@@ -57,7 +57,7 @@ export function etiquetaCampo(campo, catalog) {
 }
 
 // Plan de actualización. Devuelve { foods (con los conflictos resueltos como "mío"), nuevos, actualizados,
-// retirados, conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
+// retirados, propios (creados en el dispositivo), conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
 export function planCatalogUpdate({ local, remote, base = null, catalog }) {
   const L = new Map(local.map((f) => [f.id, f]));
   const R = new Map(remote.map((f) => [f.id, f]));
@@ -97,8 +97,12 @@ export function planCatalogUpdate({ local, remote, base = null, catalog }) {
   for (const r of remote) if (!L.has(r.id)) nuevos.push({ id: r.id, nombre: r.nombre });
   const quedan = local.filter((l) => !R.has(l.id));
   foods.push(...quedan);
-  const retirados = quedan.map((l) => ({ id: l.id, nombre: l.nombre }));
-  return { foods, nuevos, actualizados, retirados, conflictos, hayCambios: nuevos.length + actualizados.length + conflictos.length > 0 };
+  // Creados en el dispositivo (Estimar con IA, Guardar como receta): nunca estuvieron publicados, así que no se
+  // cuentan como "ya no publicados". Sin base, se reconocen por tipo=usda_app.
+  const propio = (l) => (B ? !B.has(l.id) : l.extra?.tipo === 'usda_app');
+  const retirados = quedan.filter((l) => !propio(l)).map((l) => ({ id: l.id, nombre: l.nombre }));
+  const propios = quedan.filter(propio).map((l) => ({ id: l.id, nombre: l.nombre }));
+  return { foods, nuevos, actualizados, retirados, propios, conflictos, hayCambios: nuevos.length + actualizados.length + conflictos.length > 0 };
 }
 
 // Aplica tus elecciones en los conflictos: elecciones = { "id|campo": "publicado" | "mio" } (por defecto, "mío").

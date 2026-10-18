@@ -1,15 +1,17 @@
 // Copia de seguridad del diario (JSON): exportar e importar. Funciones puras, sin DOM.
-// La copia lleva las comidas, tus objetivos, tus plantillas y el registro de frases a revisar; nunca la conexión
+// La copia lleva las comidas, tus objetivos, tus plantillas, el registro de frases a revisar y tus recetas (sus
+// definiciones; las filas van en el documento); nunca la conexión
 // (el token del Worker).
 import { MEALS } from './meal-defaults.js';
 import { cleanTemplates } from './templates.js';
 import { cleanLog } from './phrase-log.js';
+import { cleanRecetas } from './recetas.js';
 
 export const BACKUP_FORMAT = 1;
 export const BACKUP_KIND = 'nutrition-tracker/diario';
 
-export function buildBackup({ meals, objetivos = null, plantillas = [], registro = [], now = new Date() }) {
-  return { tipo: BACKUP_KIND, formatVersion: BACKUP_FORMAT, exportedAt: now.toISOString(), comidas: meals, objetivos, plantillas, registro_frases: registro };
+export function buildBackup({ meals, objetivos = null, plantillas = [], registro = [], recetas = [], now = new Date() }) {
+  return { tipo: BACKUP_KIND, formatVersion: BACKUP_FORMAT, exportedAt: now.toISOString(), comidas: meals, objetivos, plantillas, registro_frases: registro, recetas };
 }
 export const backupToJSON = (backup) => `${JSON.stringify(backup, null, 2)}\n`;
 
@@ -44,13 +46,13 @@ const cleanMeal = (m) => ({
   lines: m.lines.map((l) => ({ food_id: l.food_id, grams: l.grams, source_text: typeof l.source_text === 'string' ? l.source_text : '' })),
 });
 
-// Lee una copia. Devuelve { ok, error?, meals, errors: [{ index, id, message }], objetivos, plantillas, registro }.
+// Lee una copia. Devuelve { ok, error?, meals, errors: [{ index, id, message }], objetivos, plantillas, registro, recetas }.
 export function parseBackup(text) {
   let data;
-  try { data = JSON.parse(String(text ?? '').replace(/^﻿/, '')); } catch (e) { return { ok: false, error: `No es un JSON válido: ${e.message}`, meals: [], errors: [], objetivos: null, plantillas: [], registro: [] }; }
+  try { data = JSON.parse(String(text ?? '').replace(/^﻿/, '')); } catch (e) { return { ok: false, error: `No es un JSON válido: ${e.message}`, meals: [], errors: [], objetivos: null, plantillas: [], registro: [], recetas: [] }; }
   const lista = Array.isArray(data) ? data : data?.tipo === BACKUP_KIND && Array.isArray(data.comidas) ? data.comidas : null;
-  if (!lista) return { ok: false, error: 'No es una copia del diario de esta app.', meals: [], errors: [], objetivos: null, plantillas: [], registro: [] };
-  if (!Array.isArray(data) && data.formatVersion > BACKUP_FORMAT) return { ok: false, error: `La copia es de una versión más nueva de la app (formato ${data.formatVersion}).`, meals: [], errors: [], objetivos: null, plantillas: [], registro: [] };
+  if (!lista) return { ok: false, error: 'No es una copia del diario de esta app.', meals: [], errors: [], objetivos: null, plantillas: [], registro: [], recetas: [] };
+  if (!Array.isArray(data) && data.formatVersion > BACKUP_FORMAT) return { ok: false, error: `La copia es de una versión más nueva de la app (formato ${data.formatVersion}).`, meals: [], errors: [], objetivos: null, plantillas: [], registro: [], recetas: [] };
   const meals = [];
   const errors = [];
   const vistos = new Set();
@@ -64,7 +66,8 @@ export function parseBackup(text) {
   const objetivos = o && typeof o === 'object' && !Array.isArray(o) ? { perfil: typeof o.perfil === 'string' ? o.perfil : undefined, valores: o.valores && typeof o.valores === 'object' ? { ...o.valores } : {} } : null;
   const plantillas = Array.isArray(data) ? [] : cleanTemplates(data.plantillas); // las inválidas se ignoran
   const registro = Array.isArray(data) ? [] : cleanLog(data.registro_frases);
-  return { ok: true, meals, errors, objetivos, plantillas, registro };
+  const recetas = Array.isArray(data) ? [] : cleanRecetas(data.recetas);
+  return { ok: true, meals, errors, objetivos, plantillas, registro, recetas };
 }
 
 const stamp = (m) => Date.parse(m.updatedAt ?? m.createdAt);
