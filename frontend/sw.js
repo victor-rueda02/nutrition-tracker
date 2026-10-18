@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v6';
+const VERSION = 'nt-v7';
 const ASSETS = [
   './',
   'css/catalogo.css',
@@ -35,6 +35,7 @@ const ASSETS = [
   'js/core/portions.js',
   'js/core/schema.js',
   'js/core/settings.js',
+  'js/core/targets-plan.js',
   'js/core/targets.js',
   'js/core/templates.js',
   'js/core/text.js',
