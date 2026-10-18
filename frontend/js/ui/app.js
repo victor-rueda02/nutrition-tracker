@@ -17,6 +17,8 @@ import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core
 import { repeatScreen } from './repeat-screen.js';
 import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTemplate, templateAsMeals, mergeTemplates } from '../core/templates.js';
 import { templatesScreen } from './templates-screen.js';
+import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV } from '../core/phrase-log.js';
+import { phraseLogScreen } from './phrase-log-screen.js';
 import { parseNumber } from '../core/numbers.js';
 
 const FLAG_TEXT = {
@@ -75,7 +77,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null,
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '',
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
@@ -123,7 +125,9 @@ export function mountApp(root, deps) {
     return track((async () => {
       try {
         const result = await interpret(text);
-        state.draft = createDraft({ text, meal: state.meal, result, foodsById: byId() });
+        const entry = newEntry({ texto: text, result, now: now() });
+        if (entry) await deps.store.setSetting('registro_frases', addEntry(await loadLog(), entry));
+        state.draft = { ...createDraft({ text, meal: state.meal, result, foodsById: byId() }), logId: entry?.id ?? null };
         state.screen = 'confirm';
       } catch (e) {
         state.error = e.userMessage ?? `Error inesperado: ${e.message}`;
@@ -159,6 +163,11 @@ export function mountApp(root, deps) {
     return track((async () => {
       const rec = toMealRecord(state.draft, { now: now(), idGen: deps.idGen });
       await deps.store.addMeal(rec);
+      if (state.draft.logId) {
+        const log = await loadLog();
+        const entry = log.find((e) => e.id === state.draft.logId);
+        if (entry) await deps.store.setSetting('registro_frases', updateEntry(log, resolveEntry(entry, rec.lines)));
+      }
       state.status = `Guardado en ${MEAL_LABEL[rec.meal].toLowerCase()}: ${rec.lines.length} ${rec.lines.length === 1 ? 'alimento' : 'alimentos'}.`;
       state.text = ''; state.draft = null; state.screen = 'home'; render();
     })());
@@ -200,12 +209,33 @@ export function mountApp(root, deps) {
 
   // Pantalla Documento: se cargan antes todas las comidas para que "Exportar" comparta en el mismo toque.
   const loadTemplates = async () => cleanTemplates(await deps.store.getSetting('plantillas'));
+  const loadLog = async () => cleanLog(await deps.store.getSetting('registro_frases'));
   const openDoc = (msg = '') => track((async () => {
     state.allMeals = await deps.store.allMeals();
     state.plantillas = await loadTemplates();
+    state.registro = await loadLog();
     state.docMsg = msg; state.screen = 'doc'; render();
   })());
   const fecha = () => madridNow(now()).date;
+
+  const openLog = (msg = '') => track((async () => {
+    state.registro = await loadLog();
+    state.logMsg = msg; state.pendingDelete = null; state.screen = 'registro'; render();
+  })());
+  const removeLogEntry = (id) => track((async () => {
+    await deps.store.setSetting('registro_frases', removeEntry(await loadLog(), id));
+    await openLog('Frase quitada.');
+  })());
+  const clearLog = () => track((async () => {
+    await deps.store.setSetting('registro_frases', []);
+    await openLog('Registro vaciado.');
+  })());
+  function exportLog() {
+    const text = logToCSV(state.registro, byId());
+    return track(saveFile({ name: `nutritiontracker-frases-${madridNow(now()).date}.csv`, text, type: 'text/csv' }).then((r) => {
+      state.logMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Exportadas ${state.registro.length} frases.`; render();
+    }));
+  }
 
   function exportDiary() {
     const text = backupToJSON(buildBackup({ meals: state.allMeals, objetivos: tieneObjetivos(state.objetivos) ? state.objetivos : null, plantillas: state.plantillas, now: now() }));
@@ -553,6 +583,8 @@ export function mountApp(root, deps) {
         h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
         h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
       connMsg,
+      h('h2', {}, 'Pulir el documento'),
+      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`)),
       h('h2', {}, 'Copia de seguridad'),
       h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). La copia no incluye el token.`),
       state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
@@ -677,11 +709,15 @@ export function mountApp(root, deps) {
         else { state.screen = 'home'; render(); }
       },
     });
+    const registro = () => phraseLogScreen({
+      h, state, byId, header, MOTIVO_TEXT, render, removeLogEntry, clearLog, exportLog,
+      back: () => openDoc(),
+    });
     const plantillas = () => templatesScreen({
       h, state, byId, header, nf0, nf1, MEAL_LABEL, render, useTemplate, deleteTemplate,
       back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
     });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro };
     root.replaceChildren(screens[state.screen]());
   }
   render();

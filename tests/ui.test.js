@@ -660,3 +660,53 @@ test('copia de seguridad con plantillas: se exportan y al importar se añaden la
   assert.deepEqual((await t.store.getSetting('plantillas')).map((x) => x.nombre), ['Cena', 'Desayuno']);
   assert.match(t.$('p.ok[role=status]').textContent, /1 plantilla/);
 });
+
+// ---------- Registro local de frases problemáticas ----------
+test('registro: un dictado con problemas se anota (solo local) y al guardar se anota qué elegiste', { skip }, async () => {
+  const resp = { items: [ITEM('pechuga_pollo_cruda', 150, '150 g de pechuga', { flags: ['sin_alias'], confidence: 'baja' }), ITEM('avena_copos', 80, '80 g de avena')], unmatched: [{ text: 'un plátano', motivo: 'no_en_catalogo' }], warnings: [], model: 'm' };
+  const t = await setup({ responses: [resp] });
+  t.type(t.$('textarea'), 'para desayunar 150 g de pechuga, 80 g de avena y un plátano');
+  await t.act(() => t.btn('Procesar').click());
+  let log = await t.store.getSetting('registro_frases');
+  assert.deepEqual(log.map((e) => [e.texto, e.problemas.map((p) => [p.texto, p.tipo, p.resolucion])]), [['para desayunar 150 g de pechuga, 80 g de avena y un plátano', [['un plátano', 'no_reconocido', null], ['150 g de pechuga', 'sin_alias', null]]]]);
+  // cambiar la pechuga por la de pavo y guardar (el plátano se queda sin resolver)
+  await t.act(() => t.$('button.name').click());
+  t.type(t.$('.overlay input'), 'pechuga de pavo');
+  await t.act(() => t.$$('.pick').find((b) => b.textContent.includes('sin piel cruda')).click());
+  await t.act(() => t.btn('Guardar').click());
+  log = await t.store.getSetting('registro_frases');
+  assert.deepEqual(log[0].problemas.map((p) => [p.texto, p.resolucion]), [['un plátano', 'descartado'], ['150 g de pechuga', 'pechuga_pavo_cruda']]);
+  assert.equal((await t.store.allMeals())[0].id, 'm1'); // el registro no consume ids de comidas
+  // verlo en Documento -> Frases a revisar
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Frases a revisar (1)').click());
+  const card = t.$('.frase').textContent;
+  assert.match(card, /«un plátano» · No reconocido \(No está en tu documento\) · descartado/);
+  assert.match(card, /«150 g de pechuga» · No coincide con tus alias · la IA: Pechuga de pollo sin piel cruda · → Pechuga de pavo sin piel cruda/);
+  await t.act(() => t.btn('Exportar (CSV)').click());
+  assert.equal(t.saved[0].name, 'nutritiontracker-frases-2026-10-16.csv');
+  assert.match(t.saved[0].text, /un plátano;No reconocido;no_en_catalogo;;descartado/);
+  await t.act(() => t.btn('Quitar').click());
+  assert.match(t.root.textContent, /No hay frases pendientes de revisar/);
+  assert.deepEqual(await t.store.getSetting('registro_frases'), []);
+});
+
+test('registro: un dictado sin problemas no se anota; «Vaciar» pide confirmación', { skip }, async () => {
+  const limpio = { items: [ITEM('avena_copos', 80, '80 g de avena')], unmatched: [], warnings: [], model: 'm' };
+  const t = await setup({ responses: [limpio] });
+  t.type(t.$('textarea'), '80 g de avena');
+  await t.act(() => t.btn('Procesar').click());
+  assert.equal(await t.store.getSetting('registro_frases'), undefined);
+  await t.store.setSetting('registro_frases', [{ id: 'e1', fecha: '2026-10-16T08:00:00Z', texto: 'x', problemas: [{ texto: 'x', tipo: 'confianza_baja', motivo: null, food_id: 'kiwi_verde', resolucion: null }] }]);
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Frases a revisar (1)').click());
+  assert.match(t.$('.frase').textContent, /Confianza baja · la IA: Kiwi verde · sin guardar/);
+  await t.act(() => t.btn('Vaciar').click());
+  assert.match(t.root.textContent, /¿Vaciar todo el registro\?/);
+  await t.act(() => t.btn('Sí, vaciar').click());
+  assert.deepEqual(await t.store.getSetting('registro_frases'), []);
+  assert.match(t.$('p.ok[role=status]').textContent, /Registro vaciado/);
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.match(t.root.textContent, /Frases a revisar \(0\)/);
+});
