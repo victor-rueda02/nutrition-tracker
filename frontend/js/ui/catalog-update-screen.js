@@ -1,0 +1,42 @@
+// Pantalla "Actualizar documento": qué trae el foods.csv publicado (nuevos, actualizados, ya no publicados) y, si
+// hay conflictos con lo que cambiaste desde la app, elegir antes de aplicar. Nada cambia hasta pulsar «Actualizar».
+// Usa las clases globales (panel, card, chips); estilos propios en css/catalogo.css.
+
+const valor = (campo, v) => {
+  if (campo === 'extra:incluir') return String(v ?? '').trim().toLowerCase() === 'no' ? 'excluido (incluir=no)' : 'activado';
+  return v === '' || v === null || v === undefined ? '(vacío)' : String(v).split('|').join(' | ');
+};
+
+// ui: { h, state, header, render, applyCatalogUpdate, postponeCatalogUpdate, back }
+export function catalogUpdateScreen(ui) {
+  const { h, state } = ui;
+  const { plan, remote } = state.catUpdate;
+  const lista = (titulo, items, texto) => (items.length ? h('details', { class: 'panel' }, h('summary', {}, `${titulo} (${items.length})`),
+    h('ul', {}, items.map((i) => h('li', {}, texto(i))))) : null);
+  const eleccion = (c) => state.catEleccion[`${c.id}|${c.campo}`] ?? 'mio';
+  const elegir = (c, que) => { state.catEleccion = { ...state.catEleccion, [`${c.id}|${c.campo}`]: que }; ui.render(); };
+  return h('main', { class: 'catalogo-update' },
+    ui.header('Actualizar documento', ui.back),
+    h('section', { class: 'panel' },
+      h('p', {}, `Hay una versión nueva de tu documento de alimentos publicado (${remote.foods.length} alimentos).`),
+      h('ul', { class: 'small resumen' },
+        h('li', {}, `${plan.nuevos.length} nuevos`),
+        h('li', {}, `${plan.actualizados.length} actualizados`),
+        plan.retirados.length ? h('li', {}, `${plan.retirados.length} ya no están publicados: se mantienen en tu dispositivo (pueden estar en tu diario)`) : null,
+        h('li', {}, plan.conflictos.length ? `${plan.conflictos.length} ${plan.conflictos.length === 1 ? 'conflicto' : 'conflictos'}: elige abajo` : 'Sin conflictos: se conservan los cambios que hiciste desde la app')),
+      h('p', { class: 'muted small' }, 'Nada cambia hasta que pulses «Actualizar». Tu diario no se toca.')),
+    lista('Nuevos', plan.nuevos, (i) => i.nombre),
+    lista('Actualizados', plan.actualizados, (i) => `${i.nombre}: ${i.campos.join(', ')}`),
+    lista('Ya no publicados (se mantienen)', plan.retirados, (i) => i.nombre),
+    plan.conflictos.length ? h('section', { class: 'conflictos' },
+      h('h2', {}, 'Conflictos'),
+      h('p', { class: 'muted small' }, 'Cambiaste lo mismo que el documento publicado. Elige qué te quedas en cada caso (por defecto, lo tuyo).'),
+      h('ul', { class: 'cards' }, plan.conflictos.map((c) => h('li', { class: 'card conflicto', 'data-campo': c.campo },
+        h('div', {}, h('strong', {}, c.nombre), ` · ${c.etiqueta}`),
+        h('div', { class: 'chips', role: 'group', 'aria-label': `${c.nombre}: ${c.etiqueta}` },
+          h('button', { type: 'button', class: 'chip', 'aria-pressed': String(eleccion(c) === 'mio'), onclick: () => elegir(c, 'mio') }, `Mío: ${valor(c.campo, c.mio)}`),
+          h('button', { type: 'button', class: 'chip', 'aria-pressed': String(eleccion(c) === 'publicado'), onclick: () => elegir(c, 'publicado') }, `Publicado: ${valor(c.campo, c.publicado)}`)))))) : null,
+    h('div', { class: 'row' },
+      h('button', { class: 'primary', onclick: () => ui.applyCatalogUpdate() }, 'Actualizar'),
+      h('button', { class: 'secondary', onclick: () => ui.postponeCatalogUpdate() }, 'Ahora no')));
+}

@@ -5,7 +5,7 @@ import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
 import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, setDate, validateDraft, lineProblem, previewTotals, toMealRecord, draftFromRecord } from '../core/draft.js';
 import { MEALS, defaultMeal, madridNow } from '../core/meal-defaults.js';
-import { parseFoodsDocument, formatIssue, foodsToCSV } from '../core/foods-parser.js';
+import { parseFoodsDocument, parseFoodsCSV, formatIssue, foodsToCSV } from '../core/foods-parser.js';
 import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
@@ -19,6 +19,8 @@ import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTempl
 import { templatesScreen } from './templates-screen.js';
 import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
 import { phraseLogScreen } from './phrase-log-screen.js';
+import { hashText, planCatalogUpdate, applyChoices, unirCabeceras } from '../core/catalog-update.js';
+import { catalogUpdateScreen } from './catalog-update-screen.js';
 import { parseNumber } from '../core/numbers.js';
 
 const FLAG_TEXT = {
@@ -77,7 +79,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '',
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'home',
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
@@ -228,6 +230,54 @@ export function mountApp(root, deps) {
     state.docMsg = msg; state.screen = 'doc'; render();
   })());
   const fecha = () => madridNow(now()).date;
+
+  // ¿Hay una versión nueva del foods.csv publicado? (deps.fetchPublished; sin conexión no pasa nada).
+  // manual = desde Documento: dice siempre el resultado y abre la revisión si hay cambios.
+  function checkCatalogUpdate({ manual = false } = {}) {
+    if (!deps.fetchPublished) return Promise.resolve();
+    const decir = (msg) => { if (manual) { state.catMsg = msg; render(); } };
+    return track((async () => {
+      let text;
+      try { text = await deps.fetchPublished(); } catch { decir('No se pudo consultar el documento publicado (¿sin conexión?).'); return; }
+      const hash = hashText(text);
+      const base = await deps.store.getSetting('catalogo_base');
+      if (base?.hash === hash) { decir('Tu documento está al día con el publicado.'); return; }
+      const remote = parseFoodsCSV(text, { catalog: deps.catalog });
+      if (!remote.report.ok || !remote.foods.length) { decir('El documento publicado tiene errores: no se ofrece.'); return; }
+      const baseFoods = base?.text ? parseFoodsCSV(base.text, { catalog: deps.catalog }).foods : null;
+      const plan = planCatalogUpdate({ local: state.foods, remote: remote.foods, base: baseFoods, catalog: deps.catalog });
+      if (!plan.hayCambios) { await deps.store.setSetting('catalogo_base', { hash, text }); decir('Tu documento está al día con el publicado.'); return; }
+      const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === hash;
+      state.catUpdate = { hash, text, remote, plan, ignorado };
+      state.catEleccion = {};
+      state.catMsg = '';
+      if (manual) { state.catBack = 'doc'; state.screen = 'catalogo'; }
+      render();
+    })(), 'No se pudo comprobar el documento publicado');
+  }
+
+  function applyCatalogUpdate() {
+    const u = state.catUpdate;
+    return track((async () => {
+      state.foods = applyChoices(u.plan, u.remote.foods, state.catEleccion);
+      state.extraHeaders = unirCabeceras(state.extraHeaders, u.remote.extraHeaders);
+      await persistFoods();
+      await deps.store.setSetting('catalogo_base', { hash: u.hash, text: u.text });
+      await deps.store.setSetting('catalogo_ignorado', null);
+      state.catUpdate = null;
+      state.status = `Documento actualizado: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados.`;
+      state.screen = 'home'; render();
+    })(), 'No se pudo actualizar el documento');
+  }
+
+  // «Ahora no»: no se vuelve a avisar de esta versión (se puede revisar desde Documento).
+  function postponeCatalogUpdate() {
+    return track((async () => {
+      await deps.store.setSetting('catalogo_ignorado', state.catUpdate.hash);
+      state.catUpdate = { ...state.catUpdate, ignorado: true };
+      state.screen = state.catBack === 'doc' ? 'doc' : 'home'; render();
+    })());
+  }
 
   const openLog = (msg = '') => track((async () => {
     state.registro = await loadLog();
@@ -470,6 +520,11 @@ export function mountApp(root, deps) {
     return h('main', {},
       header('NutritionTracker'),
       state.status ? h('p', { class: 'ok', role: 'status' }, state.status) : null,
+      state.catUpdate && !state.catUpdate.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
+        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} con conflicto` : ''}.`),
+        h('div', { class: 'row' },
+          h('button', { class: 'secondary', onclick: () => { state.catBack = 'home'; state.screen = 'catalogo'; render(); } }, 'Revisar'),
+          h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,
       state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : h('p', { class: 'muted' }, `${state.foods.length} alimentos${incompletos ? ` · ${incompletos} incompletos` : ''}`),
       ta, mealChips(state.meal, (m) => { state.meal = m; render(); }),
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
@@ -593,6 +648,10 @@ export function mountApp(root, deps) {
       h('section', { class: 'panel' },
         h('p', {}, state.foods.length ? `${state.docName || 'Documento'}: ${state.foods.length} alimentos (${incompletos} incompletos).` : 'Sin documento cargado.'),
         h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => fileIn.click() }, 'Importar documento'), fileIn),
+        deps.fetchPublished ? h('div', { class: 'row wrap' },
+          h('button', { class: 'secondary', onclick: () => checkCatalogUpdate({ manual: true }) }, 'Buscar actualización del documento'),
+          state.catUpdate ? h('button', { class: 'link', onclick: () => { state.catBack = 'doc'; state.screen = 'catalogo'; render(); } }, 'Revisar la versión nueva') : null) : null,
+        state.catMsg ? h('p', { class: 'muted small', role: 'status' }, state.catMsg) : null,
         state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null),
       h('section', { class: 'panel' },
         h('h2', {}, 'Conexión con la IA'),
@@ -733,6 +792,10 @@ export function mountApp(root, deps) {
         else { state.screen = 'home'; render(); }
       },
     });
+    const catalogo = () => catalogUpdateScreen({
+      h, state, header, render, applyCatalogUpdate, postponeCatalogUpdate,
+      back: () => { state.screen = state.catBack === 'doc' ? 'doc' : 'home'; render(); },
+    });
     const registro = () => phraseLogScreen({
       h, state, byId, header, MOTIVO_TEXT, render, removeLogEntry, clearLog, exportLog,
       back: () => openDoc(),
@@ -741,7 +804,7 @@ export function mountApp(root, deps) {
       h, state, byId, header, nf0, nf1, MEAL_LABEL, render, useTemplate, deleteTemplate,
       back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
     });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro, catalogo };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
@@ -752,5 +815,6 @@ export function mountApp(root, deps) {
     root.replaceChildren(screen);
   }
   render();
+  checkCatalogUpdate();
   return { state, render, whenIdle };
 }

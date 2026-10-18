@@ -1,9 +1,10 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v5';
+const VERSION = 'nt-v6';
 const ASSETS = [
   './',
+  'css/catalogo.css',
   'css/frases.css',
   'css/plantillas.css',
   'css/repeat.css',
@@ -17,6 +18,7 @@ const ASSETS = [
   'js/core/ai-contract.js',
   'js/core/ai-validate.js',
   'js/core/backup.js',
+  'js/core/catalog-update.js',
   'js/core/catalog.js',
   'js/core/completeness.js',
   'js/core/csv.js',
@@ -40,6 +42,7 @@ const ASSETS = [
   'js/storage/idb-store.js',
   'js/storage/store.js',
   'js/ui/app.js',
+  'js/ui/catalog-update-screen.js',
   'js/ui/phrase-log-screen.js',
   'js/ui/repeat-screen.js',
   'js/ui/templates-screen.js',
@@ -65,6 +68,8 @@ self.addEventListener('fetch', (event) => {
   const req = event.request;
   // Solo GET del mismo origen: las llamadas al Worker de IA (otro origen, POST) pasan sin tocar.
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // ?fresco= (comprobar si hay un foods.csv nuevo): siempre a la red y sin guardarlo en caché.
+  if (new URL(req.url).searchParams.has('fresco')) return;
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req).then((res) => {

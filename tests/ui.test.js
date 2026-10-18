@@ -4,6 +4,7 @@ import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
 import { realFoods, rulesFoods, catalog, settings, readFile } from './helpers.js';
+import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 
@@ -13,12 +14,13 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st, publicado, ajustes = {} } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
   const store = alterStore(createMemoryStore());
   for (const m of meals) await store.addMeal(m);
+  for (const [k, v] of Object.entries(ajustes)) await store.setSetting(k, v);
   const calls = [];
   const saved = []; // ficheros exportados (en el iPhone irían al menú Compartir)
   const queue = [...responses];
@@ -31,7 +33,9 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
     },
     async health() { return health; },
   });
-  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; } });
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; },
+    fetchPublished: publicado === undefined ? undefined : async () => { if (publicado instanceof Error) throw publicado; return publicado; } });
+  await app.whenIdle();
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
   const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
@@ -775,4 +779,70 @@ test('copia de seguridad con el registro de frases: se exporta y al importar se 
   assert.deepEqual((await t.store.getSetting('registro_frases')).map((x) => x.id), ['f2', 'f1']);
   assert.match(t.$('p.ok[role=status]').textContent, /1 frase a revisar/);
   assert.match(t.root.textContent, /Frases a revisar \(2\)/);
+});
+
+// ---------- Actualizar el documento con el foods.csv publicado ----------
+const CSV_H = 'id,nombre,alias,energia_kcal,incluir';
+const csvDoc = (...rows) => [CSV_H, ...rows].join('\n') + '\n';
+const docDe = (text) => parseFoodsCSV(text, { catalog }).foods;
+
+test('documento publicado nuevo (sin base): aviso en el inicio, revisar y actualizar conservando lo activado', { skip }, async () => {
+  const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'mayonesa,Mayonesa,mayonesa,680,no', 'merluza_cocida,Merluza cocida,merluza,116,si'));
+  const publicado = csvDoc('arroz,Arroz,arroz|arroz largo,360,si', 'mayonesa,Mayonesa,mayonesa|mahonesa,680,si', 'merluza_cocida,Merluza cocida,merluza,116,no', 'brocoli,Brócoli,brócoli,34,si');
+  const t = await setup({ foods: mio, publicado });
+  const aviso = t.$('section[aria-label="Documento nuevo"]');
+  assert.match(aviso.textContent, /Hay una versión nueva de tu documento de alimentos: 1 nuevos, 2 actualizados, 1 con conflicto/);
+  await t.act(() => t.btn('Revisar').click());
+  assert.match(t.root.textContent, /4 alimentos/);
+  assert.match(t.$('.conflicto').textContent, /Merluza cocida · incluir/);
+  assert.equal(t.btn('Mío: activado').getAttribute('aria-pressed'), 'true');
+  await t.act(() => t.btn('Actualizar').click());
+  const rec = await t.store.getCatalogRecord();
+  const de = (id) => rec.foods.find((f) => f.id === id);
+  assert.deepEqual([de('arroz').alias, de('arroz').nutrients.energia_kcal, de('mayonesa').extra.incluir, de('merluza_cocida').extra.incluir, !!de('brocoli')], [['arroz', 'arroz largo'], 360, 'si', 'si', true]);
+  assert.match(t.$('[role=status]').textContent, /Documento actualizado: 1 nuevos, 2 actualizados/);
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  assert.equal((await t.store.getSetting('catalogo_base')).text, publicado);
+});
+
+test('conflicto con base: eliges "Publicado" y se aplica; nada cambia hasta pulsar Actualizar', { skip }, async () => {
+  const base = csvDoc('arroz,Arroz,arroz,365,si');
+  const mio = docDe(csvDoc('arroz,Arroz,arroz|arroz blanco,365,si'));
+  const publicado = csvDoc('arroz,Arroz,arroz|arroz largo,365,si');
+  const t = await setup({ foods: mio, publicado, ajustes: { catalogo_base: { hash: 'x', text: base } } });
+  await t.act(() => t.btn('Revisar').click());
+  assert.match(t.$('.conflicto').textContent, /Arroz · alias/);
+  await t.act(() => t.btn('Publicado: arroz | arroz largo').click());
+  assert.equal(await t.store.getCatalogRecord(), null); // aún no se ha guardado nada
+  await t.act(() => t.btn('Actualizar').click());
+  assert.deepEqual((await t.store.getCatalogRecord()).foods[0].alias, ['arroz', 'arroz largo']);
+});
+
+test('«Ahora no» no vuelve a avisar de esa versión; desde Documento se puede revisar o buscar de nuevo', { skip }, async () => {
+  const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si'));
+  const publicado = csvDoc('arroz,Arroz,arroz,360,si');
+  const t = await setup({ foods: mio, publicado });
+  await t.act(() => t.btn('Ahora no').click());
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  assert.equal(typeof (await t.store.getSetting('catalogo_ignorado')), 'string');
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Revisar la versión nueva').click());
+  assert.match(t.$('header').textContent, /Actualizar documento/);
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.match(t.$('header').textContent, /Documento/);
+});
+
+test('al día o sin conexión: no hay aviso ni error; desde Documento se dice el resultado', { skip }, async () => {
+  const text = csvDoc('arroz,Arroz,arroz,365,si');
+  const t = await setup({ foods: docDe(text), publicado: text });
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  assert.equal((await t.store.getSetting('catalogo_base')).text, text); // sin cambios: se adopta como base
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Buscar actualización del documento').click());
+  assert.match(t.root.textContent, /Tu documento está al día con el publicado/);
+  const off = await setup({ publicado: new Error('Failed to fetch') });
+  assert.equal(off.$('[role=alert]'), null);
+  await off.act(() => off.btn('Documento').click());
+  await off.act(() => off.btn('Buscar actualización del documento').click());
+  assert.match(off.root.textContent, /No se pudo consultar el documento publicado/);
 });

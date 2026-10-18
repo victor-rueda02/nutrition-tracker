@@ -3,6 +3,7 @@ import { DATA_BASE } from './config.js';
 import { buildCatalog } from './core/catalog.js';
 import { loadSettings } from './core/settings.js';
 import { parseFoodsCSV } from './core/foods-parser.js';
+import { hashText } from './core/catalog-update.js';
 import { openIdbStore } from './storage/idb-store.js';
 import { createAiClient } from './ai-client.js';
 import { mountApp } from './ui/app.js';
@@ -10,6 +11,14 @@ import { mountApp } from './ui/app.js';
 async function fetchText(path) {
   const res = await fetch(DATA_BASE + path);
   if (!res.ok) throw new Error(`${path}: ${res.status}`);
+  return res.text();
+}
+
+// El foods.csv publicado, sin caché (ni la del navegador ni la del service worker: "fresco" la salta), para ver si hay
+// una versión nueva. La copia del dispositivo solo se hace la primera vez; después se ofrece actualizar.
+async function fetchPublished() {
+  const res = await fetch(`${DATA_BASE}foods.csv?fresco=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`foods.csv: ${res.status}`);
   return res.text();
 }
 
@@ -22,15 +31,17 @@ async function boot() {
     let rec = await store.getCatalogRecord();
     if (!rec) { // primera ejecución: copia por defecto incluida en el repositorio (opcional)
       try {
-        const parsed = parseFoodsCSV(await fetchText('foods.csv'), { catalog });
+        const text = await fetchText('foods.csv');
+        const parsed = parseFoodsCSV(text, { catalog });
         rec = { foods: parsed.foods, extraHeaders: parsed.extraHeaders, name: 'foods.csv (por defecto)', importedAt: new Date().toISOString() };
         await store.putCatalogRecord(rec);
+        await store.setSetting('catalogo_base', { hash: hashText(text), text }); // base para futuras actualizaciones
       } catch { rec = { foods: [], extraHeaders: [], name: '' }; }
     }
     let targets = null; // sin targets.json el diario muestra totales, pero sin objetivos
     try { targets = JSON.parse(await fetchText('targets.json')); } catch { /* se sigue sin objetivos */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets,
+      store, createAiClient, catalog, settings, targets, fetchPublished,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });
