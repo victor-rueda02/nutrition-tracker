@@ -1,13 +1,13 @@
-# Informe USDA (2026-10-17)
+# Informe USDA (2026-10-18)
 
 Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes de copiarlo a `data/foods.csv`.
 
 ## Resumen
 
-- Alimentos en el documento: 64
-- Completos (≥ 80 % de 31 obligatorios): 48
+- Alimentos en el documento: 66
+- Completos (≥ 80 % de 31 obligatorios): 50
 - Incompletos: 16
-- Con fdcId elegido: 49
+- Con fdcId elegido: 51
 - Buscables sin fdcId elegido: 0
 - Omitidos (excluidos, sin término o recetas): 15
 
@@ -15,6 +15,7 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 - corn_flakes (fdcId 174648, Cereals ready-to-eat, RALSTON Corn Flakes): B1 = 4.483 mg por 100 g: imposible sin fortificar en un cereal; hierro = 19.4 mg por 100 g: imposible sin fortificar en un cereal
 - pan_molde_blanco (fdcId 174924, Bread, white, commercially prepared (includes soft bread crumbs)): ácido fólico añadido (431) = 86 µg — vaciados: vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg
+- pan_blanco_barra (fdcId 172675, Bread, french or vienna (includes sourdough)): ácido fólico añadido (431) = 67 µg — vaciados: vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg
 
 ## Valores sospechosos
 
@@ -129,6 +130,12 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Faltan: Vitamina B5 (ác. pantoténico), Manganeso
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
+### jamon_cocido
+
+- USDA: Pork, cured, ham, boneless, extra lean and regular, unheated — fdcId 168295 — SR Legacy
+- Obligatorios: 31/31 (100 %)
+- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
+
 ### muesli
 
 - USDA: Cereals ready-to-eat, FAMILIA — fdcId 169076 — SR Legacy
@@ -206,6 +213,14 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Faltan: Vitamina B1 (tiamina), Vitamina B2 (riboflavina), Vitamina B3 (niacina), Vitamina B9 (folato, DFE), Hierro
 - Alternativa usada: sin enriquecer: vacíos vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg (USDA está enriquecido)
 - ⚠ Fortificación: ácido fólico añadido (431) = 86 µg (enriquecimiento vaciado)
+
+### pan_blanco_barra
+
+- USDA: Bread, french or vienna (includes sourdough) — fdcId 172675 — SR Legacy
+- Obligatorios: 26/31 (84 %)
+- Faltan: Vitamina B1 (tiamina), Vitamina B2 (riboflavina), Vitamina B3 (niacina), Vitamina B9 (folato, DFE), Hierro
+- Alternativa usada: sin enriquecer: vacíos vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg (USDA está enriquecido)
+- ⚠ Fortificación: ácido fólico añadido (431) = 67 µg (enriquecimiento vaciado)
 
 ### queso_tierno_loncha
 

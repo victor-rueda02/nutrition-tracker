@@ -154,10 +154,10 @@ test('la plantilla es válida y está vacía', () => {
   assert.equal(r.foods.length, 0);
 });
 
-test('lista inicial real de Victor: 64 alimentos, sin errores ni avisos (porciones, grupos, estados)', () => {
+test('lista inicial real de Victor: 66 alimentos, sin errores ni avisos (porciones, grupos, estados)', () => {
   const r = parseFoodsCSV(readFile('./fixtures/alimentos_iniciales.csv'), { catalog });
   assert.equal(r.report.ok, true);
-  assert.equal(r.foods.length, 64);
+  assert.equal(r.foods.length, 66);
   assert.deepEqual(r.report.warnings, []);
   assert.equal(r.foods.find((f) => f.id === 'leche_entera').porciones[0].gramos, 250);
   assert.equal(r.foods.find((f) => f.id === 'ron').extra.incluir, 'no');

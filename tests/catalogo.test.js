@@ -35,6 +35,14 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   assert.ok(flagsOf('pan_integral', '60 g de barra de pan').includes('sin_alias'));
   assert.ok(!flagsOf('pan_integral', '60 g de pan integral').includes('sin_alias'));
   assert.ok(flagsOf('jamon_curado', '30 g de jamón cocido').includes('sin_alias'));
+  for (const [id, text] of [['pan_blanco_barra', '60 g de pan'], ['pan_blanco_barra', '60 g de barra de pan'], ['jamon_cocido', '30 g de jamón cocido'], ['jamon_cocido', '30 g de jamón york']]) {
+    assert.ok(!flagsOf(id, text).includes('sin_alias'), text);
+  }
+  // pan de barra: el enriquecimiento de EE. UU. vaciado a propósito (sin dato, no 0)
+  const pan = byId.get('pan_blanco_barra');
+  for (const k of ['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'vitamina_b3_mg', 'hierro_mg']) assert.equal(pan.nutrients[k], undefined, k);
+  assert.equal(pan.extra.fdc_id, '172675');
+  assert.equal(byId.get('jamon_cocido').extra.fdc_id, '168295');
 });
 
 test('alias: regla de cortes y especies, sin genéricos de especie o de corte', () => {
