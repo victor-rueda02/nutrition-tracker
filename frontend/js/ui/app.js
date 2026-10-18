@@ -497,8 +497,8 @@ export function mountApp(root, deps) {
       const matches = state.foods.filter((f) => !q || [f.nombre, ...f.alias].some((t) => looseKey(t).includes(q))).slice(0, 60);
       if (!matches.length) list.append(h('li', { class: 'muted' }, 'Sin resultados en tu documento'));
       for (const f of matches) {
-        list.append(h('li', {}, h('button', { class: 'pick', onclick: () => { close(); track(Promise.resolve(isExcluded(f) ? activate(f.id) : null).then(() => onPick(f))); } },
-          h('span', {}, f.nombre, isExcluded(f) ? h('span', { class: 'tag' }, 'excluido (incluir=no): se activará') : null),
+        list.append(h('li', {}, h('button', { class: 'pick', onclick: () => { close(); onPick(f); } }, // un excluido elegido a mano se usa en esa línea, sin activarlo (sigue sin ir a la IA)
+          h('span', {}, f.nombre, isExcluded(f) ? h('span', { class: 'tag' }, 'excluido (incluir=no): no se envía a la IA') : null),
           f.alias.length ? h('small', {}, f.alias.slice(0, 3).join(' · ')) : null)));
       }
     };

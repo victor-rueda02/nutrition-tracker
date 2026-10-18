@@ -328,3 +328,12 @@ test('con unidad de peso o volumen dicha, se respetan los gramos aunque no haya 
   }
   assert.equal(run([line('leche_entera', '200 ml de leche', { cantidad: 200, unidad: 'ml' })]).items[0].ml, 200);
 });
+
+test('peso_en_crudo: si la IA elige la variante cocinada de un grupo con la cruda marcada, se usa la cruda (sin aviso)', () => {
+  const list = [{ id: 'merluza_cruda', nombre: 'Merluza cruda', alias: ['merluza'], estado: 'crudo', grupo: 'merluza', defecto: true, peso_en_crudo: true },
+    { id: 'merluza_cocida', nombre: 'Merluza cocida', alias: ['merluza'], estado: 'cocinado', grupo: 'merluza', defecto: false }];
+  const r = one(line('merluza_cocida', '200 g de merluza a la plancha', { cantidad: 200, estado_dicho: 'cocinado' }), list);
+  assert.deepEqual([r.food_id, r.confidence, r.flags], ['merluza_cruda', 'alta', []]);
+  // sin palabras de cocinado se aplica la regla de siempre (variante por defecto)
+  assert.equal(one(line('merluza_cocida', '200 g de merluza', { cantidad: 200 }), list).food_id, 'merluza_cruda');
+});

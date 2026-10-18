@@ -88,8 +88,10 @@ export function resolveVariant(item, index) {
   let modelSaid = ['crudo', 'cocinado', 'tostado'].includes(item.estado_dicho) ? item.estado_dicho : null;
   if (!said && stripped.states.has(modelSaid)) modelSaid = null; // el modelo tomó el estado del propio nombre
   // peso_en_crudo: "a la plancha" dice cómo lo cociné, no cómo lo pesé. Se queda en esta fila, sin bajar la confianza.
-  if (modelFood.peso_en_crudo && (said === 'cocinado' || (!said && modelSaid === 'cocinado'))) {
-    return { food_id: modelFood.id, confidence: item.confidence, flags: [] };
+  // Si la IA eligió otra variante del grupo (la cocinada) y la cruda está marcada, se usa la marcada.
+  const marcado = modelFood.peso_en_crudo ? modelFood : members.find((m) => m.peso_en_crudo);
+  if (marcado && (said === 'cocinado' || (!said && modelSaid === 'cocinado'))) {
+    return { food_id: marcado.id, confidence: item.confidence, flags: [] };
   }
   let confidence = item.confidence;
 

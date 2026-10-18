@@ -320,3 +320,14 @@ test('energía: se usan los factores calóricos propios del alimento (cacao 228 
   assert.deepEqual(calorieFactors(usda), { p: 1.83, g: 8.37, h: 1.33 });
   assert.deepEqual(valoresSospechosos(cacao, calorieFactors(usda)), []);
 });
+
+test('filas se salta los alimentos que no se buscan (sin término, recetas, incluir=no) aunque tengan fdcId', async () => {
+  const foods = parseFoodsCSV(csv('id,nombre,proteina_g,termino_busqueda_usda,incluir', 'arroz,Arroz,,Rice,si', 'chorizo,Chorizo,24,,si', 'ron,Ron,,Rum,no'), { catalog }).foods;
+  const api = fakeApi((url, body) => body.fdcIds.map((id) => usdaFood(id, `x${id}`, 'SR Legacy', { shape: 'full' })));
+  const client = createUsdaClient({ apiKey: 'k', fetchImpl: api.fetchImpl });
+  const eleccion = 'id;fdcId\narroz;1\nchorizo;2\nron;3\n';
+  const r = await runFilas({ client, foods, eleccionText: eleccion, map, sobrescribir: true });
+  assert.deepEqual(api.calls[0].body.fdcIds, [1]);
+  assert.equal(r.propuestos.find((f) => f.id === 'chorizo').nutrients.proteina_g, 24); // no se pisa (datos de BEDCA o etiqueta)
+  assert.deepEqual(r.errores, ['chorizo: no se aplica el fdcId 2 porque el alimento no se busca en USDA (sin termino_busqueda_usda)', 'ron: no se aplica el fdcId 3 porque el alimento no se busca en USDA (excluido (incluir=no))']);
+});

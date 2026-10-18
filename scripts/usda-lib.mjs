@@ -392,10 +392,17 @@ export async function runCandidatos({ client, foods, map, required, threshold, o
   return { rows, plan, resumen };
 }
 
+// Solo se aplican los alimentos que "candidatos" busca: los omitidos (incluir=no, sin término o recetas, p. ej. con
+// datos de BEDCA o de una etiqueta) se saltan aunque tengan fdcId en eleccion.csv, para no pisar sus datos.
 export async function runFilas({ client, foods, eleccionText, map, sobrescribir = false }) {
-  const { elegidos, errores } = readEleccion(eleccionText);
+  const { elegidos: todos, errores } = readEleccion(eleccionText);
+  const plan = searchPlan(foods);
+  const omitidos = new Map(plan.filter((x) => x.omitido).map((x) => [x.food.id, x.omitido]));
+  const saltados = todos.filter((e) => omitidos.has(e.id));
+  const elegidos = todos.filter((e) => !omitidos.has(e.id));
+  for (const e of saltados) errores.push(`${e.id}: no se aplica el fdcId ${e.fdcId} porque el alimento no se busca en USDA (${omitidos.get(e.id)})`);
   const usda = await client.foods([...new Set(elegidos.map((e) => e.fdcId))]);
   const usdaById = new Map(usda.map((f) => [f.fdcId, f]));
   const { foods: propuestos, resultado } = applyUsda(foods, elegidos, usdaById, { map, sobrescribir });
-  return { propuestos, resultado, errores, elegidosIds: new Set(elegidos.map((e) => e.id)), plan: searchPlan(foods) };
+  return { propuestos, resultado, errores, elegidosIds: new Set(elegidos.map((e) => e.id)), plan };
 }

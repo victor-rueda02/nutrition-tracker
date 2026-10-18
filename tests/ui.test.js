@@ -846,3 +846,17 @@ test('al día o sin conexión: no hay aviso ni error; desde Documento se dice el
   await off.act(() => off.btn('Buscar actualización del documento').click());
   assert.match(off.root.textContent, /No se pudo consultar el documento publicado/);
 });
+
+test('elegir a mano un alimento excluido lo usa en la línea sin activarlo (sigue sin ir a la IA)', { skip }, async () => {
+  const t = await setup({ responses: [RESULT] });
+  t.type(t.$('textarea'), 'x');
+  await t.act(() => t.btn('Procesar').click());
+  await t.act(() => t.btn('+ Añadir alimento').click());
+  t.type(t.$('.overlay input'), 'merluza cocida');
+  const pick = t.$$('.pick').find((b) => b.textContent.includes('Merluza cocida'));
+  assert.match(pick.textContent, /excluido \(incluir=no\): no se envía a la IA/);
+  await t.act(() => pick.click());
+  assert.ok(t.$$('li.card[data-key] button.name').some((b) => b.textContent === 'Merluza cocida'));
+  assert.equal(t.app.state.foods.find((f) => f.id === 'merluza_cocida').extra.incluir, 'no');
+  assert.equal(await t.store.getCatalogRecord(), null); // no se ha tocado el documento
+});
