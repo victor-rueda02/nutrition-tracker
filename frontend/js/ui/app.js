@@ -11,7 +11,7 @@ import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
-import { loadTargets, resolveTargets, referenceValue } from '../core/targets.js';
+import { loadTargets, resolveTargets } from '../core/targets.js';
 import { diaryReport, shiftDate } from '../core/diary.js';
 import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
@@ -21,7 +21,7 @@ import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, l
 import { phraseLogScreen } from './phrase-log-screen.js';
 import { hashText, planCatalogUpdate, applyChoices, unirCabeceras } from '../core/catalog-update.js';
 import { catalogUpdateScreen } from './catalog-update-screen.js';
-import { parseNumber } from '../core/numbers.js';
+import { objetivosScreen } from './objetivos-screen.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -49,7 +49,6 @@ const ESTADO_TEXT = {
   cumplido: 'Objetivo cumplido', por_debajo: 'Por debajo', dentro: 'Dentro del máximo', excedido: 'Por encima del máximo',
   en_objetivo: 'En objetivo', por_encima: 'Por encima', sin_dato: 'Sin dato', sin_objetivo: '',
 };
-const TIPO_TEXT = { min: 'al menos', max: 'como mucho', objetivo: 'objetivo' };
 // Resultado de "Probar" (comprueba origen, secretos y token sin gastar IA).
 const probarTexto = (r) => (!r?.ok ? 'El Worker no responde bien.'
   : r.token === 'incorrecto' ? 'El Worker responde, pero el token no es correcto.'
@@ -432,22 +431,6 @@ export function mountApp(root, deps) {
     state.pendingDelete = null; state.error = ''; state.screen = 'confirm'; render();
   }
 
-  // Guarda tus objetivos. Vacío = referencia; un valor no válido no se guarda y se dice cuál.
-  async function saveObjetivos(perfil, inputs) {
-    const valores = {};
-    const malos = [];
-    for (const [clave, raw] of Object.entries(inputs)) {
-      if (!String(raw).trim()) continue;
-      const n = parseNumber(raw);
-      if (n.status === 'ok' && n.value > 0) valores[clave] = n.value;
-      else malos.push(targets.list.find((t) => t.clave === clave)?.label ?? clave);
-    }
-    if (malos.length) return { ok: false, msg: `No guardado: valor no válido en ${malos.join(', ')}.` };
-    state.objetivos = { perfil, valores };
-    await deps.store.setSetting('objetivos', state.objetivos);
-    return { ok: true, msg: 'Guardado.' };
-  }
-
   function onFile(file) {
     if (!file) return;
     return track((async () => {
@@ -750,36 +733,6 @@ export function mountApp(root, deps) {
         h('button', { class: 'link', onclick: () => { state.templateForm = null; render(); } }, 'Cancelar')));
   }
 
-  function objetivosScreen() {
-    const own = state.objetivos.valores ?? {};
-    const perfilActual = resolveTargets(targets, state.objetivos)[0]?.perfil ?? targets.perfilPorDefecto;
-    const perfilSel = h('select', { 'aria-label': 'Perfil de referencia' },
-      Object.entries(targets.perfiles).map(([k, label]) => h('option', { value: k, selected: k === perfilActual }, label)));
-    const inputs = new Map();
-    const msg = h('p', { class: 'small', role: 'status' });
-    const campo = (t) => {
-      const ref = referenceValue(targets, t.clave, { perfil: perfilActual, valores: own });
-      const unit = UNIT_LABEL[t.unit] ?? t.unit;
-      const input = h('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t.label} (${unit})`, value: own[t.clave] === undefined ? '' : nf2.format(own[t.clave]).replace(/\./g, ''), placeholder: ref === null ? '' : fmtNum(ref, t.unit) });
-      inputs.set(t.clave, input);
-      return h('li', { class: `card k-${t.clave}` },
-        h('label', {}, h('span', {}, `${t.label} (${unit}) · ${TIPO_TEXT[t.tipo]}`), input),
-        h('div', { class: 'small muted' }, [ref === null ? '' : `Referencia: ${fmtQty(ref, t.unit)}`, t.ul !== null ? `UL: ${fmtQty(t.ul, t.unit)}` : '', t.nota].filter(Boolean).join(' · ')));
-    };
-    const save = (vaciar) => track((async () => {
-      const r = await saveObjetivos(perfilSel.value, vaciar ? {} : Object.fromEntries([...inputs].map(([k, el]) => [k, el.value])));
-      if (r.ok) { render(); root.querySelector('[role=status]').textContent = r.msg; } else msg.textContent = r.msg;
-    })());
-    return h('main', {},
-      header('Objetivos', () => openDay(state.day)),
-      h('label', {}, 'Perfil de referencia (EFSA)', perfilSel),
-      h('p', { class: 'muted small' }, 'Vacío = valor de referencia. Tus objetivos se guardan en este dispositivo. B1, niacina y ALA se calculan con tu objetivo de kcal. Los UL no cambian.'),
-      h('h2', {}, 'Energía y macros'), h('ul', { class: 'cards' }, targets.list.filter((t) => MACROS.includes(t.clave)).map(campo)),
-      h('h2', {}, 'Micronutrientes'), h('ul', { class: 'cards' }, targets.list.filter((t) => !MACROS.includes(t.clave)).map(campo)),
-      h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => save(false) }, 'Guardar'), h('button', { class: 'secondary', onclick: () => save(true) }, 'Restablecer')),
-      msg);
-  }
-
   // ---------- render ----------
   function render() {
     const repeat = () => repeatScreen({
@@ -804,7 +757,11 @@ export function mountApp(root, deps) {
       h, state, byId, header, nf0, nf1, MEAL_LABEL, render, useTemplate, deleteTemplate,
       back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
     });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro, catalogo };
+    const objetivos = () => objetivosScreen({
+      h, state, root, store: deps.store, targets, track, render, header, MACROS, UNIT_LABEL, nf2, fmtNum, fmtQty,
+      back: () => openDay(state.day),
+    });
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos, repeat, plantillas, registro, catalogo };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
