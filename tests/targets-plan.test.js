@@ -11,7 +11,8 @@ import { catalog, readFile, realFoods } from './helpers.js';
 
 const { targets } = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog);
 const ctx = { targets, catalog };
-const [EJEMPLO, EJEMPLO_SEMANA] = [...readFile('../docs/OBJETIVOS-FORMATO.md').matchAll(/```json\n([\s\S]*?)```/g)].map((m) => m[1]);
+// \r?: en Windows git puede bajar el .md con CRLF.
+const [EJEMPLO, EJEMPLO_SEMANA] = [...readFile('../docs/OBJETIVOS-FORMATO.md').matchAll(/```json\r?\n([\s\S]*?)```/g)].map((m) => m[1]);
 const ejemplo = parsePlan(EJEMPLO, ctx).plan;
 const PLAN = (o = {}) => ({ tipo: 'plan_objetivos', version: 1, periodos: [], ...o });
 const P = (o = {}) => ({ id: 'p', nombre: 'P', inicio: '2026-01-01', ...o });

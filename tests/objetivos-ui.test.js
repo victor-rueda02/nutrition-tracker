@@ -6,7 +6,7 @@ import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { realFoods, catalog, settings, readFile } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
-const EJEMPLO = readFile('../docs/OBJETIVOS-FORMATO.md').match(/```json\n([\s\S]*?)```/)[1];
+const EJEMPLO = readFile('../docs/OBJETIVOS-FORMATO.md').match(/```json\r?\n([\s\S]*?)```/)[1]; // \r?: en Windows git puede bajar el .md con CRLF
 const jsdom = await import('jsdom').catch(() => null);
 const skip = jsdom ? false : 'falta jsdom (npm install)';
 const NOW = new Date('2026-10-16T07:30:00Z'); // viernes 16-10-2026: en el ejemplo, día de entreno
