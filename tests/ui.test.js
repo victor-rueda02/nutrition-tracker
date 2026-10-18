@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
-import { realFoods, catalog, settings, readFile } from './helpers.js';
+import { realFoods, rulesFoods, catalog, settings, readFile } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 
@@ -59,7 +59,7 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   await t.act(() => t.btn('Procesar').click());
   assert.equal(t.calls.length, 1);
   assert.equal(t.calls[0].texto, 'para desayunar 80 g de avena, 2 huevos y un plátano');
-  assert.equal(t.calls[0].alimentos.length, 49); // sin los incluir=no
+  assert.equal(t.calls[0].alimentos.length, 55); // sin los incluir=no
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('nutrients'));
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('densidad')); // la densidad no viaja: la conversión de ml es local
   // confirmación
@@ -245,7 +245,8 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
 });
 
 test('Diario: superar un UL es un aviso distinto de "objetivo cumplido"', { skip }, async () => {
-  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] }); // 981 µg de vitamina A por 100 g
+  // Copia congelada del documento: sus corn flakes traen la fortificación de EE. UU. (981 µg de vitamina A por 100 g).
+  const t = await setup({ foods: rulesFoods, meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] });
   await t.act(() => t.btn('Diario').click());
   assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado/);
   assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\): 3924 µg \(UL 3000 µg\)/);
@@ -423,7 +424,7 @@ test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }
   assert.ok(t.saved[0].text.startsWith('﻿id;nombre;'));
   assert.match(t.saved[0].text, /aceite_oliva;.*;0,91;/);
   assert.ok(t.saved[1].text.startsWith('﻿id,nombre,'));
-  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 64 alimentos/);
+  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 69 alimentos/);
 });
 
 test('importar el diario: resumen antes de aplicar, fusión por id, nunca borra; repetir no duplica', { skip }, async () => {

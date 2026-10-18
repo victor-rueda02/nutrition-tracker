@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTargets, resolveTargets, referenceValue } from '../frontend/js/core/targets.js';
 import { diaryReport, dayTotals, evaluate, shiftDate } from '../frontend/js/core/diary.js';
-import { catalog, settings, readFile, realFoods } from './helpers.js';
+import { catalog, settings, readFile, realFoods, rulesFoods } from './helpers.js';
 
 const raw = JSON.parse(readFile('../data/targets.json'));
 const { targets, warnings } = loadTargets(raw, catalog);
@@ -68,6 +68,8 @@ test('evaluate: min, max y objetivo; sin dato; parcial; UL es un aviso aparte', 
 
 // ---------- diario ----------
 test('diario real: totales del día, por comida, EPA + DHA sumados y UL superado', () => {
+  // Copia congelada del documento: sus corn flakes traen la fortificación de EE. UU. (para probar el UL).
+  const byId = new Map(rulesFoods.map((f) => [f.id, f]));
   const meals = [
     meal('a', 'desayuno', [['avena_copos', 80], ['leche_entera', 250]]),
     meal('b', 'comida', [['salmon_atlantico', 200], ['arroz_blanco_crudo', 100]]),

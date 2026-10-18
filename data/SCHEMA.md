@@ -53,3 +53,48 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - `foods.template.csv`: solo las cabeceras.
 - `foods.sample.csv`: 10 alimentos de ejemplo. **Valores aproximados, no verificados contra USDA; no usar como catálogo.**
   Se regeneran con `npm run build:templates`.
+- `recetas.json`: recetas del catálogo (ver abajo). Las filas de receta de `foods.csv` se calculan desde aquí.
+
+## Recetas (`data/recetas.json`)
+Una receta es **una fila más del catálogo**: la app la trata como cualquier alimento (dictas "300 g de lentejas").
+Sus nutrientes por 100 g de plato cocinado **no se escriben a mano**: los calcula `scripts/recetas.mjs` con los
+nutrientes de sus ingredientes en el propio catálogo. Nada de red ni de IA.
+
+```json
+{ "recetas": [
+  { "id": "lentejas_caseras", "nombre": "Lentejas caseras", "alias": ["lentejas"],
+    "peso_final_g": 2400,
+    "ingredientes": [ { "food_id": "lentejas_secas", "gramos": 400 }, { "food_id": "chorizo", "gramos": 100 } ],
+    "notas": "Texto libre que se añade a la columna notas" }
+] }
+```
+| Campo | Obligatorio | Descripción |
+|---|---|---|
+| `id` | sí | Id de la fila en `foods.csv` (mismas reglas que `id`). Si la fila no existe, se crea. |
+| `nombre` | sí | Nombre de la fila. |
+| `alias` | no | Lista (o texto `a\|b`). Si se omite, se conservan los alias de la fila. |
+| `ingredientes` | sí | `food_id` (cualquier alimento del catálogo, también con `incluir=no`; no otra receta del fichero: no se anidan) y `gramos` (> 0) **en crudo**, de la tanda entera. |
+| `peso_final_g` | no | Peso del plato cocinado entero (olla llena − olla vacía). Sin él, el peso final es la suma de los ingredientes: así los `gramos` pueden ser **proporciones** (p. ej. un producto comercial: 20 g de cada verdura). |
+| `ejemplo` | no | `true` = receta de ejemplo/plantilla: se calcula pero **nunca** se escribe en el catálogo. |
+| `notas` | no | Se añade tras "Gramos del plato cocinado." en la columna `notas`. |
+
+**Cálculo** (por nutriente): suma de (valor por 100 g × gramos / 100) de los ingredientes ÷ peso final × 100.
+- Si un ingrediente **no tiene dato** de un nutriente, la receta queda **sin dato** en ese nutriente (nunca un total
+  parcial que parezca completo); el script dice qué ingrediente lo bloquea. Un `0` escrito cuenta como dato.
+- El cambio de peso al cocinar se asume que es **agua**: agua final = agua de los ingredientes + (peso final − peso de
+  los ingredientes). No se aplican factores de retención de vitaminas.
+
+**Fila de receta en `foods.csv`** (la escribe el script con `--aplicar`): `estado=cocinado` (se pesa el plato
+cocinado: es la excepción a "todo en crudo"), `peso_en_crudo` vacío, `incluir=si`, notas que empiezan por "Gramos del
+plato cocinado", `termino_busqueda_usda` = `(receta: data/recetas.json)` (así `usda.mjs` no la pisa), `fdc_id` vacío
+y `fuente_usda` con los ingredientes y el peso final. Las columnas de nutrientes se sobrescriben todas; el resto de la
+fila y del documento se conserva (separador, BOM, fin de línea; coma decimal si el separador es `;`). Una fila nueva
+lleva `grupo` = su id, `variante_por_defecto=si` y `tipo=receta`.
+
+```
+node scripts/recetas.mjs              # informe: obligatorios por receta y qué ingrediente deja huecos; no escribe
+node scripts/recetas.mjs --aplicar    # escribe las filas en data/foods.csv (--foods y --recetas para otras rutas)
+```
+Para "guardar como receta" desde la app: generar un objeto con este mismo formato (ingredientes = líneas de la
+comida, `peso_final_g` = lo que pese el plato) y calcular con `computeReceta` de `scripts/recetas-lib.mjs` (funciones
+puras, sin Node; hoy viven en `scripts/` y habría que moverlas a `frontend/js/core/`).

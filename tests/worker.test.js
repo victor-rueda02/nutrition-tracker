@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { handleRequest } from '../worker/src/index.js';
 import { callGemini, ProviderError } from '../worker/src/providers/gemini.js';
-import { realList } from './helpers.js';
+import { realList, rulesList } from './helpers.js';
 
 const ORIGIN = 'https://victor.github.io';
 const env = { APP_TOKEN: 'tok-123', ALLOWED_ORIGIN: ORIGIN, GEMINI_MODEL: 'modelo-de-prueba', GEMINI_API_KEY: 'CLAVE-SECRETA-XYZ' };
@@ -124,7 +124,7 @@ test('errores del proveedor: 429 -> 429, otros -> 502, sin reintento', async () 
 
 test('el worker aplica la validación y las reglas de variantes (merluza sin estado -> cruda, confianza media)', async () => {
   const raw = JSON.stringify({ items: [{ food_id: 'merluza_cocida', cantidad: 200, unidad: 'g', source_text: '200 g de merluza', confidence: 'alta', estado_dicho: 'ninguno' }, { food_id: 'inventado', cantidad: 5, unidad: 'g', source_text: 'cosa', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] });
-  const body = await (await handleRequest(req({ body: { texto: '200 g de merluza y cosa', alimentos: realList } }), env, { callModel: model(raw) })).json();
+  const body = await (await handleRequest(req({ body: { texto: '200 g de merluza y cosa', alimentos: rulesList } }), env, { callModel: model(raw) })).json();
   assert.deepEqual(body.items.map((i) => [i.food_id, i.confidence]), [['merluza_cruda', 'media']]);
   assert.equal(body.unmatched[0].text, 'cosa');
 });

@@ -8,7 +8,7 @@ import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText, g
 import { parseFoodsCSV, foodsToCSV, foodsToJSON } from '../frontend/js/core/foods-parser.js';
 import { normalizeText, removeTerms } from '../frontend/js/core/text.js';
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA } from '../worker/src/prompt.js';
-import { realFoods, realList, catalog, csv } from './helpers.js';
+import { realFoods, realList, rulesList, catalog, csv } from './helpers.js';
 
 const line = (food_id, source_text, o = {}) => ({ food_id, cantidad: 100, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'ninguno', ...o });
 const run = (items, list = realList, unmatched = []) => normalizeAiResponse({ items, unmatched }, list);
@@ -34,8 +34,8 @@ test('pollo frito: "frito" sí es estado cuando no forma parte del nombre', () =
   const r = one(line('pollo_crudo', '200 g de pollo frito', { estado_dicho: 'cocinado' }), list);
   assert.equal(r.food_id, 'pollo_cocinado');
   assert.equal(r.confidence, 'alta');
-  // En el documento real, un alimento sin variante cocinada ni peso_en_crudo: estado sin variante -> baja y aviso.
-  const p = run([line('merluza_cruda', '200 g de merluza frita', { estado_dicho: 'cocinado' })]);
+  // En la copia congelada del documento (merluza con variante cocinada, sin peso_en_crudo).
+  const p = run([line('merluza_cruda', '200 g de merluza frita', { estado_dicho: 'cocinado' })], rulesList);
   assert.equal(p.items[0].food_id, 'merluza_cocida'); // merluza sí tiene variante cocinada
   const k = run([line('kiwi_verde', 'un kiwi frito', { cantidad: 69, estado_dicho: 'cocinado' })]);
   assert.equal(k.items[0].confidence, 'baja');
@@ -56,9 +56,9 @@ test('el estado del propio alimento en su alias sí cuenta ("pistachos crudos", 
 // ---------- 2. Cortes y especies ----------
 test('documento: pechuga de pollo nueva; "pollo", "pavo" y "pechuga" a secas no identifican a ningún alimento', () => {
   const p = byId.get('pechuga_pollo_cruda');
-  assert.deepEqual([p.nombre, p.alias, p.estado, p.grupo, p.varianteDefecto], ['Pechuga de pollo sin piel cruda', ['pechuga de pollo'], 'crudo', 'pechuga_pollo', true]);
+  assert.deepEqual([p.nombre, p.alias, p.estado, p.grupo, p.varianteDefecto], ['Pechuga de pollo sin piel cruda', ['pechuga de pollo', 'filete de pollo'], 'crudo', 'pechuga_pollo', true]);
   assert.equal(p.extra.termino_busqueda_usda, 'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw');
-  assert.deepEqual(byId.get('muslo_pollo_con_piel').alias, ['muslo de pollo', 'contramuslo']);
+  assert.deepEqual(byId.get('muslo_pollo_con_piel').alias, ['muslo de pollo', 'contramuslo', 'jamoncito de pollo']);
   assert.deepEqual(byId.get('pechuga_pavo_cruda').alias, ['pechuga de pavo']);
   const terms = new Set(realList.flatMap((f) => [f.nombre, ...(f.alias ?? [])]).map(normalizeText));
   for (const generic of ['pollo', 'pavo', 'pechuga']) assert.ok(!terms.has(generic), generic);
@@ -159,7 +159,7 @@ test('coincidencia con nombre o alias: sin acentos, sin mayúsculas, con plurale
     ['huevo', '2 huevos'],
     ['leche_entera', '2500 g de leche entera'],
   ];
-  for (const [id, text] of ok) assert.ok(!one(line(id, text)).flags.includes('sin_alias'), text);
+  for (const [id, text] of ok) assert.ok(!one(line(id, text), rulesList).flags.includes('sin_alias'), text);
   for (const [id, text] of [['muslo_pollo_con_piel', '180 g de pollo'], ['pechuga_pavo_cruda', '100 g de pavo'], ['kiwi_verde', '100 g de una fruta']]) {
     assert.ok(one(line(id, text)).flags.includes('sin_alias'), text);
   }
@@ -195,7 +195,7 @@ test('peso_en_crudo: pechuga de pollo a la plancha se queda en cruda, confianza 
 });
 
 test('sin peso_en_crudo, el arroz cocido sigue avisando', () => {
-  const r = run([line('arroz_blanco_crudo', '150 g de arroz cocido', { cantidad: 150, estado_dicho: 'cocinado' })]);
+  const r = run([line('arroz_blanco_crudo', '150 g de arroz cocido', { cantidad: 150, estado_dicho: 'cocinado' })], rulesList); // copia congelada: arroz sin peso_en_crudo
   assert.equal(r.items[0].confidence, 'baja');
   assert.ok(r.items[0].flags.includes('variante_no_disponible'));
   assert.equal(r.warnings.length, 1);
@@ -210,9 +210,10 @@ test('peso_en_crudo con variante cocinada en el grupo: se queda en la fila marca
 
 test('peso_en_crudo: columna si/no (vacío = no), se exporta y solo viaja a la IA si está marcado', () => {
   assert.equal(byId.get('pechuga_pollo_cruda').pesoEnCrudo, true);
-  assert.equal(realFoods.filter((f) => f.pesoEnCrudo).length, 1);
-  assert.equal(realList.find((f) => f.id === 'pechuga_pollo_cruda').peso_en_crudo, true);
-  assert.ok(realList.filter((f) => f.id !== 'pechuga_pollo_cruda').every((f) => !('peso_en_crudo' in f)));
+  const marcados = new Set(realFoods.filter((f) => f.pesoEnCrudo).map((f) => f.id));
+  assert.equal(marcados.size, 20);
+  for (const f of realList) assert.equal('peso_en_crudo' in f, marcados.has(f.id), f.id);
+  assert.ok(realList.filter((f) => marcados.has(f.id)).every((f) => f.peso_en_crudo === true));
 
   const r = parseFoodsCSV(csv('id,nombre,peso_en_crudo', 'a,A,si', 'b,B,no', 'c,C,', 'd,D,quizá'), { catalog });
   assert.deepEqual(r.foods.map((f) => f.pesoEnCrudo), [true, false, false, false]);

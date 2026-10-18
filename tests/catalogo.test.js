@@ -1,0 +1,124 @@
+// Decisiones sobre el catálogo real (fixture = copia de data/foods.csv). Las respuestas del modelo son SIMULADAS.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { normalizeAiResponse } from '../frontend/js/core/ai-validate.js';
+import { normalizeText } from '../frontend/js/core/text.js';
+import { realFoods, realList, readFile } from './helpers.js';
+
+const byId = new Map(realFoods.map((f) => [f.id, f]));
+const flagsOf = (food_id, source_text) => normalizeAiResponse({
+  items: [{ food_id, cantidad: 100, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [],
+}, realList).items[0].flags;
+
+test('el fixture es copia exacta de data/foods.csv', () => {
+  assert.equal(readFile('./fixtures/alimentos_iniciales.csv'), readFile('../data/foods.csv'));
+});
+
+test('alias: frases que antes no casaban con el alimento ahora sí (sin aviso sin_alias)', () => {
+  for (const [id, text] of [
+    ['nueces', '100 g de nuez'], // plural irregular
+    ['muesli', '50 g de musli'],
+    ['corn_flakes', '40 g de cornflakes'],
+    ['queso_tierno_loncha', '100 g de lonchas de queso'],
+    ['merluza_cruda', '200 g de pescadilla'],
+    ['pechuga_pollo_cruda', '150 g de filete de pollo'],
+    ['arroz_blanco_crudo', '80 g de arroz largo'],
+    ['pan_molde_blanco', '40 g de pan bimbo'],
+    ['solomillo_ternera', '150 g de solomillo de ternera'],
+    ['jamon_curado', '30 g de jamón serrano'],
+  ]) assert.ok(!flagsOf(id, text).includes('sin_alias'), text);
+});
+
+test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no es el curado (también como cocido)', () => {
+  assert.ok(flagsOf('pan_integral', '60 g de pan').includes('sin_alias'));
+  assert.ok(flagsOf('pan_integral', '60 g de barra de pan').includes('sin_alias'));
+  assert.ok(!flagsOf('pan_integral', '60 g de pan integral').includes('sin_alias'));
+  assert.ok(flagsOf('jamon_curado', '30 g de jamón cocido').includes('sin_alias'));
+  for (const [id, text] of [['pan_blanco_barra', '60 g de pan'], ['pan_blanco_barra', '60 g de barra de pan'], ['jamon_cocido', '30 g de jamón cocido'], ['jamon_cocido', '30 g de jamón york']]) {
+    assert.ok(!flagsOf(id, text).includes('sin_alias'), text);
+  }
+  // pan de barra español sin enriquecer: B1, B2, B9 y hierro de BEDCA; B3 sin dato (USDA solo la tiene enriquecida)
+  const pan = byId.get('pan_blanco_barra');
+  assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, undefined]);
+  assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
+  assert.equal(pan.extra.fdc_id, '172675');
+  assert.equal(byId.get('jamon_cocido').extra.fdc_id, '168295');
+});
+
+test('alias: regla de cortes y especies, sin genéricos de especie o de corte', () => {
+  const terms = new Set(realFoods.flatMap((f) => [f.nombre, ...f.alias]).map(normalizeText));
+  for (const generic of ['pollo', 'pavo', 'pechuga', 'ternera', 'solomillo', 'jamon']) assert.ok(!terms.has(generic), generic);
+  assert.deepEqual(byId.get('solomillo_ternera').alias, ['solomillo de ternera']);
+});
+
+test('peso_en_crudo (regla general: lo dictado es peso en crudo): cocinar no cambia la fila ni pide confirmación', () => {
+  const r1 = (food_id, source_text) => normalizeAiResponse({ items: [{ food_id, cantidad: 150, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'cocinado' }], unmatched: [] }, realList);
+  for (const [id, text] of [['arroz_blanco_crudo', '150 g de arroz cocido'], ['pasta_seca', '150 g de macarrones hervidos'], ['salmon_atlantico', '150 g de salmón al horno'],
+    ['merluza_cruda', '150 g de merluza a la plancha'], ['patata_cruda', '150 g de patata asada'], ['huevo', '150 g de huevos fritos'], ['calabacin', '150 g de calabacín a la plancha']]) {
+    const r = r1(id, text);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags, r.warnings.length], [id, 'alta', [], 0], text);
+  }
+});
+
+test('merluza_cocida y patata_asada: se conservan (diario, elegir a mano) pero no viajan a la IA', () => {
+  for (const id of ['merluza_cocida', 'patata_asada']) {
+    assert.equal(byId.get(id).extra.incluir, 'no', id);
+    assert.ok(!realList.some((f) => f.id === id), id);
+  }
+  // merluza queda con una sola variante en la lista: sin estado no se baja la confianza
+  const r = normalizeAiResponse({ items: [{ food_id: 'merluza_cruda', cantidad: 200, unidad: 'g', source_text: '200 g de merluza', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
+  assert.deepEqual([r.items[0].food_id, r.items[0].confidence], ['merluza_cruda', 'alta']);
+});
+
+test('incluir=no: activados mayonesa (con "mahonesa") y chorizo; el resto de puntuales sigue fuera', () => {
+  const c = byId.get('chorizo');
+  assert.deepEqual([c.extra.incluir, c.estado, c.extra.termino_busqueda_usda, c.nutrients.energia_kcal, c.nutrients.vitamina_b5_mg], ['si', 'procesado', undefined, 322, undefined]);
+  assert.match(c.extra.fuente_usda, /^BEDCA 2264/); // chorizo español: BEDCA, huecos de USDA; sin término para que usda.mjs no lo pise
+  const m = byId.get('mayonesa');
+  assert.deepEqual([m.extra.incluir, m.estado, m.extra.fdc_id], ['si', 'procesado', '171009']);
+  assert.ok(!flagsOf('mayonesa', '15 g de mahonesa').includes('sin_alias'));
+  for (const id of ['coca_cola', 'tinto_verano', 'ron', 'lengua_cerdo', 'salsa_cerdo_lata', 'salchicha_desayuno_cerdo', 'yogur_griego_vainilla', 'queso_monterey_jack']) {
+    assert.equal(byId.get(id).extra.incluir, 'no', id);
+  }
+});
+
+test('recetas: filas cocinadas que se dictan en gramos de plato sin aviso ("verduras asadas" no pide variante)', () => {
+  for (const [id, text, estado_dicho] of [['verduras_asadas_hacendado', '200 g de verduras asadas', 'cocinado'], ['verduras_asadas_hacendado', '200 g de verduras asadas', 'ninguno'], ['parrillada_verduras_hacendado', '250 g de parrillada de verduras', 'ninguno']]) {
+    const r = normalizeAiResponse({ items: [{ food_id: id, cantidad: 200, unidad: 'g', source_text: text, confidence: 'alta', estado_dicho }], unmatched: [] }, realList);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags], [id, 'alta', []], `${text} (${estado_dicho})`);
+  }
+});
+
+test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. UU. no declarada queda sin dato', () => {
+  const c = byId.get('corn_flakes').nutrients;
+  assert.deepEqual([c.energia_kcal, c.proteina_g, c.hidratos_g, c.azucares_g, c.fibra_g, c.sodio_mg], [373, 6.7, 82, 0.9, 4.4, 600]); // sodio = sal 1,5 g ÷ 2,5
+  assert.deepEqual([c.vitamina_b1_mg, c.vitamina_b9_ug, c.vitamina_b12_ug, c.hierro_mg], [0.3, 282.2, 2.1, 7]); // B9 en DFE = 1,7 × 166 µg de ácido fólico
+  for (const k of ['vitamina_a_ug', 'vitamina_c_mg', 'vitamina_d_ug']) assert.equal(c[k], undefined, k);
+  assert.equal(c.potasio_mg, 107); // natural del maíz: de USDA
+  assert.equal(byId.get('corn_flakes').extra.termino_busqueda_usda, undefined); // usda.mjs no la vuelve a rellenar
+});
+
+test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para que usda.mjs no los pise', () => {
+  const eleccion = readFile('../usda/eleccion.csv');
+  for (const [id, bedca] of [['merluza_cruda', 2347], ['jamon_curado', 2273], ['pan_blanco_barra', 2160], ['galleta_maria', 2675], ['brocoli', 1177], ['champinon', 2384]]) {
+    const f = byId.get(id);
+    assert.match(f.extra.fuente_usda, new RegExp(`(^|· )BEDCA ${bedca} `), id); // la merluza: macros de su etiqueta, micros de BEDCA
+    assert.equal(f.extra.termino_busqueda_usda, undefined, id);
+    assert.match(eleccion, new RegExp(`(^|\n)${id};[^;]*;;;`), id); // sin fdcId elegido
+  }
+  assert.match(eleccion, /(^|\n)corn_flakes;[^;]*;;;/); // etiqueta: igual
+  for (const id of ['brocoli', 'champinon']) assert.equal(byId.get(id).pesoEnCrudo, true, id);
+  assert.ok(!flagsOf('champinon', '50 g de champiñones laminados').includes('sin_alias'));
+  assert.ok(!flagsOf('brocoli', '150 g de brécol').includes('sin_alias'));
+  // EPA y DHA = 0 en vegetales (criterio de Victor): la chía queda completa
+  for (const id of ['semillas_chia', 'pimiento_amarillo']) assert.deepEqual([byId.get(id).nutrients.epa_g, byId.get(id).nutrients.dha_g], [0, 0], id);
+  // atún: escurrido y con sal (el aceite se dicta aparte)
+  assert.equal(byId.get('atun_lata_aceite').extra.fdc_id, '173708');
+});
+
+test('merluza: macros de la etiqueta de Victor (merluza del Cabo), micros de BEDCA', () => {
+  const m = byId.get('merluza_cruda');
+  assert.deepEqual(['energia_kcal', 'proteina_g', 'grasa_total_g', 'grasas_saturadas_g', 'sodio_mg', 'hidratos_g'].map((k) => m.nutrients[k]), [82, 18, 1.2, 0.3, 96, 0]);
+  assert.ok(m.nutrients.agua_g + m.nutrients.proteina_g + m.nutrients.grasa_total_g <= 100); // agua coherente con la etiqueta
+  assert.match(m.extra.fuente_usda, /^Etiqueta de la merluza/);
+});

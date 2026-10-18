@@ -40,7 +40,8 @@ test('en scripts/ y tests/, import.meta.url solo se usa dentro de fileURLToPath(
 
 test('try-phrases --simulated funciona desde cualquier directorio de trabajo', () => {
   const script = join(root, 'scripts', 'try-phrases.mjs');
-  const r = spawnSync(process.execPath, [script, '--simulated'], { cwd: tmpdir(), encoding: 'utf8' });
+  // Copia congelada del documento: las frases simuladas de phrases.json se escribieron sobre ella.
+  const r = spawnSync(process.execPath, [script, '--simulated', '--foods', join(root, 'tests', 'fixtures', 'reglas_variantes.csv')], { cwd: tmpdir(), encoding: 'utf8' });
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /ENTRADA: "para desayunar 80 g de avena/);
   assert.match(r.stdout, /merluza_cruda/);
@@ -51,7 +52,7 @@ test('try-phrases acepta --foods con ruta absoluta o relativa', () => {
   const abs = join(root, 'tests', 'fixtures', 'alimentos_iniciales.csv');
   const a = spawnSync(process.execPath, [script, '--simulated', '--foods', abs], { cwd: tmpdir(), encoding: 'utf8' });
   assert.equal(a.status, 0, a.stderr);
-  assert.match(a.stdout, /Documento: 64 alimentos, 49 enviados/);
+  assert.match(a.stdout, /Documento: 69 alimentos, 55 enviados/);
   const b = spawnSync(process.execPath, [script, '--simulated', '--foods', join('tests', 'fixtures', 'alimentos_iniciales.csv')], { cwd: root, encoding: 'utf8' });
   assert.equal(b.status, 0, b.stderr);
 });

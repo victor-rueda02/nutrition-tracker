@@ -1,0 +1,43 @@
+{
+  "recetas": [
+    {
+      "id": "ejemplo_arroz_con_huevo",
+      "nombre": "Arroz con huevo (EJEMPLO inventado)",
+      "ejemplo": true,
+      "peso_final_g": 400,
+      "ingredientes": [
+        { "food_id": "arroz_blanco_crudo", "gramos": 150 },
+        { "food_id": "huevo", "gramos": 100 },
+        { "food_id": "aceite_oliva", "gramos": 10 }
+      ],
+      "notas": "Receta inventada para los tests y como plantilla. Nunca se escribe en el catálogo."
+    },
+    {
+      "id": "verduras_asadas_hacendado",
+      "nombre": "Salteado de verduras asadas",
+      "alias": ["verduras asadas"],
+      "ingredientes": [
+        { "food_id": "calabacin", "gramos": 20 },
+        { "food_id": "cebolla", "gramos": 20 },
+        { "food_id": "berenjena", "gramos": 20 },
+        { "food_id": "pimiento_rojo", "gramos": 20 },
+        { "food_id": "pimiento_amarillo", "gramos": 20 }
+      ],
+      "notas": "Hacendado. Proporciones del envase; verduras en crudo sin la pérdida de agua del asado (aproximado)."
+    },
+    {
+      "id": "parrillada_verduras_hacendado",
+      "nombre": "Parrillada de verduras Hacendado",
+      "alias": ["parrillada de verduras", "parrillada"],
+      "ingredientes": [
+        { "food_id": "calabacin", "gramos": 25 },
+        { "food_id": "cebolla", "gramos": 25 },
+        { "food_id": "berenjena", "gramos": 25 },
+        { "food_id": "pimiento_rojo", "gramos": 25 },
+        { "food_id": "pimiento_amarillo", "gramos": 25 },
+        { "food_id": "patata_asada", "gramos": 75 }
+      ],
+      "notas": "Hacendado. Proporciones del envase; verduras en crudo sin la pérdida de agua del asado (aproximado)."
+    }
+  ]
+}
