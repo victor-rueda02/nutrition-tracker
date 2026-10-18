@@ -81,7 +81,18 @@ export function mountApp(root, deps) {
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   let pending = Promise.resolve();
-  const track = (p) => { pending = pending.then(() => p, () => p); return p; };
+  // Toda acción asíncrona pasa por aquí. Ninguna falla en silencio: si algo lanza un error, se muestra arriba en
+  // cualquier pantalla ("No se pudo guardar: …") y no se toca nada más (el borrador y la pantalla se conservan).
+  const track = (p, que = 'Algo ha fallado') => {
+    state.fail = ''; // una acción nueva quita el aviso de la anterior
+    const q = Promise.resolve(p).catch((e) => {
+      state.fail = `${que}: ${e?.message ?? e}`;
+      globalThis.console?.error?.(e);
+      render();
+    });
+    pending = pending.then(() => q, () => q);
+    return q;
+  };
   const whenIdle = async () => { let last; do { last = pending; await last.catch(() => {}); } while (last !== pending); };
 
   const h = (tag, props = {}, ...kids) => {
@@ -170,7 +181,7 @@ export function mountApp(root, deps) {
       }
       state.status = `Guardado en ${MEAL_LABEL[rec.meal].toLowerCase()}: ${rec.lines.length} ${rec.lines.length === 1 ? 'alimento' : 'alimentos'}.`;
       state.text = ''; state.draft = null; state.screen = 'home'; render();
-    })());
+    })(), 'No se pudo guardar');
   }
 
   const today = () => madridNow(now()).date;
@@ -185,7 +196,7 @@ export function mountApp(root, deps) {
       const movida = rec.date !== state.draft.editing.date;
       state.draft = null;
       await openDay(rec.date, movida ? `Cambios guardados. La comida está ahora en este día.` : 'Cambios guardados.');
-    })());
+    })(), 'No se pudo guardar');
   }
 
   function deleteMeal(id, date) {
@@ -193,7 +204,7 @@ export function mountApp(root, deps) {
       await deps.store.deleteMeal(id);
       state.draft = null;
       await openDay(date, 'Comida borrada.');
-    })());
+    })(), 'No se pudo borrar');
   }
 
   // Borrar pide confirmación dentro de la app (sin diálogos del navegador): "Borrar" -> "Sí, borrar" / "Cancelar".
@@ -234,7 +245,7 @@ export function mountApp(root, deps) {
     const text = logToCSV(state.registro, byId());
     return track(saveFile({ name: `nutritiontracker-frases-${madridNow(now()).date}.csv`, text, type: 'text/csv' }).then((r) => {
       state.logMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Exportadas ${state.registro.length} frases.`; render();
-    }));
+    }), 'No se pudo exportar');
   }
 
   function exportDiary() {
@@ -242,7 +253,7 @@ export function mountApp(root, deps) {
     const n = state.allMeals.length;
     return track(saveFile({ name: `nutritiontracker-diario-${fecha()}.json`, text, type: 'application/json' }).then((r) => {
       state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Copia del diario: ${n} ${n === 1 ? 'comida' : 'comidas'}.`; render();
-    }));
+    }), 'No se pudo exportar');
   }
 
   function exportFoods(excel) {
@@ -250,7 +261,7 @@ export function mountApp(root, deps) {
     const name = `nutritiontracker-alimentos${excel ? '-excel' : ''}-${fecha()}.csv`;
     return track(saveFile({ name, text, type: 'text/csv' }).then((r) => {
       state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Documento exportado: ${state.foods.length} alimentos.`; render();
-    }));
+    }), 'No se pudo exportar');
   }
 
   function onBackupFile(file) {
@@ -264,7 +275,7 @@ export function mountApp(root, deps) {
       const plantillas = parsed.ok ? mergeTemplates(await loadTemplates(), parsed.plantillas) : null;
       state.backupImport = { name: file.name, parsed, plan, restaurarObjetivos, plantillas, desconocidos: [...desconocidos], applied: false };
       state.docMsg = ''; render();
-    })());
+    })(), 'No se pudo leer la copia');
   }
 
   function applyBackup() {
@@ -277,7 +288,7 @@ export function mountApp(root, deps) {
       const partes = [`${b.plan.nuevas.length} nuevas`, `${b.plan.actualizadas.length} actualizadas`];
       if (b.plantillas.nuevas.length) partes.push(`${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`);
       await openDoc(`Copia importada: ${partes.join(', ')}${b.restaurarObjetivos ? '; objetivos restaurados' : ''}.`);
-    })());
+    })(), 'No se pudo importar la copia');
   }
 
   function backupView(b) {
@@ -312,7 +323,7 @@ export function mountApp(root, deps) {
       state.repeat = createRepeat({ meals, sourceDate, recordId, foodsById: byId(), targetDate, targetMeal });
       state.repeatBack = back;
       state.screen = 'repeat'; render();
-    })());
+    })(), 'No se pudo abrir');
   }
 
   const openTemplates = (msg = '') => track((async () => {
@@ -331,7 +342,7 @@ export function mountApp(root, deps) {
       state.templateForm = null;
       state.diaryMsg = `Plantilla «${t.nombre}» guardada. La tienes en Inicio → Plantillas.`;
       render();
-    })());
+    })(), 'No se pudo guardar la plantilla');
   }
 
   function deleteTemplate(id) {
@@ -340,7 +351,7 @@ export function mountApp(root, deps) {
       const t = list.find((x) => x.id === id);
       await deps.store.setSetting('plantillas', removeTemplate(list, id));
       await openTemplates(t ? `Plantilla «${t.nombre}» borrada.` : '');
-    })());
+    })(), 'No se pudo borrar la plantilla');
   }
 
   function useTemplate(t) {
@@ -358,7 +369,7 @@ export function mountApp(root, deps) {
       state.repeat = null;
       const de = r.template ? `la plantilla «${r.template.nombre}»` : dayLabel(r.sourceDate).toLowerCase();
       await openDay(r.targetDate, `Añadidos ${n} ${n === 1 ? 'alimento' : 'alimentos'} de ${de}.`);
-    })());
+    })(), 'No se pudo guardar');
   }
 
   function editMeal(rec) {
@@ -390,7 +401,7 @@ export function mountApp(root, deps) {
       state.importResult = { name: file.name, parsed, applied: false };
       if (parsed.report.ok && parsed.foods.length > 0) await applyImport(); // sin errores: se guarda directamente
       render();
-    })());
+    })(), 'No se pudo leer el documento');
   }
 
   async function applyImport() {
@@ -576,7 +587,7 @@ export function mountApp(root, deps) {
       header('Documento', () => { state.screen = 'home'; render(); }),
       h('p', {}, state.foods.length ? `${state.docName || 'Documento'}: ${state.foods.length} alimentos (${incompletos} incompletos).` : 'Sin documento cargado.'),
       h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => fileIn.click() }, 'Importar documento'), fileIn),
-      state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render)) }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null,
+      state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null,
       h('h2', {}, 'Conexión con la IA'),
       h('label', {}, 'Worker', ep), h('label', {}, 'Token', tk),
       h('div', { class: 'row' },
@@ -587,6 +598,7 @@ export function mountApp(root, deps) {
       h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`)),
       h('h2', {}, 'Copia de seguridad'),
       h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). La copia no incluye el token.`),
+      doc.defaultView?.isSecureContext === false ? h('p', { class: 'warn small' }, 'Sin https (prueba en red local): el fichero se descarga en vez de abrir el menú Compartir, y la app no funciona sin conexión.') : null,
       state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
       h('div', { class: 'row wrap' },
         h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
@@ -718,7 +730,12 @@ export function mountApp(root, deps) {
       back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
     });
     const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro };
-    root.replaceChildren(screens[state.screen]());
+    const screen = screens[state.screen]();
+    if (state.fail) {
+      screen.prepend(h('p', { class: 'error', role: 'alert' }, state.fail, ' ',
+        h('button', { class: 'link', onclick: () => { state.fail = ''; render(); } }, 'Cerrar')));
+    }
+    root.replaceChildren(screen);
   }
   render();
   return { state, render, whenIdle };

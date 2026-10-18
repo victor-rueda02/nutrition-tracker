@@ -13,11 +13,11 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' } } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
-  const store = createMemoryStore();
+  const store = alterStore(createMemoryStore());
   for (const m of meals) await store.addMeal(m);
   const calls = [];
   const saved = []; // ficheros exportados (en el iPhone irían al menú Compartir)
@@ -31,7 +31,7 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
     },
     async health() { return health; },
   });
-  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; } });
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; } });
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
   const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
@@ -709,4 +709,53 @@ test('registro: un dictado sin problemas no se anota; «Vaciar» pide confirmaci
   assert.match(t.$('p.ok[role=status]').textContent, /Registro vaciado/);
   await t.act(() => t.btn('‹ Volver').click());
   assert.match(t.root.textContent, /Frases a revisar \(0\)/);
+});
+
+// ---------- Contexto no seguro (http con la IP del PC): sin crypto.randomUUID ----------
+const sinRandomUUID = () => { Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true }); return () => delete globalThis.crypto.randomUUID; };
+
+test('sin crypto.randomUUID (http con IP), guardar funciona con el generador de ids de la app', { skip }, async () => {
+  const restaurar = sinRandomUUID();
+  try {
+    assert.equal(typeof globalThis.crypto.randomUUID, 'undefined');
+    const t = await setup({ responses: [RESULT], idGen: null }); // como en producción: sin generador de ids inyectado
+    t.type(t.$('textarea'), 'para desayunar 80 g de avena, 2 huevos y un plátano'); // con un no reconocido: también se anota en el registro
+    await t.act(() => t.btn('Procesar').click());
+    assert.equal(t.$('.error'), null);
+    await t.act(() => t.btn('Guardar').click());
+    const [m] = await t.store.allMeals();
+    assert.match(m.id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    assert.match(t.$('[role=status]').textContent, /Guardado en desayuno/);
+    assert.equal((await t.store.getSetting('registro_frases')).length, 1);
+  } finally { restaurar(); }
+  assert.equal(typeof globalThis.crypto.randomUUID, 'function');
+});
+
+test('ningún error al guardar es silencioso: "No se pudo guardar: …" y el borrador se conserva', { skip }, async () => {
+  let romper = true;
+  const t = await setup({ responses: [RESULT], alterStore: (st) => ({ ...st, addMeal: async (rec) => { if (romper) throw new Error('disco lleno'); return st.addMeal(rec); } }) });
+  t.type(t.$('textarea'), 'x');
+  await t.act(() => t.btn('Procesar').click());
+  t.type(t.$$('input.grams')[0], '90');
+  await t.act(() => t.btn('Guardar').click());
+  assert.match(t.$('[role=alert]').textContent, /No se pudo guardar: disco lleno/);
+  assert.match(t.$('header').textContent, /Confirmar/); // sigue en la confirmación
+  assert.equal(t.$$('input.grams')[0].value, '90'); // con lo que habías cambiado
+  assert.deepEqual(await t.store.allMeals(), []);
+  romper = false;
+  await t.act(() => t.btn('Guardar').click());
+  assert.equal((await t.store.allMeals()).length, 1);
+  assert.equal(t.$('.error[role=alert]'), null); // el aviso desaparece al guardar bien
+});
+
+test('también en Repetir: un fallo al guardar se ve y la pantalla se conserva', { skip }, async () => {
+  let romper = false;
+  const t = await setup({ meals: [AYER], alterStore: (st) => ({ ...st, addMeal: async (rec) => { if (romper) throw new Error('sin espacio'); return st.addMeal(rec); } }) });
+  romper = true;
+  await t.act(() => t.btn('Repetir de ayer').click());
+  await t.act(() => t.btn('Añadir 3 alimentos').click());
+  assert.match(t.$('[role=alert]').textContent, /No se pudo guardar: sin espacio/);
+  assert.match(t.$('header').textContent, /Repetir/);
+  await t.act(() => t.btn('Cerrar').click());
+  assert.equal(t.$('p.error[role=alert]'), null);
 });

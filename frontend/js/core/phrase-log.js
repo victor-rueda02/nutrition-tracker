@@ -1,6 +1,7 @@
 // Registro local de frases problemáticas (para pulir el documento: añadir alias o alimentos). Solo en el dispositivo:
 // nunca se envía fuera. Se anota la frase dictada con sus líneas problemáticas (no reconocido, confianza baja,
 // "no coincide con tus alias") y, al guardar, qué alimento elegiste al final. Funciones puras, sin DOM.
+import { newId } from './ids.js';
 import { serializeCSV } from './csv.js';
 
 export const MAX_ENTRADAS = 300; // las más antiguas se descartan
@@ -17,7 +18,7 @@ export function problemsFromResult(result) {
 }
 
 // Entrada nueva (o null si la frase no tuvo problemas).
-export function newEntry({ texto, result, now = new Date(), idGen = () => globalThis.crypto.randomUUID() }) {
+export function newEntry({ texto, result, now = new Date(), idGen = newId }) {
   const problemas = problemsFromResult(result);
   return problemas.length ? { id: idGen(), fecha: now.toISOString(), texto, problemas: problemas.map((p) => ({ ...p, resolucion: null })) } : null;
 }

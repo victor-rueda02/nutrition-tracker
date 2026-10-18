@@ -22,6 +22,7 @@ const ASSETS = [
   'js/core/draft.js',
   'js/core/excluded.js',
   'js/core/foods-parser.js',
+  'js/core/ids.js',
   'js/core/meal-defaults.js',
   'js/core/numbers.js',
   'js/core/phrase-log.js',

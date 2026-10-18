@@ -1,5 +1,6 @@
 // Plantillas: una comida guardada con nombre para registrarla en segundos con la pantalla "Repetir" (ajustando gramos).
 // Se guardan en el dispositivo (ajuste "plantillas") y van en la copia de seguridad. Funciones puras, sin DOM.
+import { newId } from './ids.js';
 import { MEALS } from './meal-defaults.js';
 import { normalizeText } from './text.js';
 
@@ -34,7 +35,7 @@ export function nameError(nombre, list) {
   return null;
 }
 
-export function templateFromRecord(rec, { nombre, list = [], now = new Date(), idGen = () => globalThis.crypto.randomUUID() }) {
+export function templateFromRecord(rec, { nombre, list = [], now = new Date(), idGen = newId }) {
   const err = nameError(nombre, list);
   if (err) throw new Error(err);
   return { id: idGen(), nombre: String(nombre).trim(), meal: rec.meal, createdAt: now.toISOString(), lines: rec.lines.map((l) => ({ food_id: l.food_id, grams: l.grams })) };

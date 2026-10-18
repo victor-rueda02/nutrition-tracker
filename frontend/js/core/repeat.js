@@ -1,5 +1,6 @@
 // Repetir comidas de otro día ajustando los gramos a mano, sin IA. Funciones puras (devuelven un estado nuevo), sin DOM.
 // Esta pantalla cuenta como confirmación editable (regla 5): se ve todo, se marca/desmarca y se cambian los gramos.
+import { newId } from './ids.js';
 import { MEALS } from './meal-defaults.js';
 import { MAX_GRAMS } from './ai-contract.js';
 import { sumLines } from './nutrients.js';
@@ -58,7 +59,7 @@ export function validateRepeat(r) {
 }
 
 // Registros a guardar (mismo formato que el resto del diario). Con "Como en el origen", uno por comida; si no, uno.
-export function toRecords(r, { now = new Date(), idGen = () => globalThis.crypto.randomUUID() } = {}) {
+export function toRecords(r, { now = new Date(), idGen = newId } = {}) {
   if (!validateRepeat(r).ok) throw new Error('Nada válido que añadir: revisa los gramos, la fecha y la comida');
   const origen = r.template ? `plantilla «${r.template.nombre}»` : `repetido de ${r.sourceDate}`;
   const linea = (i) => ({ food_id: i.food_id, grams: i.grams, source_text: origen });

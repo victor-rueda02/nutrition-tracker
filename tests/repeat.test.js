@@ -81,3 +81,23 @@ test('un alimento que ya no está en el documento sale desmarcado y no se puede 
   assert.equal(findItem(toggleItem(r, fantasma.key, true), fantasma.key).checked, false);
   assert.deepEqual(toRecords(r, { now: NOW, idGen })[0].lines.map((l) => l.food_id), ['huevo']);
 });
+
+test('ids sin crypto.randomUUID: UUID v4 con getRandomValues, o con Math.random si no hay crypto', async () => {
+  const { newId } = await import('../frontend/js/core/ids.js');
+  const v4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  const soloRandom = { getRandomValues: (b) => globalThis.crypto.getRandomValues(b) };
+  assert.match(newId(soloRandom), v4);
+  assert.match(newId(null), v4);
+  assert.match(newId(), v4);
+  const muchos = new Set(Array.from({ length: 2000 }, () => newId(soloRandom)));
+  assert.equal(muchos.size, 2000);
+  // y los valores por defecto de los módulos no dependen de randomUUID
+  Object.defineProperty(globalThis.crypto, 'randomUUID', { value: undefined, configurable: true });
+  try {
+    const { templateFromRecord } = await import('../frontend/js/core/templates.js');
+    const { newEntry } = await import('../frontend/js/core/phrase-log.js');
+    assert.match(toRecords(nuevo(), { now: NOW })[0].id, v4);
+    assert.match(templateFromRecord(AYER[0], { nombre: 'x' }).id, v4);
+    assert.match(newEntry({ texto: 't', result: { items: [], unmatched: [{ text: 'a', motivo: 'no_en_catalogo' }] } }).id, v4);
+  } finally { delete globalThis.crypto.randomUUID; }
+});

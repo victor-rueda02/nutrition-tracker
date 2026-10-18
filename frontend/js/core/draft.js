@@ -1,5 +1,6 @@
 // Borrador de la pantalla de confirmación. Funciones puras (devuelven un borrador nuevo), sin DOM.
 // Aquí viven las ediciones del usuario: cambiar gramos, cambiar alimento, borrar línea, resolver "no reconocidos".
+import { newId } from './ids.js';
 import { parseNumber } from './numbers.js';
 import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectPeso, detectVolumen, cantidadDicha } from './ai-contract.js';
 import { sumLines } from './nutrients.js';
@@ -145,7 +146,7 @@ export function previewTotals(d, foodsById) {
 
 // Registro que se guarda: solo alimentos y gramos (los nutrientes se calculan siempre del documento).
 // Al editar se conservan id y createdAt, se usa la fecha del borrador y se añade updatedAt.
-export function toMealRecord(d, { now = new Date(), idGen = () => globalThis.crypto.randomUUID() } = {}) {
+export function toMealRecord(d, { now = new Date(), idGen = newId } = {}) {
   if (!validateDraft(d).ok) throw new Error('El borrador no es válido: revisa gramos y líneas');
   const lines = d.lines.map((l) => ({ food_id: l.food_id, grams: l.grams, source_text: l.source_text }));
   if (d.editing) return { id: d.editing.id, date: d.date, meal: d.meal, createdAt: d.editing.createdAt, updatedAt: now.toISOString(), text: d.text, lines };
