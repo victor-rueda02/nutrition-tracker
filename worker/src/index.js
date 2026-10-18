@@ -146,7 +146,7 @@ async function usdaSearch(body, client, cors) {
       const r = await findCandidates(conRegistro, termino, { map: usdaMap, required, threshold, fndds: false });
       resultados.push({
         termino, estado: r.estado, motivo: r.motivo, sugerido: r.candidato?.fdcId ?? null,
-        candidatos: r.candidatos.map((c) => ({ fdcId: c.fdcId, descripcion: c.descripcion, tipo: c.tipo, obligatorios: c.obligatorios, total: c.total, coincidencia: r2(c.coincidencia), fortificacion: fortificacion(encontrados.get(c.fdcId) ?? {}) })),
+        candidatos: r.candidatos.map((c) => ({ fdcId: c.fdcId, descripcion: c.descripcion, tipo: c.tipo, obligatorios: c.obligatorios, total: c.total, coincidencia: r2(c.coincidencia), preparaciones: c.preparaciones, fortificacion: fortificacion(encontrados.get(c.fdcId) ?? {}) })),
       });
     }
   } catch (e) { return usdaFail(e, cors); }

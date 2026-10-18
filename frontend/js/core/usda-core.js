@@ -62,11 +62,18 @@ const casa = (a, b) => a === b || (Math.min(a.length, b.length) >= 5 && (a.start
 // Parte de las palabras del término que aparecen en la descripción de USDA (0..1). Solo para elegir el sugerido.
 // USDA nombra "Categoría, tipo, ...": si la categoría del término ("Ham") no está en la primera parte de la
 // descripción ("Peppers, serrano"), es otro alimento aunque comparta palabras, y el parecido se reduce a la mitad.
+// Preparaciones que cambian mucho la grasa y las kcal. Si la descripción de USDA lleva una que el término no pide
+// ("Squid, cooked" -> "..., cooked, fried"), es otro alimento: el parecido también se reduce a la mitad.
+export const PREPARACIONES = ['fried', 'breaded', 'battered', 'coated', 'floured', 'with sauce', 'in sauce', 'with gravy', 'canned', 'in oil', 'in syrup', 'glazed'];
+const prepRe = new Map(PREPARACIONES.map((p) => [p, new RegExp(`(^|[^a-z])${p.replace(' ', '\\s+')}($|[^a-z])`)]));
+export const preparacionesDeMas = (termino, descripcion) => PREPARACIONES.filter((p) => prepRe.get(p).test(normalizeText(descripcion)) && !prepRe.get(p).test(normalizeText(termino)));
+
 export function coincidencia(termino, descripcion) {
   const t = palabras(termino);
   if (!t.length) return 0;
   const d = palabras(descripcion);
-  const ratio = t.filter((w) => d.some((x) => casa(w, x))).length / t.length;
+  let ratio = t.filter((w) => d.some((x) => casa(w, x))).length / t.length;
+  if (preparacionesDeMas(termino, descripcion).length) ratio /= 2;
   const categoria = palabras(descripcion.split(',')[0]);
   return categoria.some((x) => casa(t[0], x)) ? ratio : ratio / 2;
 }
@@ -77,6 +84,7 @@ export function toCandidate(food, { termino, map, required }) {
   return {
     fdcId: food.fdcId, descripcion: food.description, tipo: food.dataType, estimado: food.dataType === FNDDS,
     obligatorios, total: required.length, ratio: obligatorios / required.length, coincidencia: coincidencia(termino, food.description),
+    preparaciones: preparacionesDeMas(termino, food.description),
   };
 }
 

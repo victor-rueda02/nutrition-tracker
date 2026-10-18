@@ -13,7 +13,7 @@ import {
 
 export {
   API, PRINCIPALES, FNDDS, MAX_CANDIDATOS, usdaNutrients, mapNutrients, countRequired, coincidencia, toCandidate, sortCandidates,
-  pct, suggest, searchQuery, UsdaError, findCandidates, fortificacion, calorieFactors, valoresSospechosos, fichaUsda,
+  pct, suggest, searchQuery, UsdaError, findCandidates, fortificacion, calorieFactors, valoresSospechosos, fichaUsda, PREPARACIONES, preparacionesDeMas,
 } from '../frontend/js/core/usda-core.js';
 
 // Alimentos del documento que se buscan y motivo de los que no.

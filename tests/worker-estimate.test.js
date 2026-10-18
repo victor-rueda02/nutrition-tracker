@@ -111,6 +111,7 @@ test('/usda/search: solo Foundation y SR Legacy, una búsqueda por término (sin
   assert.equal(pasta.sugerido, 1);
   assert.deepEqual(pasta.candidatos.map((c) => [c.fdcId, c.obligatorios, c.total]), [[1, 31, 31], [2, 31, 31]]);
   assert.deepEqual(pasta.candidatos[1].fortificacion, ['la descripción dice "enriched"', 'ácido fólico añadido (431) = 86 µg']);
+  assert.deepEqual(pasta.candidatos[0].preparaciones, []);
   assert.equal(beef.estado, 'incompleto');
   assert.equal(beef.sugerido, 3);
 });

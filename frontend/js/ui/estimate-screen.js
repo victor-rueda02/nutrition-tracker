@@ -174,6 +174,7 @@ export function estimateScreen(ui) {
       h('div', { class: 'muted small' }, `Término: «${i.termino}»`),
       sel ?? h('p', { class: 'flag' }, i.buscado ? 'USDA no encontró nada con este término: prueba otro o usa uno de tu documento.' : 'Sin buscar en USDA todavía.'),
       elegido && !ya && elegido.obligatorios + 1e-9 < elegido.total * ui.thr ? h('div', { class: 'flag' }, `Incompleto en USDA: ${elegido.obligatorios}/${elegido.total} nutrientes obligatorios`) : null,
+      elegido?.preparaciones?.length && !ya ? h('div', { class: 'flag' }, `Preparación que no pidió la IA: ${elegido.preparaciones.join(', ')} (cambia mucho la grasa y las kcal): mira las alternativas`) : null,
       elegido?.fortificacion?.length && !ya ? h('div', { class: 'flag' }, `Puede estar enriquecido (EE. UU.): ${elegido.fortificacion.join('; ')}`) : null,
       elegido?.fortificacion?.length && !ya ? h('label', { class: 'row small' }, h('input', { type: 'checkbox', checked: i.sinEnriquecer, onchange: (ev) => { set((x) => setSinEnriquecer(x, i.key, ev.target.checked)); } }), ' Sin enriquecer (deja vacíos B9, B1, B2, B3 y hierro)') : null,
       h('div', { class: 'row' }, otro, h('button', { class: 'secondary', disabled: state.busy, onclick: () => ui.est.buscar(i.key, otro.value) }, 'Buscar en USDA')));
