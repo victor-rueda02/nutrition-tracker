@@ -30,20 +30,35 @@ function combine(parts) {
   };
 }
 
-// Estado de un total frente a su objetivo resuelto (resolveTargets).
-// estado: sin_dato | cumplido | por_debajo (min) · dentro | excedido (max) · en_objetivo | por_debajo | por_encima (objetivo).
-// superaUl va aparte: es un aviso distinto de "objetivo cumplido".
+// Límites de un objetivo: los de targetsForDate (min, objetivo, max) o, en uno de resolveTargets, su tipo y valor.
+function limitesDe(target) {
+  if ('min' in target || 'objetivo' in target || 'max' in target) return { min: target.min ?? null, objetivo: target.objetivo ?? null, max: target.max ?? null };
+  const v = target.valor ?? null;
+  return { min: target.tipo === 'min' ? v : null, objetivo: target.tipo === 'objetivo' ? v : null, max: target.tipo === 'max' ? v : null };
+}
+
+// Estado de un total frente a su objetivo resuelto (targetsForDate o resolveTargets).
+// estado: sin_dato | sin_objetivo | cumplido | por_debajo (solo min) · dentro | excedido (solo max) ·
+// en_objetivo | por_debajo | por_encima (objetivo y rangos: por debajo de min, o del 90 % del objetivo si no hay min;
+// por encima de max, o del 110 % del objetivo si no hay max). El % es sobre el objetivo (en un rango sin objetivo,
+// sobre el máximo). superaUl va aparte: es un aviso distinto de "objetivo cumplido".
 export function evaluate(total, target) {
   const value = total.value;
   const parcial = total.missing.length > 0;
   if (value === null) return { total: null, pct: null, estado: 'sin_dato', superaUl: false, parcial };
-  const pct = target.valor ? value / target.valor : null;
+  const { min, objetivo, max } = limitesDe(target);
+  const ref = objetivo ?? (min !== null && max !== null ? max : min ?? max);
+  const pct = ref ? value / ref : null;
   let estado;
-  if (target.valor === null) estado = 'sin_objetivo';
-  else if (target.tipo === 'min') estado = value >= target.valor ? 'cumplido' : 'por_debajo';
-  else if (target.tipo === 'max') estado = value > target.valor ? 'excedido' : 'dentro';
-  else estado = pct < RANGO_OBJETIVO[0] ? 'por_debajo' : pct > RANGO_OBJETIVO[1] ? 'por_encima' : 'en_objetivo';
-  return { total: value, pct, estado, superaUl: target.ul !== null && value > target.ul, parcial };
+  if (ref === null) estado = 'sin_objetivo';
+  else if (objetivo === null && max === null) estado = value >= min ? 'cumplido' : 'por_debajo';
+  else if (objetivo === null && min === null) estado = value > max ? 'excedido' : 'dentro';
+  else {
+    const lo = min ?? objetivo * RANGO_OBJETIVO[0];
+    const hi = max ?? objetivo * RANGO_OBJETIVO[1];
+    estado = value < lo ? 'por_debajo' : value > hi ? 'por_encima' : 'en_objetivo';
+  }
+  return { total: value, pct, estado, superaUl: target.ul !== null && target.ul !== undefined && value > target.ul, parcial };
 }
 
 // Todo lo que muestra la pantalla Diario para un día.

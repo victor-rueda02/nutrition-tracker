@@ -1,12 +1,13 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v7';
+const VERSION = 'nt-v11'; // nt-v10 (objetivos) + 1 (ia-recetas)
 const ASSETS = [
   './',
   'css/catalogo.css',
   'css/frases.css',
   'css/ia-recetas.css',
+  'css/objetivos.css',
   'css/plantillas.css',
   'css/repeat.css',
   'css/styles.css',
@@ -39,6 +40,7 @@ const ASSETS = [
   'js/core/recetas.js',
   'js/core/schema.js',
   'js/core/settings.js',
+  'js/core/targets-plan.js',
   'js/core/targets.js',
   'js/core/templates.js',
   'js/core/text.js',
@@ -50,6 +52,7 @@ const ASSETS = [
   'js/ui/app.js',
   'js/ui/catalog-update-screen.js',
   'js/ui/estimate-screen.js',
+  'js/ui/objetivos-screen.js',
   'js/ui/phrase-log-screen.js',
   'js/ui/recetas-screen.js',
   'js/ui/repeat-screen.js',

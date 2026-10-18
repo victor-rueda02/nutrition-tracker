@@ -120,3 +120,14 @@ test('actualizar el catálogo publicado conserva los añadidos con IA (tipo usda
   const p2 = planCatalogUpdate({ local, remote: republicado, base, catalog });
   assert.deepEqual([p2.conflictos, p2.retirados, p2.propios, p2.hayCambios], [[], [], [], false]);
 });
+
+test('integración con objetivos: la copia lleva a la vez el plan de objetivos y las recetas, y se leen los dos', () => {
+  const r = { id: 'lasana', nombre: 'Lasaña', ingredientes: [{ food_id: 'a', gramos: 10 }] };
+  const plan = { version: 1, periodos: [] };
+  const json = backupToJSON(buildBackup({ meals: [], plan, recetas: [r] }));
+  const back = parseBackup(json);
+  assert.equal(back.ok, true);
+  assert.deepEqual(back.plan, plan);
+  assert.deepEqual(back.recetas, [r]);
+  assert.deepEqual(Object.keys(JSON.parse(json)).filter((k) => ['plan_objetivos', 'recetas'].includes(k)), ['plan_objetivos', 'recetas']);
+});

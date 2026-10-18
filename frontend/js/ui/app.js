@@ -11,7 +11,8 @@ import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
-import { loadTargets, resolveTargets, referenceValue } from '../core/targets.js';
+import { loadTargets } from '../core/targets.js';
+import { targetsForDate, planFromLegacy, validatePlan } from '../core/targets-plan.js';
 import { diaryReport, shiftDate } from '../core/diary.js';
 import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
@@ -25,6 +26,7 @@ import { parseNumber } from '../core/numbers.js';
 import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } from './estimate-screen.js';
 import { recetasActions, recetasScreen } from './recetas-screen.js';
 import { cleanRecetas, mergeRecetasImport } from '../core/recetas.js';
+import { objetivosScreen } from './objetivos-screen.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -53,7 +55,6 @@ const ESTADO_TEXT = {
   cumplido: 'Objetivo cumplido', por_debajo: 'Por debajo', dentro: 'Dentro del máximo', excedido: 'Por encima del máximo',
   en_objetivo: 'En objetivo', por_encima: 'Por encima', sin_dato: 'Sin dato', sin_objetivo: '',
 };
-const TIPO_TEXT = { min: 'al menos', max: 'como mucho', objetivo: 'objetivo' };
 // Resultado de "Probar" (comprueba origen, secretos y token sin gastar IA).
 const probarTexto = (r) => (!r?.ok ? 'El Worker no responde bien.'
   : r.token === 'incorrecto' ? 'El Worker responde, pero el token no es correcto.'
@@ -87,6 +88,9 @@ export function mountApp(root, deps) {
     estimate: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
+  // Plan de objetivos (docs/OBJETIVOS-FORMATO.md): cada día se evalúa con los objetivos vigentes ESE día.
+  state.plan = null;
+  const targetsFor = (fecha) => targetsForDate(fecha, { plan: state.plan, targets, catalog: deps.catalog });
   let pending = Promise.resolve();
   // Toda acción asíncrona pasa por aquí. Ninguna falla en silencio: si algo lanza un error, se muestra arriba en
   // cualquier pantalla ("No se pudo guardar: …") y no se toca nada más (el borrador y la pantalla se conservan).
@@ -123,6 +127,23 @@ export function mountApp(root, deps) {
   const incompleteInfo = (food) => { const c = foodCompleteness(food, req); return isIncomplete(c, thr) ? c : null; };
 
   // ---------- acciones ----------
+  // Carga el plan; si no hay y tenías objetivos de la pantalla anterior, pasan a un plan abierto desde tu primer día.
+  async function loadPlan() {
+    let plan = await deps.store.getSetting('plan_objetivos');
+    if (!plan && tieneObjetivos(deps.objetivos)) {
+      const fechas = (await deps.store.allMeals()).map((m) => m.date).sort();
+      plan = planFromLegacy(deps.objetivos, { desde: fechas[0] ?? madridNow(now()).date, targets });
+      if (plan) await deps.store.setSetting('plan_objetivos', plan);
+    }
+    state.plan = plan ?? null;
+    if (state.screen === 'diary' || state.screen === 'objetivos') render();
+  }
+  // El plan de una copia: el suyo si es válido o, en una copia antigua, el de sus objetivos.
+  function planDeCopia(parsed) {
+    if (parsed.plan) return validatePlan(parsed.plan, { targets, catalog: deps.catalog }).plan;
+    return planFromLegacy(parsed.objetivos, { desde: parsed.meals.map((m) => m.date).sort()[0] ?? madridNow(now()).date, targets });
+  }
+
   const persistFoods = () => deps.store.putCatalogRecord({ foods: state.foods, extraHeaders: state.extraHeaders, name: state.docName, importedAt: now().toISOString() });
 
   async function activate(id) {
@@ -305,7 +326,7 @@ export function mountApp(root, deps) {
   }
 
   function exportDiary() {
-    const text = backupToJSON(buildBackup({ meals: state.allMeals, objetivos: tieneObjetivos(state.objetivos) ? state.objetivos : null, plantillas: state.plantillas, registro: state.registro, recetas: state.recetasPropias, now: now() }));
+    const text = backupToJSON(buildBackup({ meals: state.allMeals, plan: state.plan, plantillas: state.plantillas, registro: state.registro, recetas: state.recetasPropias, now: now() }));
     const n = state.allMeals.length;
     return track(saveFile({ name: `nutritiontracker-diario-${fecha()}.json`, text, type: 'application/json' }).then((r) => {
       state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Copia del diario: ${n} ${n === 1 ? 'comida' : 'comidas'}.`; render();
@@ -326,12 +347,13 @@ export function mountApp(root, deps) {
       state.allMeals = await deps.store.allMeals();
       const parsed = parseBackup(await readFile(file));
       const plan = parsed.ok ? planImport(state.allMeals, parsed.meals) : null;
-      const restaurarObjetivos = parsed.ok && tieneObjetivos(parsed.objetivos) && !tieneObjetivos(state.objetivos);
+      const planCopia = parsed.ok ? planDeCopia(parsed) : null;
+      const restaurarObjetivos = Boolean(planCopia) && !state.plan;
       const desconocidos = parsed.ok ? new Set(parsed.meals.flatMap((m) => m.lines.map((l) => l.food_id)).filter((id) => !byId().has(id))) : new Set();
       const plantillas = parsed.ok ? mergeTemplates(await loadTemplates(), parsed.plantillas) : null;
       const registro = parsed.ok ? mergeLog(await loadLog(), parsed.registro) : null;
       const recetas = parsed.ok ? mergeRecetasImport(cleanRecetas(await deps.store.getSetting('recetas')), parsed.recetas) : null;
-      state.backupImport = { name: file.name, parsed, plan, restaurarObjetivos, plantillas, registro, recetas, desconocidos: [...desconocidos], applied: false };
+      state.backupImport = { name: file.name, parsed, plan, planCopia, restaurarObjetivos, plantillas, registro, recetas, desconocidos: [...desconocidos], applied: false };
       state.docMsg = ''; render();
     })(), 'No se pudo leer la copia');
   }
@@ -340,7 +362,7 @@ export function mountApp(root, deps) {
     const b = state.backupImport;
     return track((async () => {
       for (const m of b.plan.escribir) await deps.store.addMeal(m);
-      if (b.restaurarObjetivos) { state.objetivos = b.parsed.objetivos; await deps.store.setSetting('objetivos', state.objetivos); }
+      if (b.restaurarObjetivos) { state.plan = b.planCopia; await deps.store.setSetting('plan_objetivos', state.plan); }
       if (b.plantillas.nuevas.length) await deps.store.setSetting('plantillas', b.plantillas.list);
       if (b.registro.nuevas.length) await deps.store.setSetting('registro_frases', b.registro.list);
       if (b.recetas.nuevas.length) await deps.store.setSetting('recetas', b.recetas.list);
@@ -367,7 +389,7 @@ export function mountApp(root, deps) {
         b.parsed.registro.length ? h('li', {}, `${b.registro.nuevas.length} frases a revisar nuevas (las que ya tienes se mantienen)`) : null,
         b.parsed.plantillas.length ? h('li', {}, `${b.plantillas.nuevas.length} plantillas nuevas (las que ya tienes se mantienen)`) : null,
         b.parsed.recetas.length ? h('li', {}, `${b.recetas.nuevas.length} recetas nuevas (las que ya tienes se mantienen; sus filas van en el documento)`) : null,
-        b.parsed.objetivos ? h('li', {}, b.restaurarObjetivos ? 'Se restaurarán los objetivos de la copia.' : 'Objetivos: se mantienen los de este dispositivo.') : null,
+        b.parsed.plan || tieneObjetivos(b.parsed.objetivos) ? h('li', { class: b.planCopia ? null : 'warn' }, !b.planCopia ? 'El plan de objetivos de la copia no es válido: no se restaura.' : b.restaurarObjetivos ? 'Se restaurarán los objetivos de la copia.' : 'Objetivos: se mantienen los de este dispositivo.') : null,
         b.desconocidos.length ? h('li', { class: 'warn' }, `Alimentos que no están en tu documento (saldrán sin datos): ${b.desconocidos.join(', ')}`) : null),
       b.parsed.errors.length ? h('details', { class: 'errors', open: true }, h('summary', {}, `Comidas con error, no se importan (${b.parsed.errors.length})`),
         h('ul', {}, b.parsed.errors.slice(0, 30).map((e) => h('li', {}, `n.º ${e.index + 1}${e.id ? ` [${e.id}]` : ''}: ${e.message}`)))) : null,
@@ -441,22 +463,6 @@ export function mountApp(root, deps) {
   function editMeal(rec) {
     state.draft = draftFromRecord(rec, byId());
     state.pendingDelete = null; state.error = ''; state.screen = 'confirm'; render();
-  }
-
-  // Guarda tus objetivos. Vacío = referencia; un valor no válido no se guarda y se dice cuál.
-  async function saveObjetivos(perfil, inputs) {
-    const valores = {};
-    const malos = [];
-    for (const [clave, raw] of Object.entries(inputs)) {
-      if (!String(raw).trim()) continue;
-      const n = parseNumber(raw);
-      if (n.status === 'ok' && n.value > 0) valores[clave] = n.value;
-      else malos.push(targets.list.find((t) => t.clave === clave)?.label ?? clave);
-    }
-    if (malos.length) return { ok: false, msg: `No guardado: valor no válido en ${malos.join(', ')}.` };
-    state.objetivos = { perfil, valores };
-    await deps.store.setSetting('objetivos', state.objetivos);
-    return { ok: true, msg: 'Guardado.' };
   }
 
   function onFile(file) {
@@ -700,7 +706,7 @@ export function mountApp(root, deps) {
   // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
   function nutrientRow(r) {
     const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
-    const objetivo = r.valor === null ? '' : ` / ${fmtQty(r.valor, r.unit)}`;
+    const objetivo = r.valor === null ? '' : r.objetivo === null && r.min != null && r.max != null ? ` / ${fmtNum(r.min, r.unit)}–${fmtQty(r.max, r.unit)}` : ` / ${fmtQty(r.valor, r.unit)}`;
     const fill = h('span', {});
     fill.style.width = `${Math.min(1, r.pct ?? 0) * 100}%`;
     const pct = r.pct !== null && r.estado !== 'sin_dato' ? `${nf0.format(r.pct * 100)} %` : '';
@@ -715,7 +721,8 @@ export function mountApp(root, deps) {
   const fmtKcal = (x) => (x.kcal === null ? 'sin dato de kcal' : `${nf0.format(x.kcal)} kcal${x.kcalParcial ? ' (parcial)' : ''}`);
 
   function diaryScreen() {
-    const rep = diaryReport(state.dayMeals, byId(), resolveTargets(targets, state.objetivos), deps.catalog);
+    const obj = targetsFor(state.day);
+    const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
     const macros = rep.rows.filter((r) => MACROS.includes(r.clave));
     const micros = rep.rows.filter((r) => !MACROS.includes(r.clave));
     return h('main', {},
@@ -725,6 +732,7 @@ export function mountApp(root, deps) {
         h('strong', { class: 'daylabel' }, dayLabel(state.day)),
         h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, '›')),
       state.day !== today() ? h('button', { class: 'link', onclick: () => openDay(today()) }, 'Ir a hoy') : null,
+      h('p', { class: 'muted small objetivos-dia' }, obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA'),
       state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
         rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
@@ -763,36 +771,6 @@ export function mountApp(root, deps) {
         h('button', { class: 'link', onclick: () => { state.templateForm = null; render(); } }, 'Cancelar')));
   }
 
-  function objetivosScreen() {
-    const own = state.objetivos.valores ?? {};
-    const perfilActual = resolveTargets(targets, state.objetivos)[0]?.perfil ?? targets.perfilPorDefecto;
-    const perfilSel = h('select', { 'aria-label': 'Perfil de referencia' },
-      Object.entries(targets.perfiles).map(([k, label]) => h('option', { value: k, selected: k === perfilActual }, label)));
-    const inputs = new Map();
-    const msg = h('p', { class: 'small', role: 'status' });
-    const campo = (t) => {
-      const ref = referenceValue(targets, t.clave, { perfil: perfilActual, valores: own });
-      const unit = UNIT_LABEL[t.unit] ?? t.unit;
-      const input = h('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t.label} (${unit})`, value: own[t.clave] === undefined ? '' : nf2.format(own[t.clave]).replace(/\./g, ''), placeholder: ref === null ? '' : fmtNum(ref, t.unit) });
-      inputs.set(t.clave, input);
-      return h('li', { class: `card k-${t.clave}` },
-        h('label', {}, h('span', {}, `${t.label} (${unit}) · ${TIPO_TEXT[t.tipo]}`), input),
-        h('div', { class: 'small muted' }, [ref === null ? '' : `Referencia: ${fmtQty(ref, t.unit)}`, t.ul !== null ? `UL: ${fmtQty(t.ul, t.unit)}` : '', t.nota].filter(Boolean).join(' · ')));
-    };
-    const save = (vaciar) => track((async () => {
-      const r = await saveObjetivos(perfilSel.value, vaciar ? {} : Object.fromEntries([...inputs].map(([k, el]) => [k, el.value])));
-      if (r.ok) { render(); root.querySelector('[role=status]').textContent = r.msg; } else msg.textContent = r.msg;
-    })());
-    return h('main', {},
-      header('Objetivos', () => openDay(state.day)),
-      h('label', {}, 'Perfil de referencia (EFSA)', perfilSel),
-      h('p', { class: 'muted small' }, 'Vacío = valor de referencia. Tus objetivos se guardan en este dispositivo. B1, niacina y ALA se calculan con tu objetivo de kcal. Los UL no cambian.'),
-      h('h2', {}, 'Energía y macros'), h('ul', { class: 'cards' }, targets.list.filter((t) => MACROS.includes(t.clave)).map(campo)),
-      h('h2', {}, 'Micronutrientes'), h('ul', { class: 'cards' }, targets.list.filter((t) => !MACROS.includes(t.clave)).map(campo)),
-      h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => save(false) }, 'Guardar'), h('button', { class: 'secondary', onclick: () => save(true) }, 'Restablecer')),
-      msg);
-  }
-
   // «Estimar con IA» y recetas: acciones en sus módulos (ui/estimate-screen.js, ui/recetas-screen.js).
   const ctx = { state, deps, track, render, byId, persistFoods, now, saveFile, openDay };
   const rec = recetasActions(ctx);
@@ -823,9 +801,13 @@ export function mountApp(root, deps) {
       h, state, byId, header, nf0, nf1, MEAL_LABEL, render, useTemplate, deleteTemplate,
       back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
     });
+    const objetivos = () => objetivosScreen({
+      h, state, store: deps.store, targets, catalog: deps.catalog, track, render, header, today, saveFile, readFile, MACROS, UNIT_LABEL, fmtNum, fmtQty,
+      back: () => openDay(state.day),
+    });
     const estimar = () => estimateScreen({ h, state, byId, header, openPicker, render, thr, est, back: () => { state.estimate = null; state.screen = 'confirm'; render(); } });
     const recetas = () => recetasScreen({ h, state, byId, header, openPicker, render, openDay, nf0, rec, keys: deps.catalog.keys, required: req, labels, back: () => openDoc() });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro, catalogo, estimar, recetas };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
@@ -836,6 +818,7 @@ export function mountApp(root, deps) {
     root.replaceChildren(screen);
   }
   render();
+  track(loadPlan(), 'No se pudo cargar el plan de objetivos');
   checkCatalogUpdate();
   return { state, render, whenIdle };
 }
