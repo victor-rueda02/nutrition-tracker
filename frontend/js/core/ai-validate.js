@@ -78,6 +78,7 @@ export function porcionCuadra(grams, n, text, foods) {
 //  - Dice estado (cocido, asado...): la variante de ese estado; si no existe, la de defecto con confianza "baja".
 //  - Las palabras de estado que son parte del nombre o alias del alimento elegido no cuentan (stripNameStates).
 //  - Alimento con peso_en_crudo: las palabras de cocinado se ignoran (se pesa en crudo).
+//  - "tostado" en un alimento sin variante tostada se ignora (se pesa antes de tostar).
 export function resolveVariant(item, index) {
   const flags = [];
   const modelFood = index.byId.get(item.food_id);
@@ -87,6 +88,11 @@ export function resolveVariant(item, index) {
   let said = detectEstado(stripped.text);
   let modelSaid = ['crudo', 'cocinado', 'tostado'].includes(item.estado_dicho) ? item.estado_dicho : null;
   if (!said && stripped.states.has(modelSaid)) modelSaid = null; // el modelo tomó el estado del propio nombre
+  // "tostado" en un alimento sin variante tostada ("pan tostado"): se ignora sin aviso, porque lo peso antes de tostar.
+  if (!members.some((m) => m.estado === 'tostado')) {
+    if (said === 'tostado') said = null;
+    if (modelSaid === 'tostado') modelSaid = null;
+  }
   // peso_en_crudo: "a la plancha" dice cómo lo cociné, no cómo lo pesé. Se queda en esta fila, sin bajar la confianza.
   // Si la IA eligió otra variante del grupo (la cocinada) y la cruda está marcada, se usa la marcada.
   const marcado = modelFood.peso_en_crudo ? modelFood : members.find((m) => m.peso_en_crudo);

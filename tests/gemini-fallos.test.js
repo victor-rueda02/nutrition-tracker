@@ -337,3 +337,15 @@ test('peso_en_crudo: si la IA elige la variante cocinada de un grupo con la crud
   // sin palabras de cocinado se aplica la regla de siempre (variante por defecto)
   assert.equal(one(line('merluza_cocida', '200 g de merluza', { cantidad: 200 }), list).food_id, 'merluza_cruda');
 });
+
+test('"pan tostado": sin variante tostada, "tostado" se ignora sin aviso (se pesa antes de tostar)', () => {
+  for (const estado_dicho of ['tostado', 'ninguno']) {
+    const r = run([line('pan_blanco_barra', '60 g de pan tostado', { cantidad: 60, estado_dicho })]);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags, r.warnings], ['pan_blanco_barra', 'alta', [], []], estado_dicho);
+  }
+  // con variante tostada en el grupo, "tostado" sigue eligiéndola
+  const t = one(line('pistachos_crudos', '30 g de pistachos tostados', { estado_dicho: 'tostado' }));
+  assert.equal(t.food_id, 'pistachos_tostados_sin_sal');
+  // y "cocido" sin variante cocinada sigue avisando (salvo peso_en_crudo)
+  assert.ok(run([line('kiwi_verde', 'un kiwi cocido', { cantidad: 69, estado_dicho: 'cocinado' })]).items[0].flags.includes('variante_no_disponible'));
+});
