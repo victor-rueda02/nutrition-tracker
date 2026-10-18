@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { buildCatalog } from '../frontend/js/core/catalog.js';
 import { loadSettings } from '../frontend/js/core/settings.js';
 import { parseFoodsDocument } from '../frontend/js/core/foods-parser.js';
-import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, completitud } from './recetas-lib.mjs';
+import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, completitud } from '../frontend/js/core/recetas.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const fromRoot = (...p) => resolve(root, ...p);

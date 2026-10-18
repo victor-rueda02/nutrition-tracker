@@ -1,4 +1,4 @@
-// Script de recetas (scripts/recetas-lib.mjs y recetas.mjs): cálculo determinista con nutrientes del catálogo.
+// Script de recetas (frontend/js/core/recetas.js y recetas.mjs): cálculo determinista con nutrientes del catálogo.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, writeFileSync, copyFileSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, NOTA_RECETA, TERMINO_RECETA } from '../scripts/recetas-lib.mjs';
+import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, NOTA_RECETA, TERMINO_RECETA } from '../frontend/js/core/recetas.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { searchPlan } from '../scripts/usda-lib.mjs';
 import { catalog, csv, readFile, realFoods } from './helpers.js';

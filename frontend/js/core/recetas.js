@@ -1,8 +1,8 @@
-// Lógica del script de recetas (scripts/recetas.mjs). Herramienta manual, fuera de la app.
+// Recetas: la usan el script manual (scripts/recetas.mjs) y la app («Guardar como receta»). Funciones puras, sin DOM.
 // Una receta es una fila más del catálogo: sus nutrientes por 100 g de plato cocinado se calculan, de forma
 // determinista, con los nutrientes del propio catálogo y los gramos de data/recetas.json. Formato en data/SCHEMA.md.
-import { parseCSV, serializeCSV, detectDelimiter } from '../frontend/js/core/csv.js';
-import { normalizeText } from '../frontend/js/core/text.js';
+import { parseCSV, serializeCSV, detectDelimiter } from './csv.js';
+import { normalizeText } from './text.js';
 
 export const ESTADO_RECETA = 'cocinado';
 export const NOTA_RECETA = 'Gramos del plato cocinado';
@@ -120,3 +120,102 @@ export function aplicarRecetas(csvText, recetas, resultados, keys) {
 
 // Obligatorios rellenos de una receta calculada.
 export const completitud = (res, required) => required.filter((k) => k in res.nutrients).length;
+
+// ---------- Recetas desde la app («Guardar como receta») ----------
+// Mismo formato que data/recetas.json. Las definiciones se guardan en el dispositivo (ajuste "recetas") y la fila
+// calculada va al documento del dispositivo, con los mismos campos que escribe aplicarRecetas en el CSV.
+export const TIPO_RECETA = 'receta';
+export const MAX_NOMBRE_RECETA = 60;
+
+// id a partir del nombre ("Lasaña casera" -> "lasana_casera"), único frente a los ids que ya hay (_2, _3...).
+export function slugId(nombre, ids) {
+  const base = normalizeText(nombre).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40).replace(/_+$/, '') || 'receta';
+  const usados = ids instanceof Set ? ids : new Set(ids);
+  let id = base;
+  for (let n = 2; usados.has(id); n++) id = `${base}_${n}`;
+  return id;
+}
+
+// Fila del documento (alimento) de una receta calculada con computeReceta. "previo" = la fila que ya había con ese id
+// (se conserva lo demás: porciones, grupo, variante...); sin ella, fila nueva con grupo = id, variante por defecto y
+// tipo=receta. Da los mismos valores que aplicarRecetas sobre el CSV.
+export function recetaToFood(receta, res, previo = null) {
+  const f = previo
+    ? { ...previo, alias: [...(previo.alias ?? [])], porciones: (previo.porciones ?? []).map((p) => ({ ...p })), extra: { ...previo.extra } }
+    : { id: receta.id, nombre: '', alias: [], porciones: [], estado: '', varianteDefecto: true, grupo: receta.id, densidad: null, pesoEnCrudo: false, nutrients: {}, extra: { tipo: TIPO_RECETA } };
+  f.nombre = receta.nombre;
+  if (receta.alias !== undefined) f.alias = aLista(receta.alias);
+  f.estado = ESTADO_RECETA;
+  f.pesoEnCrudo = false;
+  f.nutrients = { ...res.nutrients };
+  f.extra.incluir = 'si';
+  f.extra.termino_busqueda_usda = TERMINO_RECETA;
+  delete f.extra.fdc_id;
+  f.extra.fuente_usda = fuenteReceta(receta, res);
+  f.extra.notas = [`${NOTA_RECETA}.`, receta.notas].filter(Boolean).join(' ');
+  return f;
+}
+
+// Receta a partir de líneas { food_id, grams } (una comida del Diario o una estimación). Ingredientes repetidos se
+// suman. Sin peso final, los gramos son proporciones (el peso final es su suma).
+export function recetaFromLines({ id, nombre, alias = [], lines, peso_final_g = null, notas = '' }) {
+  const porId = new Map();
+  for (const l of lines) porId.set(l.food_id, redondea((porId.get(l.food_id) ?? 0) + l.grams));
+  const r = { id, nombre: String(nombre ?? '').trim(), alias: aLista(alias), ingredientes: [...porId].map(([food_id, gramos]) => ({ food_id, gramos })) };
+  if (peso_final_g !== null && peso_final_g !== undefined) r.peso_final_g = peso_final_g;
+  if (String(notas ?? '').trim()) r.notas = String(notas).trim();
+  return r;
+}
+
+// Errores de una receta antes de guardarla desde la app. Además de validateRecetas: nombre corto, id que no pise un
+// alimento que no sea esta receta, y ningún ingrediente que sea una receta (del fichero o una fila tipo=receta).
+export function recetaErrors(receta, foodsById, recetas = []) {
+  const otras = recetas.filter((r) => r.id !== receta.id);
+  const errores = validateRecetas([receta], foodsById).map((e) => e.replace(/^receta "[^"]*": |^receta nº 1: /, ''));
+  if (receta.nombre.length > MAX_NOMBRE_RECETA) errores.push(`nombre de más de ${MAX_NOMBRE_RECETA} caracteres`);
+  const fila = foodsById.get(receta.id);
+  if (fila && fila.extra?.tipo !== TIPO_RECETA && !recetas.some((r) => r.id === receta.id)) errores.push(`el id "${receta.id}" ya es un alimento de tu documento`);
+  const idsRecetas = new Set(otras.map((r) => r.id));
+  for (const ing of receta.ingredientes ?? []) {
+    const f = foodsById.get(ing.food_id);
+    if (f && (idsRecetas.has(f.id) || f.extra?.tipo === TIPO_RECETA || f.id === receta.id)) errores.push(`"${f.nombre}" es una receta (no se anidan: pon sus ingredientes)`);
+  }
+  return [...new Set(errores)];
+}
+
+// Definiciones válidas (para lo guardado y para importar copias): mismo formato que data/recetas.json.
+export function cleanRecetas(list) {
+  return (Array.isArray(list) ? list : []).filter((r) => r && typeof r === 'object' && ID_RE.test(r.id ?? '') && String(r.nombre ?? '').trim()
+    && Array.isArray(r.ingredientes) && r.ingredientes.length && r.ingredientes.every((i) => typeof i?.food_id === 'string' && esNumero(i.gramos) && i.gramos > 0)
+    && (r.peso_final_g === undefined || (esNumero(r.peso_final_g) && r.peso_final_g > 0)))
+    .map((r) => {
+      const o = { id: r.id, nombre: String(r.nombre).trim() };
+      if (r.alias !== undefined) o.alias = aLista(r.alias);
+      if (r.ejemplo) o.ejemplo = true;
+      if (r.peso_final_g !== undefined) o.peso_final_g = r.peso_final_g;
+      o.ingredientes = r.ingredientes.map((i) => ({ food_id: i.food_id, gramos: i.gramos }));
+      if (typeof r.notas === 'string' && r.notas.trim()) o.notas = r.notas.trim();
+      if (typeof r.actualizada === 'string') o.actualizada = r.actualizada;
+      return o;
+    });
+}
+
+// Las del repositorio (data/recetas.json) más las del dispositivo; con el mismo id gana la del dispositivo.
+export function mergeRecetas(base, propias) {
+  const mias = new Map(cleanRecetas(propias).map((r) => [r.id, r]));
+  const out = cleanRecetas(base).map((r) => mias.get(r.id) ?? r);
+  const vistas = new Set(out.map((r) => r.id));
+  return [...out, ...[...mias.values()].filter((r) => !vistas.has(r.id))];
+}
+
+export const upsertReceta = (list, receta) => (list.some((r) => r.id === receta.id) ? list.map((r) => (r.id === receta.id ? receta : r)) : [...list, receta]);
+
+// Importar las recetas de una copia: se añaden las que no hay (por id); las que ya están se dejan como están.
+export function mergeRecetasImport(local, incoming) {
+  const ids = new Set(local.map((r) => r.id));
+  const nuevas = cleanRecetas(incoming).filter((r) => !ids.has(r.id));
+  return { list: [...local, ...nuevas], nuevas };
+}
+
+// data/recetas.json para subirlo al repositorio (sin el campo interno "actualizada").
+export const recetasToJSON = (list) => `${JSON.stringify({ recetas: list.map(({ actualizada, ...r }) => r) }, null, 2)}\n`;
