@@ -101,6 +101,20 @@ export function resolveUnmatched(d, index, food_id, grams = null, food = null) {
   return mapLine(d2, d2.lines.at(-1).key, (l) => ({ ...l, flags: ['gramos_asumidos'] }));
 }
 
+// «Estimar con IA»: un "no reconocido" pasa a ser las líneas de sus ingredientes (gramos del plato terminado), con el
+// texto dicho y el aviso "estimado con IA". Se revisan en la confirmación como cualquier otra línea.
+export function resolveUnmatchedWithLines(d, index, lines) {
+  const text = d.unmatched[index]?.text ?? '';
+  let d2 = dropUnmatched(d, index);
+  for (const l of lines) {
+    let line;
+    [d2, line] = newLine(d2, l.food_id, l.grams, text, 'estimado');
+    line.flags = ['estimado_ia'];
+    d2 = { ...d2, lines: [...d2.lines, line] };
+  }
+  return d2;
+}
+
 export function lineProblem(line) {
   if (line.needsReview) return 'sin_revisar';
   if (!(line.grams > 0)) return 'sin_gramos';
