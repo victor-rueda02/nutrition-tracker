@@ -4,21 +4,104 @@ Trabajo sobre `data/foods.csv` (y su copia `tests/fixtures/alimentos_iniciales.c
 Este documento es para el coordinador que integra en `main`: qué cambió, qué decisiones de Victor deben pasar a
 `CLAUDE.md` y qué queda pendiente (incluido lo que necesita código de la app, fuera del alcance de esta rama).
 
+**Resultado:** 69 alimentos (antes 64), 55 enviados a la IA (antes 49), **57 completos** (antes 48), 12 incompletos
+(todos con `incluir=no` y sin datos: recetas por calcular y puntuales). `npm test`: 253 tests en verde.
+Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 llamadas a Gemini.
+
 ## Decisiones de Victor para pasar a CLAUDE.md
 
 1. **Fuentes de nutrientes: USDA, etiquetas que pase Victor y BEDCA** (Base de Datos Española de Composición de
    Alimentos, https://www.bedca.net), aprobada para **alimentos españoles** que USDA no tiene bien. Nunca valores
-   "típicos" de memoria. Cuando se usa BEDCA, el origen de cada valor va en `fuente_usda` y el
-   `termino_busqueda_usda` queda vacío para que `scripts/usda.mjs` no lo pise. Consulta: `POST` de un XML a
+   "típicos" de memoria. Cuando se usa BEDCA o una etiqueta, el origen de cada valor va en `fuente_usda`, y el
+   `termino_busqueda_usda` y el `fdcId` de `usda/eleccion.csv` quedan vacíos para que `scripts/usda.mjs` no lo pise
+   (ver "Para el coordinador", punto 5). Consulta de BEDCA: `POST` de un XML a
    `https://www.bedca.net/bdpub/procquery.php` (nivel 1: buscar por `f_ori_name`; nivel 2: valores por `f_id`).
    Ojo: BEDCA da la niacina como *equivalentes de niacina* (incluye triptófano): no usarla como `vitamina_b3_mg`.
 2. **Lo que dicta Victor es peso en crudo y sin hueso** (lo que realmente se come). Las palabras de cocinado
    ("a la plancha", "al horno", "hervido", "frito") describen el plato, no el peso: los alimentos que se cocinan
-   llevan `peso_en_crudo=si`. Si alguna vez pesa cocinado o con hueso, lo dice y lo corrige en la confirmación.
-   Generaliza la regla "Peso en crudo" de la sección 4 de CLAUDE.md (hoy dice "marcado en `pechuga_pollo_cruda`").
+   llevan `peso_en_crudo=si` (hoy 20: arroz, pasta, avena, carnes, pescados, huevo, patata y verduras). Si alguna
+   vez pesa cocinado o con hueso, lo corrige en la confirmación. Generaliza la regla "Peso en crudo" de la sección 4
+   (hoy dice "marcado en `pechuga_pollo_cruda`"). Las variantes cocinadas `merluza_cocida` y `patata_asada` quedan
+   con `incluir=no` (se conservan por el diario y para elegirlas a mano).
 3. **Recetas: excepción a "todo en crudo".** Una receta es una fila del catálogo con `estado=cocinado`, sin
    `peso_en_crudo` y notas "Gramos del plato cocinado"; sus nutrientes se calculan con `scripts/recetas.mjs` desde
    `data/recetas.json` (formato en `data/SCHEMA.md`). Añadir el script a la sección 3 (herramientas de `scripts/`).
-4. **"pan" a secas = barra de pan blanco**; "arroz" a secas = arroz blanco de grano largo; "jamón" a secas no
-   identifica nada (come curado serrano y cocido). Generales con un solo alimento aceptados por Victor: "chocolate",
-   "yogur", "griego", "queso", "galletas" (si come otro tipo, lo dirá).
+4. **EPA y DHA = 0 en alimentos vegetales** (USDA deja la celda vacía; ningún vegetal terrestre los tiene). Es un 0
+   real, no un dato inventado. Aplicado en chía y pimiento amarillo (los demás vegetales ya traían 0).
+5. **Alias:** "pan" a secas = barra de pan blanco; "arroz" a secas = arroz blanco de grano largo; "jamón" a secas no
+   identifica nada (come curado serrano y cocido); sin "ternera" ni "solomillo" a secas (regla de cortes).
+   Genéricos con un solo alimento aceptados por Victor: "chocolate", "yogur", "griego", "queso", "galletas" (si
+   come otro tipo, lo dirá). Solo merecen alias las frases que el código no casa ya (acentos y plurales simples
+   ya se toleran; plurales irregulares como "nuez"/"nueces", no).
+6. **Productos con etiqueta y fortificación** (corn flakes): kcal, macros, fibra, azúcares, sal (sodio = sal ÷ 2,5)
+   y vitaminas y minerales declarados, de la etiqueta; ácido fólico a DFE × 1,7; lo que USDA trae por fortificación
+   de EE. UU. y la etiqueta no declara, vacío; lo natural del alimento, de USDA.
+
+## Cambios por tarea (commits en `catalogo`)
+
+| Commit | Tarea | Cambio |
+|---|---|---|
+| `31e114c` | 1. Alias | Alias nuevos donde el código no casaba (nuez, musli, cornflakes, pescadilla, lonchas de queso, pan bimbo, filete de pollo, arroz largo…); fuera "ternera", "solomillo", "jamón" a secas y "pan" del integral. `tests/catalogo.test.js` |
+| `e313404` | 1. Alias | Nuevos `pan_blanco_barra` y `jamon_cocido` (alias "jamón york") |
+| `4745371` | 2. peso_en_crudo | 18 alimentos marcados; `merluza_cocida` y `patata_asada` a `incluir=no`. **`tests/fixtures/reglas_variantes.csv`**: copia congelada del catálogo para los tests de reglas de variantes (`rulesFoods`/`rulesList` en `tests/helpers.js`), así pulir el catálogo no rompe esos tests |
+| `cc90d90` | 3. Excluidos | `mayonesa` activada (USDA 171009; alias "mahonesa") |
+| `189116d` | 3. Excluidos | `chorizo` activado: BEDCA 2264 + huecos de USDA 173859 |
+| `d1795d7` | 4. Recetas | `scripts/recetas.mjs` + `recetas-lib.mjs` + `tests/recetas.test.js`, `data/recetas.json` (con una receta de ejemplo que nunca va al catálogo), formato en `data/SCHEMA.md`. `verduras_asadas_hacendado` calculada y `parrillada_verduras_hacendado` nueva (proporciones del envase) |
+| `b9d8807` | 5. Corn flakes | Etiqueta de Corn Flakes 0 % azúcar Hacendado; vacías A, C y D (fortificación de EE. UU.) |
+| `1c941fa` | 6. Incompletos | BEDCA + huecos de USDA en merluza (merluza europea, no whiting), jamón serrano, pan de barra (B1, B2, B9 y hierro sin enriquecer) y galleta María; nuevos `brocoli` y `champinon` (BEDCA); EPA/DHA = 0 vegetales; atún USDA 173708 (escurrido, con sal) |
+
+## Informe de completitud (31 obligatorios, umbral 80 %)
+
+Detalle completo en `usda/informe.md` (regenerado). Alimentos que se envían a la IA con algún hueco:
+
+| Alimento | Obligatorios | Faltan | Nota |
+|---|---|---|---|
+| pimiento_amarillo | 27/31 | E, K, colina, ALA | USDA no tiene más; BEDCA no tiene pimiento amarillo |
+| verduras_asadas_hacendado, parrillada_verduras_hacendado | 27/31 | E, K, colina, ALA | Heredado del pimiento amarillo |
+| corn_flakes | 28/31 | A, C, D | A propósito: fortificación de EE. UU. que la etiqueta no declara |
+| semillas_chia | 25/31 | A, D, K, B5, B6, colina | Completa desde EPA/DHA = 0. Otra fuente posible: CIQUAL (no aprobada aún) |
+| pan_molde_blanco | 26/31 | B1, B2, B3, B9, hierro | Vaciados por el enriquecimiento de EE. UU.; BEDCA no publica su pan de molde. La etiqueta del pan lo resolvería |
+| chocolate_negro_85 | 27/31 | C, D, B9, colina | |
+| jamon_curado, muesli | 29/31 | B5, manganeso | Huecos del jamón, de FNDDS (estimado) |
+| pistachos_crudos, galleta_maria | 29/31 | K, colina (+ B5/Mn) | |
+| pasta_seca, chorizo, pan_blanco_barra | 30/31 | colina / B5 / B3 | |
+
+Los 12 incompletos restantes tienen `incluir=no` y ningún dato: recetas pendientes (lentejas, repollo al horno,
+crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere activar.
+
+## Pendiente con Victor
+
+- **Recetas caseras**: lentejas, repollo al horno, crema de calabacín y tortilla de patata. Victor pasará
+  ingredientes en crudo y peso final del plato cuando cocine; entonces se añaden a `data/recetas.json` y
+  `node scripts/recetas.mjs --aplicar`.
+- **Salteado de verduras** (judía verde redonda, brócoli, pimiento rojo, champiñón laminado, cebolla): faltan las
+  proporciones (el envase dice "variable"). Los ingredientes ya están en el catálogo.
+- **Merluza**: BEDCA da 11,9 g de proteína y 64 kcal (USDA whiting: 18,3 g y 90 kcal). Coherente en sí mismo, pero
+  la diferencia es grande: confirmar con Victor si se queda BEDCA.
+- **Verduras de Hacendado**: calculadas con verduras crudas, sin la pérdida de agua del asado. Con las kcal de la
+  etiqueta se podría fijar `peso_final_g` para que cuadren.
+- **Jamón cocido**: USDA ~8 % de grasa; el cocido extra español suele tener menos. Mejor con su etiqueta.
+- **Mayonesa**: USDA es de soja; la española suele ser de girasol (vitamina K probablemente alta, E baja).
+- **Pan de molde**: con su etiqueta se rellenarían B1, B2, B3, B9 y hierro.
+- **Verduras congeladas**: aplazado por Victor. Idea: filas propias con USDA "frozen, unprepared", en un grupo
+  distinto del crudo (si comparten grupo, el código elige siempre la variante cruda por defecto).
+- Aminoácidos y almidón de las filas de BEDCA siguen siendo de USDA (pueden no cuadrar con la proteína de BEDCA).
+- Biotina (B8) de la etiqueta de corn flakes: no hay columna; anotada en `notas`.
+
+## Para el coordinador (código de la app y CLAUDE.md, fuera del alcance de esta rama)
+
+1. **Excluidos elegidos a mano se activan**: en la confirmación, elegir un alimento con `incluir=no` lo pasa a
+   `incluir=si` en el dispositivo (`frontend/js/ui/app.js`, `activate`). Con `merluza_cocida`/`patata_asada` eso las
+   vuelve a enviar a la IA.
+2. **`peso_en_crudo` y variantes del mismo grupo**: si la IA elige la variante cocinada de un grupo cuyo crudo tiene
+   `peso_en_crudo=si`, el código la respeta. Lo coherente sería redirigir a la fila marcada (`resolveVariant`).
+3. **"Pesado cocinado"**: no hay forma de dictar que el peso es cocinado; hoy se cambia el alimento a mano.
+4. **"pan tostado"**: `tostado` es un estado y `peso_en_crudo` solo cubre las palabras de cocinado; sale
+   "variante no disponible".
+5. **`scripts/usda.mjs filas` aplica el `fdcId` de `eleccion.csv` aunque el alimento no tenga término** (y con
+   `--sobrescribir` pisaría datos de BEDCA o de etiqueta). Esta rama lo evita vaciando esos `fdcId`; sería más
+   robusto que `filas` omita los alimentos que `searchPlan` omite.
+6. **"Guardar como receta"**: `scripts/recetas-lib.mjs` es puro (solo importa de `frontend/js/core/`); para usarlo
+   desde la app habría que moverlo a `frontend/js/core/`. Formato y reglas en `data/SCHEMA.md`.
+7. **CLAUDE.md, sección 5**: actualizar recuentos (69 alimentos, 57 completos, 253 tests) y mencionar
+   `tests/fixtures/reglas_variantes.csv`.
