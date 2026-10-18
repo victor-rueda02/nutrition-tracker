@@ -21,7 +21,6 @@ test('alias: frases que antes no casaban con el alimento ahora sí (sin aviso si
     ['corn_flakes', '40 g de cornflakes'],
     ['queso_tierno_loncha', '100 g de lonchas de queso'],
     ['merluza_cruda', '200 g de pescadilla'],
-    ['merluza_cocida', '200 g de pescadilla cocida'],
     ['pechuga_pollo_cruda', '150 g de filete de pollo'],
     ['arroz_blanco_crudo', '80 g de arroz largo'],
     ['pan_molde_blanco', '40 g de pan bimbo'],
@@ -49,4 +48,23 @@ test('alias: regla de cortes y especies, sin genéricos de especie o de corte', 
   const terms = new Set(realFoods.flatMap((f) => [f.nombre, ...f.alias]).map(normalizeText));
   for (const generic of ['pollo', 'pavo', 'pechuga', 'ternera', 'solomillo', 'jamon']) assert.ok(!terms.has(generic), generic);
   assert.deepEqual(byId.get('solomillo_ternera').alias, ['solomillo de ternera']);
+});
+
+test('peso_en_crudo (regla general: lo dictado es peso en crudo): cocinar no cambia la fila ni pide confirmación', () => {
+  const r1 = (food_id, source_text) => normalizeAiResponse({ items: [{ food_id, cantidad: 150, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'cocinado' }], unmatched: [] }, realList);
+  for (const [id, text] of [['arroz_blanco_crudo', '150 g de arroz cocido'], ['pasta_seca', '150 g de macarrones hervidos'], ['salmon_atlantico', '150 g de salmón al horno'],
+    ['merluza_cruda', '150 g de merluza a la plancha'], ['patata_cruda', '150 g de patata asada'], ['huevo', '150 g de huevos fritos'], ['calabacin', '150 g de calabacín a la plancha']]) {
+    const r = r1(id, text);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags, r.warnings.length], [id, 'alta', [], 0], text);
+  }
+});
+
+test('merluza_cocida y patata_asada: se conservan (diario, elegir a mano) pero no viajan a la IA', () => {
+  for (const id of ['merluza_cocida', 'patata_asada']) {
+    assert.equal(byId.get(id).extra.incluir, 'no', id);
+    assert.ok(!realList.some((f) => f.id === id), id);
+  }
+  // merluza queda con una sola variante en la lista: sin estado no se baja la confianza
+  const r = normalizeAiResponse({ items: [{ food_id: 'merluza_cruda', cantidad: 200, unidad: 'g', source_text: '200 g de merluza', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
+  assert.deepEqual([r.items[0].food_id, r.items[0].confidence], ['merluza_cruda', 'alta']);
 });

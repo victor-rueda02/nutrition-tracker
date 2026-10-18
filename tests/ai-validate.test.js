@@ -2,11 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCompactList, detectEstado, toCompact } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, parseModelJson, checkStructure } from '../frontend/js/core/ai-validate.js';
-import { realFoods, realList, catalog } from './helpers.js';
+import { realFoods, realList, rulesList, catalog } from './helpers.js';
 
 // Una línea dictada tal y como la devolvería el modelo.
 const line = (food_id, source_text, o = {}) => ({ food_id, cantidad: 100, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'ninguno', ...o });
-const run = (items, list = realList, unmatched = []) => normalizeAiResponse({ items, unmatched }, list);
+// Las reglas se prueban sobre la copia congelada del catálogo (grupos merluza y patata con variante cocinada).
+const run = (items, list = rulesList, unmatched = []) => normalizeAiResponse({ items, unmatched }, list);
 const one = (item, list) => run([item], list).items[0];
 
 // ---------- lista compacta ----------
@@ -21,9 +22,9 @@ test('lista compacta: sin los alimentos incluir=no y sin nutrientes', () => {
   assert.equal(buildCompactList(foods, { includeExcluded: true }).length, 2);
 });
 
-test('lista compacta del documento real: 51 de 66 (15 con incluir=no fuera) y ningún nutriente', () => {
+test('lista compacta del documento real: 49 de 66 (17 con incluir=no fuera) y ningún nutriente', () => {
   assert.equal(realFoods.length, 66);
-  assert.equal(realList.length, 51);
+  assert.equal(realList.length, 49);
   assert.ok(!realList.some((f) => f.id === 'ron' || f.id === 'lentejas_caseras'));
   const text = JSON.stringify(realList);
   for (const k of catalog.keys) assert.ok(!text.includes(k), k);
