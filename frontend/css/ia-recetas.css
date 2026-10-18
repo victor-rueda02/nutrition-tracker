@@ -1,0 +1,16 @@
+/* Pantallas «Estimar con IA» y «Recetas», y la lista de añadidos con IA de Documento. Solo tokens de la paleta de
+   styles.css (docs/notas-estetica.md). */
+.estimar .estimar-ing, .recetas .card { margin:0 0 8px; }
+.estimar .estimar-ing select { width:100%; }
+.estimar .estimar-ing input[type=search] { flex:1; }
+.estimar .estimar-nombre { flex:1; font-weight:600; }
+.estimar .origen { font-size:.75rem; font-weight:600; padding:2px 10px; border-radius:999px; border:1px solid currentColor; }
+.estimar .origen.catalogo { color:var(--bar-met); }
+.estimar .origen.usda { color:var(--accent); }
+.estimar .estimar-suma { margin:4px 0 0; color:var(--muted); }
+.estimar .estimar-suma.warn { color:var(--warn); }
+.estimar input.grams, .recetas input.grams { flex:none; width:6rem; }
+.recetas .receta-preview { margin:8px 0; color:var(--muted); }
+.recetas ul.error { padding-left:18px; }
+.pendientes-ia { margin-top:8px; }
+.pendientes-ia > summary { cursor:pointer; font-weight:600; }

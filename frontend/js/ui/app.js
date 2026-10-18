@@ -22,6 +22,10 @@ import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, l
 import { phraseLogScreen } from './phrase-log-screen.js';
 import { hashText, planCatalogUpdate, applyChoices, unirCabeceras } from '../core/catalog-update.js';
 import { catalogUpdateScreen } from './catalog-update-screen.js';
+import { parseNumber } from '../core/numbers.js';
+import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } from './estimate-screen.js';
+import { recetasActions, recetasScreen } from './recetas-screen.js';
+import { cleanRecetas, mergeRecetasImport } from '../core/recetas.js';
 import { objetivosScreen } from './objetivos-screen.js';
 
 const FLAG_TEXT = {
@@ -35,6 +39,7 @@ const FLAG_TEXT = {
   unidad_discrepante: 'Dijiste un volumen pero la IA lo pasó como gramos: revisa la cantidad',
   sin_alias: 'No coincide con tus alias: revisa que sea este alimento',
   gramos_asumidos: 'Asumido en gramos (no dijiste la unidad)',
+  estimado_ia: 'Estimado con IA: proporciones típicas del plato, revisa los gramos',
 };
 const MOTIVO_TEXT = { no_en_catalogo: 'No está en tu documento', ambiguo: 'No lo tengo claro', sin_porcion: 'Falta la cantidad en gramos', excluido_catalogo: 'Excluido del catálogo (incluir=no)', sin_densidad: 'Dijiste ml y este alimento no tiene densidad_g_ml en tu documento' };
 const MEAL_LABEL = { desayuno: 'Desayuno', comida: 'Comida', merienda: 'Merienda', cena: 'Cena', otro: 'Otro' };
@@ -80,6 +85,7 @@ export function mountApp(root, deps) {
     screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
     day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'home',
+    estimate: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   // Plan de objetivos (docs/OBJETIVOS-FORMATO.md): cada día se evalúa con los objetivos vigentes ESE día.
@@ -247,6 +253,7 @@ export function mountApp(root, deps) {
     state.allMeals = await deps.store.allMeals();
     state.plantillas = await loadTemplates();
     state.registro = await loadLog();
+    state.recetasPropias = cleanRecetas(await deps.store.getSetting('recetas'));
     state.docMsg = msg; state.screen = 'doc'; render();
   })());
   const fecha = () => madridNow(now()).date;
@@ -319,7 +326,7 @@ export function mountApp(root, deps) {
   }
 
   function exportDiary() {
-    const text = backupToJSON(buildBackup({ meals: state.allMeals, plan: state.plan, plantillas: state.plantillas, registro: state.registro, now: now() }));
+    const text = backupToJSON(buildBackup({ meals: state.allMeals, plan: state.plan, plantillas: state.plantillas, registro: state.registro, recetas: state.recetasPropias, now: now() }));
     const n = state.allMeals.length;
     return track(saveFile({ name: `nutritiontracker-diario-${fecha()}.json`, text, type: 'application/json' }).then((r) => {
       state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Copia del diario: ${n} ${n === 1 ? 'comida' : 'comidas'}.`; render();
@@ -345,7 +352,8 @@ export function mountApp(root, deps) {
       const desconocidos = parsed.ok ? new Set(parsed.meals.flatMap((m) => m.lines.map((l) => l.food_id)).filter((id) => !byId().has(id))) : new Set();
       const plantillas = parsed.ok ? mergeTemplates(await loadTemplates(), parsed.plantillas) : null;
       const registro = parsed.ok ? mergeLog(await loadLog(), parsed.registro) : null;
-      state.backupImport = { name: file.name, parsed, plan, planCopia, restaurarObjetivos, plantillas, registro, desconocidos: [...desconocidos], applied: false };
+      const recetas = parsed.ok ? mergeRecetasImport(cleanRecetas(await deps.store.getSetting('recetas')), parsed.recetas) : null;
+      state.backupImport = { name: file.name, parsed, plan, planCopia, restaurarObjetivos, plantillas, registro, recetas, desconocidos: [...desconocidos], applied: false };
       state.docMsg = ''; render();
     })(), 'No se pudo leer la copia');
   }
@@ -357,10 +365,12 @@ export function mountApp(root, deps) {
       if (b.restaurarObjetivos) { state.plan = b.planCopia; await deps.store.setSetting('plan_objetivos', state.plan); }
       if (b.plantillas.nuevas.length) await deps.store.setSetting('plantillas', b.plantillas.list);
       if (b.registro.nuevas.length) await deps.store.setSetting('registro_frases', b.registro.list);
+      if (b.recetas.nuevas.length) await deps.store.setSetting('recetas', b.recetas.list);
       state.backupImport = null;
       const partes = [`${b.plan.nuevas.length} nuevas`, `${b.plan.actualizadas.length} actualizadas`];
       if (b.plantillas.nuevas.length) partes.push(`${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`);
       if (b.registro.nuevas.length) partes.push(`${b.registro.nuevas.length} ${b.registro.nuevas.length === 1 ? 'frase a revisar' : 'frases a revisar'}`);
+      if (b.recetas.nuevas.length) partes.push(`${b.recetas.nuevas.length} ${b.recetas.nuevas.length === 1 ? 'receta' : 'recetas'}`);
       await openDoc(`Copia importada: ${partes.join(', ')}${b.restaurarObjetivos ? '; objetivos restaurados' : ''}.`);
     })(), 'No se pudo importar la copia');
   }
@@ -368,7 +378,7 @@ export function mountApp(root, deps) {
   function backupView(b) {
     if (!b.parsed.ok) return h('section', { class: 'report' }, h('p', { class: 'error', role: 'alert' }, `«${b.name}»: ${b.parsed.error}`), h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, 'Cerrar'));
     const { plan } = b;
-    const nada = plan.escribir.length === 0 && !b.restaurarObjetivos && !b.plantillas.nuevas.length && !b.registro.nuevas.length;
+    const nada = plan.escribir.length === 0 && !b.restaurarObjetivos && !b.plantillas.nuevas.length && !b.registro.nuevas.length && !b.recetas.nuevas.length;
     return h('section', { class: 'report', 'aria-label': 'Importar copia' },
       h('p', {}, `«${b.name}»: ${b.parsed.meals.length} comidas válidas.`),
       h('ul', { class: 'small' },
@@ -378,6 +388,7 @@ export function mountApp(root, deps) {
         plan.masAntiguas.length ? h('li', {}, `${plan.masAntiguas.length} más antiguas que las de este dispositivo: se mantienen las tuyas`) : null,
         b.parsed.registro.length ? h('li', {}, `${b.registro.nuevas.length} frases a revisar nuevas (las que ya tienes se mantienen)`) : null,
         b.parsed.plantillas.length ? h('li', {}, `${b.plantillas.nuevas.length} plantillas nuevas (las que ya tienes se mantienen)`) : null,
+        b.parsed.recetas.length ? h('li', {}, `${b.recetas.nuevas.length} recetas nuevas (las que ya tienes se mantienen; sus filas van en el documento)`) : null,
         b.parsed.plan || tieneObjetivos(b.parsed.objetivos) ? h('li', { class: b.planCopia ? null : 'warn' }, !b.planCopia ? 'El plan de objetivos de la copia no es válido: no se restaura.' : b.restaurarObjetivos ? 'Se restaurarán los objetivos de la copia.' : 'Objetivos: se mantienen los de este dispositivo.') : null,
         b.desconocidos.length ? h('li', { class: 'warn' }, `Alimentos que no están en tu documento (saldrán sin datos): ${b.desconocidos.join(', ')}`) : null),
       b.parsed.errors.length ? h('details', { class: 'errors', open: true }, h('summary', {}, `Comidas con error, no se importan (${b.parsed.errors.length})`),
@@ -386,7 +397,8 @@ export function mountApp(root, deps) {
       h('div', { class: 'row' },
         nada ? h('p', { class: 'muted' }, 'No hay nada nuevo que importar.') : h('button', { class: 'primary', onclick: () => applyBackup() }, plan.escribir.length ? `Importar ${plan.escribir.length} ${plan.escribir.length === 1 ? 'comida' : 'comidas'}`
           : b.plantillas.nuevas.length ? `Importar ${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`
-            : b.registro.nuevas.length ? `Importar ${b.registro.nuevas.length} ${b.registro.nuevas.length === 1 ? 'frase' : 'frases'}` : 'Restaurar objetivos'),
+            : b.registro.nuevas.length ? `Importar ${b.registro.nuevas.length} ${b.registro.nuevas.length === 1 ? 'frase' : 'frases'}`
+              : b.recetas.nuevas.length ? `Importar ${b.recetas.nuevas.length} ${b.recetas.nuevas.length === 1 ? 'receta' : 'recetas'}` : 'Restaurar objetivos'),
         h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, nada ? 'Cerrar' : 'Cancelar')));
   }
 
@@ -604,6 +616,7 @@ export function mountApp(root, deps) {
         if (f) actions.push(h('button', { class: 'secondary', onclick: () => track((async () => { await activate(id); await reprocess(); })()) }, `Activar «${f.nombre}»`));
       }
       actions.push(h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Buscar en mi documento', onPick: (f) => { state.draft = resolveUnmatched(state.draft, i, f.id, null, f); render(); } }) }, 'Buscar en mi documento'));
+      if (MOTIVOS_ESTIMABLES.includes(u.motivo)) actions.push(h('button', { class: 'secondary', disabled: state.busy, onclick: () => est.start(i) }, 'Estimar con IA'));
       actions.push(h('button', { class: 'link', onclick: () => { state.draft = dropUnmatched(state.draft, i); render(); } }, 'Descartar'));
       return h('li', { class: 'card unmatched' }, h('div', {}, `«${u.text}»`), h('div', { class: 'muted small' }, MOTIVO_TEXT[u.motivo] ?? u.motivo), h('div', { class: 'row wrap' }, actions));
     };
@@ -667,7 +680,8 @@ export function mountApp(root, deps) {
         connMsg),
       h('section', { class: 'panel' },
         h('h2', {}, 'Pulir el documento'),
-        h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`))),
+        h('div', { class: 'row wrap' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`), h('button', { class: 'secondary', onclick: () => rec.open() }, 'Recetas')),
+        pendientesView({ h, state, est })),
       h('section', { class: 'panel' },
         h('h2', {}, 'Copia de seguridad'),
         h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). Lleva también tus objetivos, plantillas y frases a revisar; no incluye el token.`),
@@ -738,7 +752,7 @@ export function mountApp(root, deps) {
               h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
             h('div', { class: 'row between registro-actions' },
               h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
-              h('span', { class: 'row wrap' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'), deleteControls(r.id, state.day))),
+              h('span', { class: 'row wrap' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'), h('button', { class: 'link', onclick: () => rec.openForm({ lines: r.record.lines, back: 'diary' }) }, 'Guardar como receta'), deleteControls(r.id, state.day))),
             state.templateForm?.recordId === r.id ? templateForm(r.record) : null)))),
       ],
       h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
@@ -756,6 +770,12 @@ export function mountApp(root, deps) {
         h('button', { class: 'secondary', onclick: () => saveTemplate(rec, input.value) }, 'Guardar plantilla'),
         h('button', { class: 'link', onclick: () => { state.templateForm = null; render(); } }, 'Cancelar')));
   }
+
+  // «Estimar con IA» y recetas: acciones en sus módulos (ui/estimate-screen.js, ui/recetas-screen.js).
+  const ctx = { state, deps, track, render, byId, persistFoods, now, saveFile, openDay };
+  const rec = recetasActions(ctx);
+  const est = estimateActions({ ...ctx, guardarReceta: rec.guardarReceta });
+  const labels = new Map(deps.catalog.keys.map((k) => [k, deps.catalog.byKey.get(k)?.label ?? k]));
 
   // ---------- render ----------
   function render() {
@@ -785,7 +805,9 @@ export function mountApp(root, deps) {
       h, state, store: deps.store, targets, catalog: deps.catalog, track, render, header, today, saveFile, readFile, MACROS, UNIT_LABEL, fmtNum, fmtQty,
       back: () => openDay(state.day),
     });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos, repeat, plantillas, registro, catalogo };
+    const estimar = () => estimateScreen({ h, state, byId, header, openPicker, render, thr, est, back: () => { state.estimate = null; state.screen = 'confirm'; render(); } });
+    const recetas = () => recetasScreen({ h, state, byId, header, openPicker, render, openDay, nf0, rec, keys: deps.catalog.keys, required: req, labels, back: () => openDoc() });
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',

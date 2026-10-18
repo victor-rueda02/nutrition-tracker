@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import {
   mapNutrients, usdaNutrients, coincidencia, suggest, sortCandidates, searchPlan, createUsdaClient, findCandidates,
   eleccionCSV, readEleccion, applyUsda, runCandidatos, runFilas, informeMarkdown, ELECCION_HEADER, FNDDS, searchQuery,
-  fortificacion, valoresSospechosos, calorieFactors,
+  fortificacion, valoresSospechosos, calorieFactors, preparacionesDeMas, toCandidate,
 } from '../scripts/usda-lib.mjs';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { completenessReport } from '../frontend/js/core/completeness.js';
@@ -330,4 +330,28 @@ test('filas se salta los alimentos que no se buscan (sin término, recetas, incl
   assert.deepEqual(api.calls[0].body.fdcIds, [1]);
   assert.equal(r.propuestos.find((f) => f.id === 'chorizo').nutrients.proteina_g, 24); // no se pisa (datos de BEDCA o etiqueta)
   assert.deepEqual(r.errores, ['chorizo: no se aplica el fdcId 2 porque el alimento no se busca en USDA (sin termino_busqueda_usda)', 'ron: no se aplica el fdcId 3 porque el alimento no se busca en USDA (excluido (incluir=no))']);
+});
+
+// Prueba real (paella): para "Mollusks, squid, mixed species, cooked" se sugería el calamar FRITO (más completo), que
+// tiene mucha más grasa y kcal. Las preparaciones que el término no pide reducen el parecido a la mitad.
+test('sugerido: una preparación que el término no pide (fried, breaded, battered, with sauce, canned...) no se sugiere', () => {
+  const ctx = (termino) => ({ termino, map, required });
+  const termino = 'Mollusks, squid, mixed species, cooked';
+  const frito = usdaFood(1, 'Mollusks, squid, mixed species, cooked, fried', 'SR Legacy');
+  const crudo = usdaFood(2, 'Mollusks, squid, mixed species, raw', 'SR Legacy', { keys: required.slice(0, 26) });
+  const cands = [frito, crudo].map((f) => toCandidate(f, ctx(termino)));
+  assert.deepEqual(cands[0].preparaciones, ['fried']);
+  assert.ok(cands[0].coincidencia < cands[1].coincidencia);
+  assert.equal(suggest(cands, threshold).candidato.fdcId, 2); // nunca el frito para "cooked"
+  // si el término sí lo pide, el frito vale
+  const pedido = [frito, crudo].map((f) => toCandidate(f, ctx('Squid, cooked, fried')));
+  assert.deepEqual(pedido[0].preparaciones, []);
+  assert.equal(suggest(pedido, threshold).candidato.fdcId, 1);
+  assert.deepEqual(preparacionesDeMas('Chicken, breast, cooked', 'Chicken, breast, meat only, breaded, baked or fried'), ['fried', 'breaded']);
+  assert.deepEqual(preparacionesDeMas('Fish, tuna', 'Fish, tuna, light, canned in oil, drained solids'), ['canned', 'in oil']);
+  assert.deepEqual(preparacionesDeMas('Fish, tuna, light, canned in oil', 'Fish, tuna, light, canned in oil, drained solids'), []);
+  assert.deepEqual(preparacionesDeMas('Pasta, cooked', 'Pasta with meatballs in tomato sauce, canned'), ['canned']);
+  assert.deepEqual(preparacionesDeMas('Beef, cooked', 'Beef, sliced, with gravy'), ['with gravy']);
+  assert.deepEqual(preparacionesDeMas('Shrimp, cooked', 'Crustaceans, shrimp, mixed species, cooked, breaded and fried'), ['fried', 'breaded']);
+  assert.deepEqual(preparacionesDeMas('Rice, white, cooked', 'Rice, white, medium-grain, cooked, unenriched'), []);
 });

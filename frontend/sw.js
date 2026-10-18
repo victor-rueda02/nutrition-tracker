@@ -1,11 +1,12 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v10';
+const VERSION = 'nt-v11'; // nt-v10 (objetivos) + 1 (ia-recetas)
 const ASSETS = [
   './',
   'css/catalogo.css',
   'css/frases.css',
+  'css/ia-recetas.css',
   'css/objetivos.css',
   'css/plantillas.css',
   'css/repeat.css',
@@ -25,6 +26,8 @@ const ASSETS = [
   'js/core/csv.js',
   'js/core/diary.js',
   'js/core/draft.js',
+  'js/core/estimate-validate.js',
+  'js/core/estimate.js',
   'js/core/excluded.js',
   'js/core/foods-parser.js',
   'js/core/ids.js',
@@ -34,26 +37,32 @@ const ASSETS = [
   'js/core/repeat.js',
   'js/core/nutrients.js',
   'js/core/portions.js',
+  'js/core/recetas.js',
   'js/core/schema.js',
   'js/core/settings.js',
   'js/core/targets-plan.js',
   'js/core/targets.js',
   'js/core/templates.js',
   'js/core/text.js',
+  'js/core/usda-cache.js',
+  'js/core/usda-core.js',
   'js/main.js',
   'js/storage/idb-store.js',
   'js/storage/store.js',
   'js/ui/app.js',
   'js/ui/catalog-update-screen.js',
+  'js/ui/estimate-screen.js',
   'js/ui/objetivos-screen.js',
   'js/ui/phrase-log-screen.js',
+  'js/ui/recetas-screen.js',
   'js/ui/repeat-screen.js',
   'js/ui/templates-screen.js',
   'manifest.webmanifest',
   '../data/nutrients.json',
   '../data/settings.json',
   '../data/targets.json',
-  '../data/foods.csv'
+  '../data/foods.csv',
+  '../data/recetas.json'
 ];
 
 self.addEventListener('install', (event) => {

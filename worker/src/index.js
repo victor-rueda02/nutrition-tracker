@@ -1,12 +1,24 @@
-// Cloudflare Worker: POST /parse { texto, alimentos } -> { items, unmatched, warnings }.
-// Solo recibe la frase dictada y la lista compacta (id, nombre, alias, porciones, variante). Nunca nutrientes ni diario.
-import { SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserPrompt } from './prompt.js';
+// Cloudflare Worker:
+//   POST /parse { texto, alimentos } -> { items, unmatched, warnings }
+//   POST /estimate { texto, alimentos } -> { plato, gramos, total_estimado, ingredientes, warnings }   («Estimar con IA»)
+//   POST /usda/search { terminos } -> { resultados }        POST /usda/foods { fdcIds } -> { fichas }
+//   GET /health
+// A Gemini solo viajan la frase dictada y la lista compacta (id, nombre, alias, porciones, variante); a USDA, solo
+// términos de búsqueda y fdcId. Nunca nutrientes ni diario. USDA solo se consulta tras una acción del usuario.
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserPrompt, ESTIMATE_SYSTEM_PROMPT, ESTIMATE_SCHEMA, buildEstimatePrompt } from './prompt.js';
 import { parseModelJson, checkStructure, normalizeAiResponse } from '../../frontend/js/core/ai-validate.js';
+import { checkEstimateStructure, normalizeEstimate, MAX_TERMINO, MAX_INGREDIENTES } from '../../frontend/js/core/estimate-validate.js';
+import { findCandidates, fichaUsda, fortificacion, UsdaError } from '../../frontend/js/core/usda-core.js';
 import { callGemini, ProviderError } from './providers/gemini.js';
+import { createUsda } from './providers/usda.js';
+import usdaMap from '../../data/usda-map.json' with { type: 'json' };
+import settingsData from '../../data/settings.json' with { type: 'json' };
 
 const MAX_BODY = 200_000;
 const MAX_TEXT = 1000;
 const MAX_FOODS = 600;
+export const MAX_TERMINOS = MAX_INGREDIENTES; // búsquedas de USDA por petición: una por ingrediente que falta, todos en una
+export const MAX_FDC = 20; // detalle de USDA: una sola llamada
 
 // Llama al proveedor configurado. El modelo sale de UNA variable: GEMINI_MODEL (wrangler.toml).
 const defaultCallModel = (env, args) => callGemini({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL, ...args });
@@ -52,7 +64,114 @@ function sanitizeFoods(list) {
   return out;
 }
 
-export async function handleRequest(request, env, { callModel = defaultCallModel } = {}) {
+// Cuerpo JSON de una petición POST, o la respuesta de error.
+async function readJson(request, cors) {
+  const raw = await request.text();
+  if (raw.length > MAX_BODY) return { error: json(413, { error: 'cuerpo_demasiado_grande' }, cors) };
+  try { return { body: JSON.parse(raw) }; } catch { return { error: json(400, { error: 'json_invalido' }, cors) }; }
+}
+
+// Frase + lista compacta (lo mismo en /parse y /estimate).
+function readTextoYAlimentos(body, cors) {
+  const texto = typeof body?.texto === 'string' ? body.texto.trim() : '';
+  if (!texto || texto.length > MAX_TEXT) return { error: json(400, { error: 'texto_invalido', detalle: `entre 1 y ${MAX_TEXT} caracteres` }, cors) };
+  const alimentos = sanitizeFoods(body?.alimentos);
+  if (!alimentos) return { error: json(400, { error: 'alimentos_invalidos' }, cors) };
+  return { texto, alimentos };
+}
+
+// Una llamada al modelo y, solo si el JSON es inválido, UN reintento. validate(data) -> { ok, result?, error? }.
+async function askModel(env, callModel, args, validate, cors) {
+  let lastError = 'sin intentos';
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    let rawModel;
+    try {
+      rawModel = await callModel(env, args);
+    } catch (e) {
+      const status = e instanceof ProviderError ? e.status : 502;
+      return json(status === 429 ? 429 : 502, { error: status === 429 ? 'limite_de_uso' : 'proveedor_ia', status }, cors);
+    }
+    const parsed = parseModelJson(rawModel);
+    if (!parsed.ok) { lastError = parsed.error; continue; }
+    const v = validate(parsed.data);
+    if (!v.ok) { lastError = v.error; continue; }
+    return json(200, { ...v.result, model: env.GEMINI_MODEL, attempts: attempt }, cors);
+  }
+  return json(502, { error: 'respuesta_invalida', detalle: lastError }, cors);
+}
+
+const parseValidate = (alimentos) => (data) => {
+  const structure = checkStructure(data);
+  return structure.ok ? { ok: true, result: normalizeAiResponse(data, alimentos) } : structure;
+};
+
+const estimateValidate = (alimentos, texto) => (data) => {
+  const structure = checkEstimateStructure(data);
+  if (!structure.ok) return structure;
+  const r = normalizeEstimate(data, alimentos, { texto });
+  if (!r.ok) return r;
+  const { ok, ...result } = r;
+  return { ok: true, result };
+};
+
+// ---------- USDA ----------
+const required = settingsData.requiredNutrients;
+const threshold = settingsData.completenessThreshold;
+const r2 = (x) => Math.round(x * 100) / 100;
+
+function usdaFail(e, cors) {
+  const status = e instanceof UsdaError ? e.status : 502;
+  if (status === 429) return json(429, { error: 'limite_usda' }, cors);
+  if (status === 401 || status === 403) return json(502, { error: 'usda_clave', status }, cors);
+  return json(502, { error: 'usda', status }, cors);
+}
+
+// Candidatos de cada término: solo Foundation y SR Legacy, una búsqueda por término, ordenados por completitud.
+async function usdaSearch(body, client, cors) {
+  const vistos = new Set();
+  const terminos = [];
+  for (const t of Array.isArray(body?.terminos) ? body.terminos : []) {
+    const s = typeof t === 'string' ? t.trim().replace(/\s+/g, ' ') : '';
+    if (!s || s.length > MAX_TERMINO) return json(400, { error: 'terminos_invalidos', detalle: `entre 1 y ${MAX_TERMINO} caracteres` }, cors);
+    const k = s.toLowerCase();
+    if (!vistos.has(k)) { vistos.add(k); terminos.push(s); }
+  }
+  if (!terminos.length || terminos.length > MAX_TERMINOS) return json(400, { error: 'terminos_invalidos', detalle: `entre 1 y ${MAX_TERMINOS} términos` }, cors);
+  // Se guardan los alimentos que devuelve la búsqueda para los avisos de fortificación (sin otra llamada).
+  const encontrados = new Map();
+  const conRegistro = { search: async (...a) => { const r = await client.search(...a); for (const f of r) encontrados.set(f.fdcId, f); return r; } };
+  const resultados = [];
+  try {
+    for (const termino of terminos) {
+      const r = await findCandidates(conRegistro, termino, { map: usdaMap, required, threshold, fndds: false });
+      resultados.push({
+        termino, estado: r.estado, motivo: r.motivo, sugerido: r.candidato?.fdcId ?? null,
+        candidatos: r.candidatos.map((c) => ({ fdcId: c.fdcId, descripcion: c.descripcion, tipo: c.tipo, obligatorios: c.obligatorios, total: c.total, coincidencia: r2(c.coincidencia), preparaciones: c.preparaciones, fortificacion: fortificacion(encontrados.get(c.fdcId) ?? {}) })),
+      });
+    }
+  } catch (e) { return usdaFail(e, cors); }
+  return json(200, { resultados, llamadas: client.calls }, cors);
+}
+
+// Ficha de cada fdcId (valores por 100 g en las columnas del documento, avisos y fuente_usda). "Sin enriquecer" lo
+// aplica la app con quitarEnriquecimiento y las columnas "enriquecibles" de cada ficha (así sirve desde su caché).
+async function usdaFoods(body, client, cors) {
+  const ids = Array.isArray(body?.fdcIds) ? [...new Set(body.fdcIds)] : [];
+  if (!ids.length || ids.length > MAX_FDC || !ids.every((n) => Number.isInteger(n) && n > 0)) return json(400, { error: 'fdcids_invalidos', detalle: `entre 1 y ${MAX_FDC} números` }, cors);
+  let usda;
+  try { usda = await client.foods(ids); } catch (e) { return usdaFail(e, cors); }
+  const columnas = usdaMap.enriquecimiento?.columnas ?? [];
+  const fichas = usda.filter((u) => ids.includes(u?.fdcId)).map((u) => {
+    const f = fichaUsda(u, usdaMap);
+    return { ...f, enriquecibles: columnas.filter((k) => k in f.values) };
+  });
+  const faltan = ids.filter((id) => !fichas.some((f) => f.fdcId === id));
+  return json(200, { fichas, faltan, llamadas: client.calls }, cors);
+}
+
+const RUTAS = ['/parse', '/estimate', '/usda/search', '/usda/foods'];
+
+export async function handleRequest(request, env, { callModel = defaultCallModel, usdaClient = (e) => createUsda(e) } = {}) {
   const url = new URL(request.url);
   const origin = request.headers.get('Origin');
   const cors = corsHeaders(origin, env);
@@ -64,39 +183,32 @@ export async function handleRequest(request, env, { callModel = defaultCallModel
     const token = t === null ? 'sin_token' : env.APP_TOKEN && safeEqual(t, env.APP_TOKEN) ? 'ok' : 'incorrecto';
     return json(200, { ok: true, configurado: Boolean(env.GEMINI_MODEL && env.GEMINI_API_KEY && env.APP_TOKEN), token }, cors);
   }
-  if (url.pathname !== '/parse' || request.method !== 'POST') return json(404, { error: 'no_encontrado' }, cors);
+  if (!RUTAS.includes(url.pathname) || request.method !== 'POST') return json(404, { error: 'no_encontrado' }, cors);
 
   if (origin && !cors['Access-Control-Allow-Origin']) return json(403, { error: 'origen_no_permitido' });
   if (!env.APP_TOKEN || !safeEqual(request.headers.get('X-App-Token'), env.APP_TOKEN)) return json(401, { error: 'token_invalido' }, cors);
-  if (!env.GEMINI_MODEL || !env.GEMINI_API_KEY) return json(500, { error: 'configuracion_incompleta' }, cors);
 
-  const raw = await request.text();
-  if (raw.length > MAX_BODY) return json(413, { error: 'cuerpo_demasiado_grande' }, cors);
-  let body;
-  try { body = JSON.parse(raw); } catch { return json(400, { error: 'json_invalido' }, cors); }
-  const texto = typeof body?.texto === 'string' ? body.texto.trim() : '';
-  if (!texto || texto.length > MAX_TEXT) return json(400, { error: 'texto_invalido', detalle: `entre 1 y ${MAX_TEXT} caracteres` }, cors);
-  const alimentos = sanitizeFoods(body?.alimentos);
-  if (!alimentos) return json(400, { error: 'alimentos_invalidos' }, cors);
-
-  const args = { system: SYSTEM_PROMPT, user: buildUserPrompt(texto, alimentos), schema: RESPONSE_SCHEMA };
-  let lastError = 'sin intentos';
-  for (let attempt = 1; attempt <= 2; attempt++) { // reintenta UNA vez si el JSON es inválido
-    let rawModel;
-    try {
-      rawModel = await callModel(env, args);
-    } catch (e) {
-      const status = e instanceof ProviderError ? e.status : 502;
-      return json(status === 429 ? 429 : 502, { error: status === 429 ? 'limite_de_uso' : 'proveedor_ia', status }, cors);
-    }
-    const parsed = parseModelJson(rawModel);
-    if (!parsed.ok) { lastError = parsed.error; continue; }
-    const structure = checkStructure(parsed.data);
-    if (!structure.ok) { lastError = structure.error; continue; }
-    const result = normalizeAiResponse(parsed.data, alimentos);
-    return json(200, { ...result, model: env.GEMINI_MODEL, attempts: attempt }, cors);
+  if (url.pathname.startsWith('/usda/')) {
+    if (!env.USDA_API_KEY) return json(500, { error: 'usda_sin_configurar' }, cors);
+    const { body, error } = await readJson(request, cors);
+    if (error) return error;
+    const client = usdaClient(env);
+    return url.pathname === '/usda/search' ? usdaSearch(body, client, cors) : usdaFoods(body, client, cors);
   }
-  return json(502, { error: 'respuesta_invalida', detalle: lastError }, cors);
+
+  if (!env.GEMINI_MODEL || !env.GEMINI_API_KEY) return json(500, { error: 'configuracion_incompleta' }, cors);
+  const { body, error } = await readJson(request, cors);
+  if (error) return error;
+  const entrada = readTextoYAlimentos(body, cors);
+  if (entrada.error) return entrada.error;
+  const { texto, alimentos } = entrada;
+
+  if (url.pathname === '/estimate') {
+    const args = { system: ESTIMATE_SYSTEM_PROMPT, user: buildEstimatePrompt(texto, alimentos), schema: ESTIMATE_SCHEMA };
+    return askModel(env, callModel, args, estimateValidate(alimentos, texto), cors);
+  }
+  const args = { system: SYSTEM_PROMPT, user: buildUserPrompt(texto, alimentos), schema: RESPONSE_SCHEMA };
+  return askModel(env, callModel, args, parseValidate(alimentos), cors);
 }
 
 export default { fetch: (request, env) => handleRequest(request, env) };

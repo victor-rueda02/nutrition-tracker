@@ -1,8 +1,9 @@
 // Servidor local para probar la app en tu PC con datos reales, sin desplegar nada:
 //   node --env-file=.env scripts/dev-server.mjs [--port 8080] [--lan]
 // - Sirve la app como GitHub Pages (la raíz del repo): http://localhost:8080/ -> /frontend/.
-// - Atiende /parse y /health con el MISMO código del Worker (worker/src/index.js) y tu GEMINI_API_KEY de .env.
-//   Cada dictado es una llamada real a Gemini (se cuentan en la consola).
+// - Atiende /parse, /estimate, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
+//   y tus GEMINI_API_KEY y USDA_API_KEY de .env. Cada dictado o «Estimar» es una llamada real a Gemini y cada búsqueda
+//   nueva, una a USDA (se cuentan en la consola; USDA se guarda en usda/cache/, como el script).
 // - Solo sirve frontend/ y data/: nunca .env, ficheros ocultos ni nada más del proyecto.
 // - Por defecto solo escucha en tu PC. Con --lan escucha en tu red para abrirla desde el iPhone (misma Wi-Fi).
 // En la app: Documento -> Conexión. Worker = la dirección de este servidor; token = APP_TOKEN de .env (o "local").
@@ -14,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { handleRequest } from '../worker/src/index.js';
 import { callGemini } from '../worker/src/providers/gemini.js';
 import { geminiModel } from './gemini-model.mjs';
+import { createUsdaClient } from './usda-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const PUBLICO = ['frontend', 'data'];
@@ -39,16 +41,18 @@ const readBody = (req) => new Promise((ok, ko) => {
   req.on('data', (c) => chunks.push(c)).on('end', () => ok(Buffer.concat(chunks))).on('error', ko);
 });
 
-export function createDevServer({ env, callModel, base = root }) {
+export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/usda/search', '/usda/foods'];
+
+export function createDevServer({ env, callModel, usdaClient, base = root }) {
   return createServer(async (req, res) => {
     try {
       const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
-      if (url.pathname === '/parse' || url.pathname === '/health') {
+      if (RUTAS_WORKER.includes(url.pathname)) {
         const headers = {};
         for (const h of ['content-type', 'x-app-token', 'origin']) if (req.headers[h]) headers[h] = req.headers[h];
         const body = req.method === 'POST' ? await readBody(req) : undefined;
         // La app y el "Worker" comparten origen: se permite el de este mismo servidor (localhost o la IP de tu PC).
-        const r = await handleRequest(new Request(url, { method: req.method, headers, body }), { ...env, ALLOWED_ORIGIN: `http://${req.headers.host}` }, callModel ? { callModel } : {});
+        const r = await handleRequest(new Request(url, { method: req.method, headers, body }), { ...env, ALLOWED_ORIGIN: `http://${req.headers.host}` }, { ...(callModel ? { callModel } : {}), ...(usdaClient ? { usdaClient } : {}) });
         res.writeHead(r.status, Object.fromEntries(r.headers));
         res.end(Buffer.from(await r.arrayBuffer()));
         return;
@@ -79,7 +83,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const token = process.env.APP_TOKEN || 'local';
   let llamadas = 0;
   const callModel = (e, a) => { llamadas++; console.log(`[gemini] llamada n.º ${llamadas} (${e.GEMINI_MODEL})`); return callGemini({ apiKey: e.GEMINI_API_KEY, model: e.GEMINI_MODEL, ...a }); };
-  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, APP_TOKEN: token }, callModel });
+  if (!process.env.USDA_API_KEY) console.warn('Aviso: falta USDA_API_KEY en .env: «Estimar con IA» no podrá buscar en USDA.');
+  else if (/[\s"']/.test(process.env.USDA_API_KEY.trim())) console.warn('Aviso: USDA_API_KEY contiene espacios o comillas: revisa esa línea de .env (USDA_API_KEY=tuclave, sola en su línea).');
+  // USDA con la caché en disco del script (usda/cache/): una búsqueda repetida no gasta llamadas.
+  let llamadasUsda = 0;
+  const contar = (url, init) => { llamadasUsda++; console.log(`[usda] llamada n.º ${llamadasUsda}`); return fetch(url, init); };
+  const usdaClient = (e) => createUsdaClient({ apiKey: e.USDA_API_KEY, fetchImpl: contar, cacheDir: resolve(root, 'usda', 'cache') });
+  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, APP_TOKEN: token, USDA_API_KEY: process.env.USDA_API_KEY }, callModel, usdaClient });
   server.listen(port, lan ? '0.0.0.0' : '127.0.0.1', () => {
     console.log(`App: http://localhost:${port}/  (modelo: ${model})`);
     if (lan) {

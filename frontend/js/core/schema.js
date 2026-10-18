@@ -13,6 +13,7 @@ export const LEGACY_HEADERS = { porciones_sugeridas: 'porciones' };
 export const WORK_COLUMNS = [
   'termino_busqueda_usda', 'tipo', 'incluir', 'notas', 'cantidad_habitual_g', 'dias_de_uso_en_8',
   'fdc_id', 'fuente_usda', // los rellena scripts/usda.mjs (de dónde sale cada dato)
+  'pendiente_revisar', // si = añadido desde la app («Estimar con IA»): ponle alias o fúndelo con tus variantes
 ];
 
 export const ESTADOS = ['crudo', 'cocinado', 'procesado', 'tostado'];

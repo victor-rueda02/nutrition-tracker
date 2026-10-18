@@ -40,8 +40,10 @@ async function boot() {
     }
     let targets = null; // sin targets.json el diario muestra totales, pero sin objetivos
     try { targets = JSON.parse(await fetchText('targets.json')); } catch { /* se sigue sin objetivos */ }
+    let recetasBase = []; // data/recetas.json del repositorio (las del dispositivo se guardan aparte)
+    try { recetasBase = JSON.parse(await fetchText('recetas.json')).recetas ?? []; } catch { /* sin recetas publicadas */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished,
+      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });
