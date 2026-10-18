@@ -80,3 +80,10 @@ test('incluir=no: activados mayonesa (con "mahonesa") y chorizo; el resto de pun
     assert.equal(byId.get(id).extra.incluir, 'no', id);
   }
 });
+
+test('recetas: filas cocinadas que se dictan en gramos de plato sin aviso ("verduras asadas" no pide variante)', () => {
+  for (const [id, text, estado_dicho] of [['verduras_asadas_hacendado', '200 g de verduras asadas', 'cocinado'], ['verduras_asadas_hacendado', '200 g de verduras asadas', 'ninguno'], ['parrillada_verduras_hacendado', '250 g de parrillada de verduras', 'ninguno']]) {
+    const r = normalizeAiResponse({ items: [{ food_id: id, cantidad: 200, unidad: 'g', source_text: text, confidence: 'alta', estado_dicho }], unmatched: [] }, realList);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags], [id, 'alta', []], `${text} (${estado_dicho})`);
+  }
+});

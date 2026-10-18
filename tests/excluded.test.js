@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { findExcludedMatches, annotateExcluded, isExcluded } from '../frontend/js/core/excluded.js';
 import { realFoods } from './helpers.js';
 
-test('el documento real tiene 15 alimentos excluidos (incluir=no), entre ellos las lentejas', () => {
-  assert.equal(realFoods.filter(isExcluded).length, 15);
+test('el documento real tiene 14 alimentos excluidos (incluir=no), entre ellos las lentejas', () => {
+  assert.equal(realFoods.filter(isExcluded).length, 14);
   assert.ok(realFoods.filter(isExcluded).some((f) => f.id === 'lentejas_caseras'));
 });
 
