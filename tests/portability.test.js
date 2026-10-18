@@ -52,7 +52,7 @@ test('try-phrases acepta --foods con ruta absoluta o relativa', () => {
   const abs = join(root, 'tests', 'fixtures', 'alimentos_iniciales.csv');
   const a = spawnSync(process.execPath, [script, '--simulated', '--foods', abs], { cwd: tmpdir(), encoding: 'utf8' });
   assert.equal(a.status, 0, a.stderr);
-  assert.match(a.stdout, /Documento: 66 alimentos, 49 enviados/);
+  assert.match(a.stdout, /Documento: 66 alimentos, 50 enviados/);
   const b = spawnSync(process.execPath, [script, '--simulated', '--foods', join('tests', 'fixtures', 'alimentos_iniciales.csv')], { cwd: root, encoding: 'utf8' });
   assert.equal(b.status, 0, b.stderr);
 });

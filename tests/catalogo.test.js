@@ -68,3 +68,12 @@ test('merluza_cocida y patata_asada: se conservan (diario, elegir a mano) pero n
   const r = normalizeAiResponse({ items: [{ food_id: 'merluza_cruda', cantidad: 200, unidad: 'g', source_text: '200 g de merluza', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
   assert.deepEqual([r.items[0].food_id, r.items[0].confidence], ['merluza_cruda', 'alta']);
 });
+
+test('incluir=no: activados mayonesa (con "mahonesa") y chorizo pendiente; el resto de puntuales sigue fuera', () => {
+  const m = byId.get('mayonesa');
+  assert.deepEqual([m.extra.incluir, m.estado, m.extra.fdc_id], ['si', 'procesado', '171009']);
+  assert.ok(!flagsOf('mayonesa', '15 g de mahonesa').includes('sin_alias'));
+  for (const id of ['coca_cola', 'tinto_verano', 'ron', 'lengua_cerdo', 'salsa_cerdo_lata', 'salchicha_desayuno_cerdo', 'yogur_griego_vainilla', 'queso_monterey_jack']) {
+    assert.equal(byId.get(id).extra.incluir, 'no', id);
+  }
+});

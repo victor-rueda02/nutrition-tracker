@@ -5,11 +5,11 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 ## Resumen
 
 - Alimentos en el documento: 66
-- Completos (≥ 80 % de 31 obligatorios): 50
-- Incompletos: 16
-- Con fdcId elegido: 51
+- Completos (≥ 80 % de 31 obligatorios): 51
+- Incompletos: 15
+- Con fdcId elegido: 52
 - Buscables sin fdcId elegido: 0
-- Omitidos (excluidos, sin término o recetas): 15
+- Omitidos (excluidos, sin término o recetas): 16
 
 ## Avisos de fortificación (revisar contra el envase)
 
@@ -329,6 +329,11 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
+### mayonesa
+
+- USDA: Salad dressing, mayonnaise, regular — fdcId 171009 — SR Legacy
+- Obligatorios: 31/31 (100 %)
+
 ## Incompletos, de peor a mejor
 
 - chorizo: 0/31 (0 %) — sin datos de USDA
@@ -336,7 +341,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - crema_calabacin: 0/31 (0 %) — sin datos de USDA
 - lengua_cerdo: 0/31 (0 %) — sin datos de USDA
 - lentejas_caseras: 0/31 (0 %) — sin datos de USDA
-- mayonesa: 0/31 (0 %) — sin datos de USDA
 - queso_monterey_jack: 0/31 (0 %) — sin datos de USDA
 - repollo_al_horno: 0/31 (0 %) — sin datos de USDA
 - ron: 0/31 (0 %) — sin datos de USDA
@@ -350,6 +354,8 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 ## Para resolver a mano
 
+- patata_asada: excluido (incluir=no) ("Potatoes, baked, flesh and skin, without salt")
+- merluza_cocida: excluido (incluir=no) ("Fish, whiting, mixed species, cooked, dry heat")
 - verduras_asadas_hacendado: excluido (incluir=no) ("(descomponer en pimiento, calabacín, berenjena, cebolla)")
 - crema_calabacin: excluido (incluir=no) ("(descomponer en ingredientes)")
 - tortilla_patata: excluido (incluir=no) ("(descomponer: patata, huevo, aceite, cebolla)")
@@ -359,7 +365,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - tinto_verano: excluido (incluir=no)
 - ron: excluido (incluir=no) ("Alcoholic beverage, distilled, rum, 80 proof")
 - chorizo: excluido (incluir=no) ("Sausage, chorizo, pork and beef, smoked")
-- mayonesa: excluido (incluir=no) ("Salad dressing, mayonnaise, regular")
 - lengua_cerdo: excluido (incluir=no) ("Pork, fresh, variety meats and by-products, tongue, raw")
 - salsa_cerdo_lata: excluido (incluir=no) ("Gravy, pork, canned")
 - salchicha_desayuno_cerdo: excluido (incluir=no) ("Sausage, pork, fresh, raw")
