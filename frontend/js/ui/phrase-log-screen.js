@@ -17,7 +17,7 @@ export function phraseLogScreen(ui) {
       h('button', { class: 'link', onclick: () => { state.pendingDelete = null; ui.render(); } }, 'Cancelar'));
   return h('main', {},
     ui.header('Frases a revisar', ui.back),
-    h('p', { class: 'muted small' }, 'Dictados con alimentos no reconocidos, de confianza baja o que no coinciden con tus alias, y lo que elegiste al final. Sirve para añadir alias o alimentos a tu documento. Solo se guarda en este dispositivo.'),
+    h('p', { class: 'muted small' }, 'Dictados con alimentos no reconocidos, de confianza baja o que no coinciden con tus alias, y lo que elegiste al final. Sirve para añadir alias o alimentos a tu documento. Solo se guarda en este dispositivo y en tus copias de seguridad (Documento → Copia de seguridad).'),
     state.logMsg ? h('p', { class: 'ok', role: 'status' }, state.logMsg) : null,
     h('div', { class: 'row wrap' }, h('button', { class: 'secondary', disabled: !state.registro.length, onclick: () => ui.exportLog() }, 'Exportar (CSV)'), vaciar),
     state.registro.length === 0 ? h('p', { class: 'muted' }, 'No hay frases pendientes de revisar.') : h('ul', { class: 'cards' }, state.registro.map((e) => h('li', { class: 'card frase', 'data-id': e.id },

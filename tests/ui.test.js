@@ -759,3 +759,19 @@ test('también en Repetir: un fallo al guardar se ve y la pantalla se conserva',
   await t.act(() => t.btn('Cerrar').click());
   assert.equal(t.$('p.error[role=alert]'), null);
 });
+
+test('copia de seguridad con el registro de frases: se exporta y al importar se añaden las nuevas', { skip }, async () => {
+  const F = { id: 'f1', fecha: '2026-10-15T08:00:00Z', texto: '150 g de pechuga', problemas: [{ texto: '150 g de pechuga', tipo: 'sin_alias', motivo: null, food_id: 'pechuga_pollo_cruda', resolucion: 'pechuga_pavo_cruda' }] };
+  const t = await setup();
+  await t.store.setSetting('registro_frases', [F]);
+  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Exportar diario').click());
+  assert.deepEqual(JSON.parse(t.saved[0].text).registro_frases, [F]);
+  const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: null, plantillas: [], registro_frases: [F, { ...F, id: 'f2', fecha: '2026-10-16T08:00:00Z', texto: 'un plátano' }] };
+  await t.attach(t.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
+  assert.match(t.root.textContent, /1 frases a revisar nuevas/);
+  await t.act(() => t.btn('Importar 1 frase').click());
+  assert.deepEqual((await t.store.getSetting('registro_frases')).map((x) => x.id), ['f2', 'f1']);
+  assert.match(t.$('p.ok[role=status]').textContent, /1 frase a revisar/);
+  assert.match(t.root.textContent, /Frases a revisar \(2\)/);
+});

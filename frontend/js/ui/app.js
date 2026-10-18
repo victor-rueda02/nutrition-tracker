@@ -17,7 +17,7 @@ import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core
 import { repeatScreen } from './repeat-screen.js';
 import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTemplate, templateAsMeals, mergeTemplates } from '../core/templates.js';
 import { templatesScreen } from './templates-screen.js';
-import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV } from '../core/phrase-log.js';
+import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
 import { phraseLogScreen } from './phrase-log-screen.js';
 import { parseNumber } from '../core/numbers.js';
 
@@ -249,7 +249,7 @@ export function mountApp(root, deps) {
   }
 
   function exportDiary() {
-    const text = backupToJSON(buildBackup({ meals: state.allMeals, objetivos: tieneObjetivos(state.objetivos) ? state.objetivos : null, plantillas: state.plantillas, now: now() }));
+    const text = backupToJSON(buildBackup({ meals: state.allMeals, objetivos: tieneObjetivos(state.objetivos) ? state.objetivos : null, plantillas: state.plantillas, registro: state.registro, now: now() }));
     const n = state.allMeals.length;
     return track(saveFile({ name: `nutritiontracker-diario-${fecha()}.json`, text, type: 'application/json' }).then((r) => {
       state.docMsg = r === 'cancelado' ? 'Exportación cancelada.' : `Copia del diario: ${n} ${n === 1 ? 'comida' : 'comidas'}.`; render();
@@ -273,7 +273,8 @@ export function mountApp(root, deps) {
       const restaurarObjetivos = parsed.ok && tieneObjetivos(parsed.objetivos) && !tieneObjetivos(state.objetivos);
       const desconocidos = parsed.ok ? new Set(parsed.meals.flatMap((m) => m.lines.map((l) => l.food_id)).filter((id) => !byId().has(id))) : new Set();
       const plantillas = parsed.ok ? mergeTemplates(await loadTemplates(), parsed.plantillas) : null;
-      state.backupImport = { name: file.name, parsed, plan, restaurarObjetivos, plantillas, desconocidos: [...desconocidos], applied: false };
+      const registro = parsed.ok ? mergeLog(await loadLog(), parsed.registro) : null;
+      state.backupImport = { name: file.name, parsed, plan, restaurarObjetivos, plantillas, registro, desconocidos: [...desconocidos], applied: false };
       state.docMsg = ''; render();
     })(), 'No se pudo leer la copia');
   }
@@ -284,9 +285,11 @@ export function mountApp(root, deps) {
       for (const m of b.plan.escribir) await deps.store.addMeal(m);
       if (b.restaurarObjetivos) { state.objetivos = b.parsed.objetivos; await deps.store.setSetting('objetivos', state.objetivos); }
       if (b.plantillas.nuevas.length) await deps.store.setSetting('plantillas', b.plantillas.list);
+      if (b.registro.nuevas.length) await deps.store.setSetting('registro_frases', b.registro.list);
       state.backupImport = null;
       const partes = [`${b.plan.nuevas.length} nuevas`, `${b.plan.actualizadas.length} actualizadas`];
       if (b.plantillas.nuevas.length) partes.push(`${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`);
+      if (b.registro.nuevas.length) partes.push(`${b.registro.nuevas.length} ${b.registro.nuevas.length === 1 ? 'frase a revisar' : 'frases a revisar'}`);
       await openDoc(`Copia importada: ${partes.join(', ')}${b.restaurarObjetivos ? '; objetivos restaurados' : ''}.`);
     })(), 'No se pudo importar la copia');
   }
@@ -294,7 +297,7 @@ export function mountApp(root, deps) {
   function backupView(b) {
     if (!b.parsed.ok) return h('section', { class: 'report' }, h('p', { class: 'error', role: 'alert' }, `«${b.name}»: ${b.parsed.error}`), h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, 'Cerrar'));
     const { plan } = b;
-    const nada = plan.escribir.length === 0 && !b.restaurarObjetivos && !b.plantillas.nuevas.length;
+    const nada = plan.escribir.length === 0 && !b.restaurarObjetivos && !b.plantillas.nuevas.length && !b.registro.nuevas.length;
     return h('section', { class: 'report', 'aria-label': 'Importar copia' },
       h('p', {}, `«${b.name}»: ${b.parsed.meals.length} comidas válidas.`),
       h('ul', { class: 'small' },
@@ -302,6 +305,7 @@ export function mountApp(root, deps) {
         h('li', {}, `${plan.actualizadas.length} se actualizan (la copia tiene una versión más reciente)`),
         h('li', {}, `${plan.iguales.length} ya estaban igual`),
         plan.masAntiguas.length ? h('li', {}, `${plan.masAntiguas.length} más antiguas que las de este dispositivo: se mantienen las tuyas`) : null,
+        b.parsed.registro.length ? h('li', {}, `${b.registro.nuevas.length} frases a revisar nuevas (las que ya tienes se mantienen)`) : null,
         b.parsed.plantillas.length ? h('li', {}, `${b.plantillas.nuevas.length} plantillas nuevas (las que ya tienes se mantienen)`) : null,
         b.parsed.objetivos ? h('li', {}, b.restaurarObjetivos ? 'Se restaurarán los objetivos de la copia.' : 'Objetivos: se mantienen los de este dispositivo.') : null,
         b.desconocidos.length ? h('li', { class: 'warn' }, `Alimentos que no están en tu documento (saldrán sin datos): ${b.desconocidos.join(', ')}`) : null),
@@ -310,7 +314,8 @@ export function mountApp(root, deps) {
       h('p', { class: 'muted small' }, 'Importar nunca borra nada de este dispositivo.'),
       h('div', { class: 'row' },
         nada ? h('p', { class: 'muted' }, 'No hay nada nuevo que importar.') : h('button', { class: 'primary', onclick: () => applyBackup() }, plan.escribir.length ? `Importar ${plan.escribir.length} ${plan.escribir.length === 1 ? 'comida' : 'comidas'}`
-          : b.plantillas.nuevas.length ? `Importar ${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}` : 'Restaurar objetivos'),
+          : b.plantillas.nuevas.length ? `Importar ${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`
+            : b.registro.nuevas.length ? `Importar ${b.registro.nuevas.length} ${b.registro.nuevas.length === 1 ? 'frase' : 'frases'}` : 'Restaurar objetivos'),
         h('button', { class: 'link', onclick: () => { state.backupImport = null; render(); } }, nada ? 'Cerrar' : 'Cancelar')));
   }
 

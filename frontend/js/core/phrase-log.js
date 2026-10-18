@@ -41,6 +41,15 @@ export const addEntry = (log, entry, max = MAX_ENTRADAS) => [entry, ...log.filte
 export const updateEntry = (log, entry) => log.map((e) => (e.id === entry.id ? entry : e));
 export const removeEntry = (log, id) => log.filter((e) => e.id !== id);
 
+// Importar el registro de una copia: se añaden las frases que no hay (por id), sin pisar las tuyas; lo más reciente
+// primero y como mucho MAX_ENTRADAS.
+export function mergeLog(local, incoming, max = MAX_ENTRADAS) {
+  const ids = new Set(local.map((e) => e.id));
+  const nuevas = cleanLog(incoming).filter((e) => !ids.has(e.id));
+  const list = [...local, ...nuevas].sort((a, b) => b.fecha.localeCompare(a.fecha)).slice(0, max);
+  return { list, nuevas: nuevas.filter((e) => list.includes(e)) };
+}
+
 // CSV para Excel en español (punto y coma y BOM): una fila por problema.
 export function logToCSV(log, foodsById) {
   const nombre = (id) => (id ? foodsById.get(id)?.nombre ?? id : '');
