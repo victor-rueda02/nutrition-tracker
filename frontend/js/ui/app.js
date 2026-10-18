@@ -429,7 +429,7 @@ export function mountApp(root, deps) {
   }
 
   function header(title, back) {
-    return h('header', { class: 'top' },
+    return h('header', { class: back ? 'top with-back' : 'top' },
       back ? h('button', { class: 'link', onclick: back }, '‹ Volver') : h('strong', { class: 'brand' }, title),
       back ? h('strong', {}, title) : h('nav', {},
         h('button', { class: 'link', onclick: () => openDay(today()) }, 'Diario'),
@@ -590,28 +590,32 @@ export function mountApp(root, deps) {
     const incompletos = state.foods.filter(incompleteInfo).length;
     return h('main', {},
       header('Documento', () => { state.screen = 'home'; render(); }),
-      h('p', {}, state.foods.length ? `${state.docName || 'Documento'}: ${state.foods.length} alimentos (${incompletos} incompletos).` : 'Sin documento cargado.'),
-      h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => fileIn.click() }, 'Importar documento'), fileIn),
-      state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null,
-      h('h2', {}, 'Conexión con la IA'),
-      h('label', {}, 'Worker', ep), h('label', {}, 'Token', tk),
-      h('div', { class: 'row' },
-        h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
-        h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
-      connMsg,
-      h('h2', {}, 'Pulir el documento'),
-      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`)),
-      h('h2', {}, 'Copia de seguridad'),
-      h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). La copia no incluye el token.`),
-      doc.defaultView?.isSecureContext === false ? h('p', { class: 'warn small' }, 'Sin https (prueba en red local): el fichero se descarga en vez de abrir el menú Compartir, y la app no funciona sin conexión.') : null,
-      state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
-      h('div', { class: 'row wrap' },
-        h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
-        h('button', { class: 'secondary', onclick: () => backupIn.click() }, 'Importar diario'), backupIn),
-      state.backupImport ? backupView(state.backupImport) : null,
-      h('div', { class: 'row wrap' },
-        h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(true) }, 'Exportar documento (Excel)'),
-        h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(false) }, 'Exportar documento (CSV con comas)')));
+      h('section', { class: 'panel' },
+        h('p', {}, state.foods.length ? `${state.docName || 'Documento'}: ${state.foods.length} alimentos (${incompletos} incompletos).` : 'Sin documento cargado.'),
+        h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => fileIn.click() }, 'Importar documento'), fileIn),
+        state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null),
+      h('section', { class: 'panel' },
+        h('h2', {}, 'Conexión con la IA'),
+        h('label', {}, 'Worker', ep), h('label', {}, 'Token', tk),
+        h('div', { class: 'row' },
+          h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
+          h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
+        connMsg),
+      h('section', { class: 'panel' },
+        h('h2', {}, 'Pulir el documento'),
+        h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`))),
+      h('section', { class: 'panel' },
+        h('h2', {}, 'Copia de seguridad'),
+        h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). Lleva también tus objetivos, plantillas y frases a revisar; no incluye el token.`),
+        doc.defaultView?.isSecureContext === false ? h('p', { class: 'warn small' }, 'Sin https (prueba en red local): el fichero se descarga en vez de abrir el menú Compartir, y la app no funciona sin conexión.') : null,
+        state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
+        h('div', { class: 'row wrap' },
+          h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
+          h('button', { class: 'secondary', onclick: () => backupIn.click() }, 'Importar diario'), backupIn),
+        state.backupImport ? backupView(state.backupImport) : null,
+        h('div', { class: 'row wrap' },
+          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(true) }, 'Exportar documento (Excel)'),
+          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(false) }, 'Exportar documento (CSV con comas)'))));
   }
 
   const dayLabel = (date) => {
@@ -629,9 +633,9 @@ export function mountApp(root, deps) {
     fill.style.width = `${Math.min(1, r.pct ?? 0) * 100}%`;
     const pct = r.pct !== null && r.estado !== 'sin_dato' ? `${nf0.format(r.pct * 100)} %` : '';
     return h('li', { class: r.superaUl ? 'nut over-ul' : 'nut', 'data-clave': r.clave },
-      h('div', { class: 'row between' }, h('span', {}, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', {}, valor, h('span', { class: 'muted' }, objetivo))),
+      h('div', { class: 'row between nut-head' }, h('span', { class: 'nut-label' }, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo))),
       h('div', { class: `meter ${r.estado}`, role: 'img', 'aria-label': pct || 'sin dato' }, fill),
-      h('div', { class: 'small' },
+      h('div', { class: 'small nut-estado' },
         h('span', { class: `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
         r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null));
   }
@@ -654,18 +658,21 @@ export function mountApp(root, deps) {
         rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
           h('ul', {}, rep.avisosUl.map((r) => h('li', {}, `${r.label}: ${fmtQty(r.total, r.unit)} (UL ${fmtQty(r.ul, r.unit)})`, r.notaUl ? h('div', { class: 'small muted' }, r.notaUl) : null)))) : null,
         rep.parciales.length ? h('p', { class: 'warn small' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
-        h('h2', {}, 'Energía y macros'), h('ul', { class: 'nuts' }, macros.map(nutrientRow)),
-        h('h2', {}, 'Micronutrientes'), h('ul', { class: 'nuts' }, micros.map(nutrientRow)),
-        h('details', {}, h('summary', {}, 'Otros nutrientes'),
+        h('section', { class: 'panel' }, h('h2', {}, 'Energía y macros'), h('ul', { class: 'nuts' }, macros.map(nutrientRow))),
+        h('section', { class: 'panel' }, h('h2', {}, 'Micronutrientes'), h('ul', { class: 'nuts' }, micros.map(nutrientRow))),
+        h('details', { class: 'panel' }, h('summary', {}, 'Otros nutrientes'),
           h('ul', {}, rep.otros.map((o) => h('li', {}, `${o.label}: ${o.total === null ? 'sin dato' : fmtQty(o.total, o.unit)}${o.parcial && o.total !== null ? ' (parcial)' : ''}`)))),
         h('h2', {}, 'Comidas'),
         rep.comidas.map((c) => h('section', { class: 'card meal' },
-          h('div', { class: 'row between' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, fmtKcal(c))),
+          h('div', { class: 'row between meal-head' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, fmtKcal(c))),
           c.registros.map((r) => h('div', { class: 'registro', 'data-id': r.id },
-            h('ul', { class: 'lines' }, r.lines.map((l) => h('li', {}, `${l.nombre} · ${nf1.format(l.grams)} g · ${l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`}`))),
-            h('div', { class: 'row between' },
+            h('ul', { class: 'lines' }, r.lines.map((l) => h('li', { class: 'line' },
+              h('span', { class: 'line-name' }, l.nombre), h('span', { class: 'sep' }, ' · '),
+              h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
+              h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
+            h('div', { class: 'row between registro-actions' },
               h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
-              h('span', { class: 'row' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'), deleteControls(r.id, state.day))),
+              h('span', { class: 'row wrap' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'), deleteControls(r.id, state.day))),
             state.templateForm?.recordId === r.id ? templateForm(r.record) : null)))),
       ],
       h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
@@ -696,7 +703,7 @@ export function mountApp(root, deps) {
       const unit = UNIT_LABEL[t.unit] ?? t.unit;
       const input = h('input', { type: 'text', inputmode: 'decimal', 'aria-label': `${t.label} (${unit})`, value: own[t.clave] === undefined ? '' : nf2.format(own[t.clave]).replace(/\./g, ''), placeholder: ref === null ? '' : fmtNum(ref, t.unit) });
       inputs.set(t.clave, input);
-      return h('li', { class: 'card' },
+      return h('li', { class: `card k-${t.clave}` },
         h('label', {}, h('span', {}, `${t.label} (${unit}) · ${TIPO_TEXT[t.tipo]}`), input),
         h('div', { class: 'small muted' }, [ref === null ? '' : `Referencia: ${fmtQty(ref, t.unit)}`, t.ul !== null ? `UL: ${fmtQty(t.ul, t.unit)}` : '', t.nota].filter(Boolean).join(' · ')));
     };
@@ -736,9 +743,11 @@ export function mountApp(root, deps) {
     });
     const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos: objetivosScreen, repeat, plantillas, registro };
     const screen = screens[state.screen]();
-    if (state.fail) {
-      screen.prepend(h('p', { class: 'error', role: 'alert' }, state.fail, ' ',
-        h('button', { class: 'link', onclick: () => { state.fail = ''; render(); } }, 'Cerrar')));
+    if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
+      const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
+        h('button', { class: 'link', onclick: () => { state.fail = ''; render(); } }, 'Cerrar'));
+      const cabecera = screen.querySelector(':scope > header');
+      if (cabecera) cabecera.after(aviso); else screen.prepend(aviso);
     }
     root.replaceChildren(screen);
   }

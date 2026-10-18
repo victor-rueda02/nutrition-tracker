@@ -1,10 +1,18 @@
-/* Pantalla "Repetir" (estilos propios; los globales son de la rama estetica). */
-.repeat .repeat-source { margin-top:4px; }
-.repeat .source-label { text-transform:capitalize; }
-.repeat .repeat-item.off { opacity:.55; }
-.repeat .repeat-name { gap:10px; margin:0 0 6px; }
-.repeat .repeat-name input[type=checkbox] { width:22px; height:22px; flex:none; }
-.repeat .repeat-qty { gap:6px; margin:0; }
-.repeat .repeat-qty .nudge { min-width:44px; padding:8px 4px; flex:none; }
-.repeat .repeat-qty input.grams { width:5.5rem; flex:none; text-align:right; }
+/* Pantalla "Repetir" (y "Usar plantilla"). Mismo aspecto que el Diario: cada comida es una tarjeta con su cabecera
+   (meal-head) y los alimentos separados por líneas; colores de la paleta de styles.css (docs/notas-estetica.md). */
+.repeat .repeat-source { margin:0 0 4px; }
+.repeat p.repeat-source { padding:4px 0; }
+.repeat .source-label { font-size:1.25rem; }
+.repeat nav .source-label { text-transform:capitalize; }
+.repeat .repeat-group .meal-head h2 { margin:0; font-size:1.1rem; }
+.repeat .repeat-item { padding:10px 0; border-bottom:1px solid var(--line); }
+.repeat .repeat-item:last-child { border-bottom:none; }
+.repeat .repeat-item.off .repeat-name > span:not(.tag), .repeat .repeat-item.off .repeat-qty { opacity:.5; }
+.repeat .repeat-name { gap:10px; margin:0 0 8px; min-height:44px; font-weight:600; cursor:pointer; }
+.repeat .repeat-name input[type=checkbox] { flex:none; }
+.repeat .repeat-qty { gap:6px; margin:0; justify-content:flex-start; }
+.repeat .repeat-qty .nudge { flex:none; min-width:44px; padding:0 6px; border-color:var(--field); background:var(--surface); font-variant-numeric:tabular-nums; }
+.repeat .repeat-qty .nudge:active { background:var(--track); }
+.repeat .repeat-qty input.grams { flex:none; width:5.5rem; background:var(--bg); }
 .repeat .repeat-target label { display:block; }
+.repeat .bar .totals { color:var(--fg); }

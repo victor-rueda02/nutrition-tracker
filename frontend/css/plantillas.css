@@ -1,0 +1,8 @@
+/* Pantalla "Plantillas" y formulario «Guardar como plantilla» del Diario. Paleta de styles.css (docs/notas-estetica.md). */
+.plantillas .plantilla { margin:0; }
+.plantillas .plantilla .meal-head { flex-wrap:wrap; row-gap:0; }
+.plantillas .plantilla .lines .line:last-child { border-bottom:none; }
+.plantillas .plantilla .registro-actions { padding:8px 0 12px; border-top:1px solid var(--line); }
+.plantillas .plantilla .registro-actions button.secondary { flex:none; min-width:7rem; }
+.template-form { margin:0 0 12px; padding:8px 0 4px; border-top:1px dashed var(--field); }
+.template-form label { margin-top:4px; font-weight:600; }

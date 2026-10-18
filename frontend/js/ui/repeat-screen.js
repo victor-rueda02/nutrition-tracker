@@ -54,7 +54,7 @@ export function repeatScreen(ui) {
       type: 'button', class: 'nudge', disabled: !it.known, 'aria-label': `${signo(d)} g a ${it.nombre}`,
       onclick: () => { state.repeat = nudge(state.repeat, it.key, d); input.value = fmtGramos(findItem(state.repeat, it.key).grams); marcarMal(); paint(); },
     }, signo(d));
-    row = h('li', { class: `card repeat-item${it.checked ? '' : ' off'}`, 'data-key': it.key },
+    row = h('li', { class: `repeat-item${it.checked ? '' : ' off'}`, 'data-key': it.key },
       h('label', { class: 'row repeat-name' }, check, h('span', {}, it.nombre), it.known ? null : h('span', { class: 'tag' }, 'ya no está en tu documento')),
       h('div', { class: 'row repeat-qty' }, boton(PASOS[0]), boton(PASOS[1]), input, h('span', {}, 'g'), boton(PASOS[2]), boton(PASOS[3])));
     marcarMal();
@@ -69,15 +69,15 @@ export function repeatScreen(ui) {
 
   const screen = h('main', { class: 'repeat' },
     ui.header(r.template ? 'Usar plantilla' : 'Repetir', ui.back),
-    r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between repeat-source', 'aria-label': 'Día de origen' },
+    r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between daynav repeat-source', 'aria-label': 'Día de origen' },
       h('button', { class: 'icon', 'aria-label': 'Día de origen anterior', onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, -1)) }, '‹'),
       h('strong', { class: 'source-label' }, `De: ${ui.dayLabel(r.sourceDate)}`),
       h('button', { class: 'icon', 'aria-label': 'Día de origen siguiente', disabled: r.sourceDate >= ui.today(), onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, 1)) }, '›')),
     r.recordId ? h('p', { class: 'muted small' }, 'Solo la comida que elegiste en el Diario. Con las flechas ves el día entero.') : null,
-    r.groups.length === 0 ? h('p', { class: 'muted' }, 'No hay comidas guardadas ese día.') : r.groups.map((g) => h('section', { class: 'repeat-group' },
-      h('h2', {}, ui.MEAL_LABEL[g.meal]),
-      h('ul', { class: 'cards' }, g.items.map(itemRow)))),
-    h('section', { class: 'repeat-target' }, h('h2', {}, 'Añadir a'), h('label', {}, 'Fecha', dateIn), h('label', {}, 'Comida', mealSel)),
+    r.groups.length === 0 ? h('p', { class: 'muted' }, 'No hay comidas guardadas ese día.') : r.groups.map((g) => h('section', { class: 'card meal repeat-group' },
+      h('div', { class: 'row between meal-head' }, h('h2', {}, ui.MEAL_LABEL[g.meal]), h('span', { class: 'muted small' }, `${g.items.length} ${g.items.length === 1 ? 'alimento' : 'alimentos'}`)),
+      h('ul', { class: 'lines' }, g.items.map(itemRow)))),
+    h('section', { class: 'panel repeat-target' }, h('h2', {}, 'Añadir a'), h('label', {}, 'Fecha', dateIn), h('label', {}, 'Comida', mealSel)),
     h('footer', { class: 'bar' }, totalsEl, hint, h('div', { class: 'row' }, addBtn)));
   paint();
   return screen;

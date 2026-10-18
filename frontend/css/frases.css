@@ -1,0 +1,11 @@
+/* Pantalla "Frases a revisar". Paleta de styles.css (docs/notas-estetica.md): el tipo de problema en color de aviso,
+   lo que elegiste al final en verde, lo descartado en gris y lo que aún no se guardó en aviso. */
+.frases .frase { display:grid; gap:4px; }
+.frases .frase-texto { font-weight:600; }
+.frases .problemas { list-style:none; padding:0; margin:4px 0 0; display:grid; gap:6px; font-size:.9rem; }
+.frases .problema { padding:6px 0 0; border-top:1px solid var(--line); }
+.frases .problema .tipo { color:var(--warn); font-weight:600; }
+.frases .problema.no_reconocido .tipo { color:var(--bar-over); }
+.frases .res-ok { color:var(--bar-met); font-weight:600; }
+.frases .res-descartado { color:var(--muted); }
+.frases .res-pendiente { color:var(--warn); }
