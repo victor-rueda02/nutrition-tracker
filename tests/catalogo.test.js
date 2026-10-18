@@ -102,7 +102,7 @@ test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para q
   const eleccion = readFile('../usda/eleccion.csv');
   for (const [id, bedca] of [['merluza_cruda', 2347], ['jamon_curado', 2273], ['pan_blanco_barra', 2160], ['galleta_maria', 2675], ['brocoli', 1177], ['champinon', 2384]]) {
     const f = byId.get(id);
-    assert.match(f.extra.fuente_usda, new RegExp(`^BEDCA ${bedca} `), id);
+    assert.match(f.extra.fuente_usda, new RegExp(`(^|· )BEDCA ${bedca} `), id); // la merluza: macros de su etiqueta, micros de BEDCA
     assert.equal(f.extra.termino_busqueda_usda, undefined, id);
     assert.match(eleccion, new RegExp(`(^|\n)${id};[^;]*;;;`), id); // sin fdcId elegido
   }
@@ -114,4 +114,11 @@ test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para q
   for (const id of ['semillas_chia', 'pimiento_amarillo']) assert.deepEqual([byId.get(id).nutrients.epa_g, byId.get(id).nutrients.dha_g], [0, 0], id);
   // atún: escurrido y con sal (el aceite se dicta aparte)
   assert.equal(byId.get('atun_lata_aceite').extra.fdc_id, '173708');
+});
+
+test('merluza: macros de la etiqueta de Victor (merluza del Cabo), micros de BEDCA', () => {
+  const m = byId.get('merluza_cruda');
+  assert.deepEqual(['energia_kcal', 'proteina_g', 'grasa_total_g', 'grasas_saturadas_g', 'sodio_mg', 'hidratos_g'].map((k) => m.nutrients[k]), [82, 18, 1.2, 0.3, 96, 0]);
+  assert.ok(m.nutrients.agua_g + m.nutrients.proteina_g + m.nutrients.grasa_total_g <= 100); // agua coherente con la etiqueta
+  assert.match(m.extra.fuente_usda, /^Etiqueta de la merluza/);
 });

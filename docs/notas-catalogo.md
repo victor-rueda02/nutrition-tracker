@@ -5,7 +5,7 @@ Este documento es para el coordinador que integra en `main`: qué cambió, qué 
 `CLAUDE.md` y qué queda pendiente (incluido lo que necesita código de la app, fuera del alcance de esta rama).
 
 **Resultado:** 69 alimentos (antes 64), 55 enviados a la IA (antes 49), **57 completos** (antes 48), 12 incompletos
-(todos con `incluir=no` y sin datos: recetas por calcular y puntuales). `npm test`: 253 tests en verde.
+(todos con `incluir=no` y sin datos: recetas por calcular y puntuales). `npm test`: 254 tests en verde.
 Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 llamadas a Gemini.
 
 ## Decisiones de Victor para pasar a CLAUDE.md
@@ -49,6 +49,7 @@ Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 lla
 | `d1795d7` | 4. Recetas | `scripts/recetas.mjs` + `recetas-lib.mjs` + `tests/recetas.test.js`, `data/recetas.json` (con una receta de ejemplo que nunca va al catálogo), formato en `data/SCHEMA.md`. `verduras_asadas_hacendado` calculada y `parrillada_verduras_hacendado` nueva (proporciones del envase) |
 | `b9d8807` | 5. Corn flakes | Etiqueta de Corn Flakes 0 % azúcar Hacendado; vacías A, C y D (fortificación de EE. UU.) |
 | `1c941fa` | 6. Incompletos | BEDCA + huecos de USDA en merluza (merluza europea, no whiting), jamón serrano, pan de barra (B1, B2, B9 y hierro sin enriquecer) y galleta María; nuevos `brocoli` y `champinon` (BEDCA); EPA/DHA = 0 vegetales; atún USDA 173708 (escurrido, con sal) |
+| (siguiente) | 6. Merluza | Macros de la etiqueta de la merluza que compra Victor (merluza del Cabo: 82 kcal, 18 g de proteína; BEDCA daba 11,9 g); micros de BEDCA; agua de USDA (la de BEDCA no cuadra con 18 g de proteína) |
 
 ## Informe de completitud (31 obligatorios, umbral 80 %)
 
@@ -76,8 +77,6 @@ crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere acti
   `node scripts/recetas.mjs --aplicar`.
 - **Salteado de verduras** (judía verde redonda, brócoli, pimiento rojo, champiñón laminado, cebolla): faltan las
   proporciones (el envase dice "variable"). Los ingredientes ya están en el catálogo.
-- **Merluza**: BEDCA da 11,9 g de proteína y 64 kcal (USDA whiting: 18,3 g y 90 kcal). Coherente en sí mismo, pero
-  la diferencia es grande: confirmar con Victor si se queda BEDCA.
 - **Verduras de Hacendado**: calculadas con verduras crudas, sin la pérdida de agua del asado. Con las kcal de la
   etiqueta se podría fijar `peso_final_g` para que cuadren.
 - **Jamón cocido**: USDA ~8 % de grasa; el cocido extra español suele tener menos. Mejor con su etiqueta.
@@ -103,5 +102,5 @@ crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere acti
    robusto que `filas` omita los alimentos que `searchPlan` omite.
 6. **"Guardar como receta"**: `scripts/recetas-lib.mjs` es puro (solo importa de `frontend/js/core/`); para usarlo
    desde la app habría que moverlo a `frontend/js/core/`. Formato y reglas en `data/SCHEMA.md`.
-7. **CLAUDE.md, sección 5**: actualizar recuentos (69 alimentos, 57 completos, 253 tests) y mencionar
+7. **CLAUDE.md, sección 5**: actualizar recuentos (69 alimentos, 57 completos, 254 tests) y mencionar
    `tests/fixtures/reglas_variantes.csv`.
