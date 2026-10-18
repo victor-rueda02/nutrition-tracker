@@ -1,5 +1,5 @@
 {
-  "_comentario": "Objetivos diarios por defecto. Tus objetivos (pantalla Objetivos) se guardan en el iPhone y tienen prioridad. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
+  "_comentario": "Objetivos diarios por defecto. Es la referencia para lo que no define tu plan de objetivos (pantalla Objetivos; formato en docs/OBJETIVOS-FORMATO.md), que tiene prioridad y se guarda en el iPhone; los UL salen siempre de aquí. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
   "fuentes": {
     "ir_ue": "Ingestas de referencia para un adulto medio, Reglamento (UE) 1169/2011, anexo XIII",
     "efsa": "EFSA, valores dietéticos de referencia para adultos (PRI o AI) y niveles máximos tolerables (UL)"
