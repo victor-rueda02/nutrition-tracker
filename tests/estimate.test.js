@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { normalizeEstimate, checkEstimateStructure, gramosDichos, TOLERANCIA_SUMA } from '../frontend/js/core/estimate-validate.js';
 import {
   createEstimate, sugerirDelDocumento, coincideConDocumento, preseleccionar, usarAlternativa, setIngGrams, setTotal, removeIng, chooseCandidate, setSinEnriquecer, useCatalog, addCatalogIng, setBusqueda, setReceta,
-  validateEstimate, fdcIdsPendientes, aplicarEstimacion, nuevoAlimento, pendientesRevision, marcarRevisado, suma, TIPO_USDA_APP,
+  validateEstimate, datoCrudoParaCocinado, AVISO_CRUDO, fdcIdsPendientes, aplicarEstimacion, nuevoAlimento, pendientesRevision, marcarRevisado, suma, TIPO_USDA_APP,
 } from '../frontend/js/core/estimate.js';
 import { claveTermino, emptyCache, putBusquedas, getBusqueda, buscarConCache, fichasConCache, cleanCache, MAX_BUSQUEDAS } from '../frontend/js/core/usda-cache.js';
 import { resolveUnmatchedWithLines, createDraft, validateDraft, toMealRecord } from '../frontend/js/core/draft.js';
@@ -289,4 +289,15 @@ test('los módulos que carga la app no usan lookbehind en expresiones regulares 
   const dir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'frontend', 'js');
   const ficheros = ['core', 'ui', 'storage'].flatMap((d) => readdirSync(join(dir, d)).map((f) => join(dir, d, f))).concat([join(dir, 'main.js'), join(dir, 'ai-client.js')]);
   for (const f of ficheros.filter((x) => x.endsWith('.js'))) assert.ok(!/\(\?<[!=]/.test(readFileSync(f, 'utf8')), f);
+});
+
+test('aviso de dato en crudo para un ingrediente cocinado (prueba real: calamar cocinado -> "squid, raw")', () => {
+  const crudo = { descripcion: 'Mollusks, squid, mixed species, raw' };
+  assert.equal(datoCrudoParaCocinado({ estado: 'cocinado' }, crudo), true);
+  assert.equal(datoCrudoParaCocinado({ estado: 'procesado' }, crudo), false); // solo para lo cocinado
+  assert.equal(datoCrudoParaCocinado({ estado: 'cocinado' }, { descripcion: 'Crustaceans, shrimp, mixed species, cooked, moist heat' }), false);
+  assert.equal(datoCrudoParaCocinado({ estado: 'cocinado' }, { descripcion: 'Strawberries, RAW' }), true);
+  assert.equal(datoCrudoParaCocinado({ estado: 'cocinado' }, { descripcion: 'Sugars, granulated (drawn)' }), false); // "raw" dentro de otra palabra no cuenta
+  assert.equal(datoCrudoParaCocinado({ estado: 'cocinado' }, null), false);
+  assert.match(AVISO_CRUDO, /kcal y proteína algo subestimadas/);
 });

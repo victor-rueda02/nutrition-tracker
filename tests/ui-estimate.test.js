@@ -233,3 +233,18 @@ test('ingrediente que la IA manda a USDA y ya tienes («leche entera»): presele
   const [l] = t.$$('li.card[data-key]').filter((li) => li.textContent.includes('Leche entera'));
   assert.ok(l);
 });
+
+test('revisión: «Dato en crudo para un ingrediente cocinado» si el elegido de USDA es «raw» y el ingrediente está cocinado', { skip }, async () => {
+  const SQUID = 'Mollusks, squid, mixed species, cooked';
+  const t = await setup({
+    estimate: { ...ESTIMACION, ingredientes: [{ origen: 'usda', termino: SQUID, nombre: 'calamar cocinado', estado: 'cocinado', gramos: 60 }, { ...ESTIMACION.ingredientes[2], gramos: 240 }] },
+    busquedas: { [SQUID]: { termino: SQUID, estado: 'completo', motivo: 'm', sugerido: 401, candidatos: [CAND(401, 'Mollusks, squid, mixed species, raw'), CAND(402, 'Mollusks, squid, mixed species, cooked, fried', { preparaciones: ['fried'] })] } },
+  });
+  await hastaEstimar(t);
+  const card = () => t.$$('li.estimar-ing')[0];
+  assert.match(card().textContent, /Dato en crudo para un ingrediente cocinado: kcal y proteína algo subestimadas/);
+  await t.act(() => { const sel = card().querySelector('select'); sel.value = '402'; sel.dispatchEvent(new t.Event('change', { bubbles: true })); });
+  assert.ok(!/Dato en crudo/.test(card().textContent));
+  assert.match(card().textContent, /Preparación que no pidió la IA: fried/);
+  assert.equal(t.btn('Añadir a la comida').disabled, false); // solo avisa
+});

@@ -114,6 +114,12 @@ export function addCatalogIng(e, food, gramos = null) {
 // «Buscar otro término»: el ingrediente pasa a USDA con los candidatos de ese término.
 export const setBusqueda = (e, key, termino, resultado) => mapIng(e, key, (i) => conBusqueda({ key: i.key, origen: 'usda', termino, nombre: i.nombre, estado: i.estado, gramos: i.gramos, sinEnriquecer: false }, resultado));
 
+// El elegido de USDA está en crudo ("Mollusks, squid, mixed species, raw") y el ingrediente, cocinado: con gramos del
+// plato terminado, kcal y proteína salen algo por debajo (al cocinarse pierde agua). Solo avisa.
+export const RAW = /(^|[^a-z])raw($|[^a-z])/;
+export const datoCrudoParaCocinado = (ing, candidato) => ing.estado === 'cocinado' && Boolean(candidato) && RAW.test(normalizeText(candidato.descripcion));
+export const AVISO_CRUDO = 'Dato en crudo para un ingrediente cocinado: kcal y proteína algo subestimadas';
+
 export const fueraDeRango = (e) => Math.abs(suma(e) - e.gramos) > TOLERANCIA_SUMA * e.gramos;
 
 // problems: [{ key, code }] con code 'sin_gramos' | 'sin_alimento' (USDA sin candidato elegido) | 'sin_nombre';
