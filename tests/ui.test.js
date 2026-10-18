@@ -59,7 +59,7 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   await t.act(() => t.btn('Procesar').click());
   assert.equal(t.calls.length, 1);
   assert.equal(t.calls[0].texto, 'para desayunar 80 g de avena, 2 huevos y un plátano');
-  assert.equal(t.calls[0].alimentos.length, 50); // sin los incluir=no
+  assert.equal(t.calls[0].alimentos.length, 51); // sin los incluir=no
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('nutrients'));
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('densidad')); // la densidad no viaja: la conversión de ml es local
   // confirmación

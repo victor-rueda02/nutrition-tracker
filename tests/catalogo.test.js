@@ -69,7 +69,10 @@ test('merluza_cocida y patata_asada: se conservan (diario, elegir a mano) pero n
   assert.deepEqual([r.items[0].food_id, r.items[0].confidence], ['merluza_cruda', 'alta']);
 });
 
-test('incluir=no: activados mayonesa (con "mahonesa") y chorizo pendiente; el resto de puntuales sigue fuera', () => {
+test('incluir=no: activados mayonesa (con "mahonesa") y chorizo; el resto de puntuales sigue fuera', () => {
+  const c = byId.get('chorizo');
+  assert.deepEqual([c.extra.incluir, c.estado, c.extra.termino_busqueda_usda, c.nutrients.energia_kcal, c.nutrients.vitamina_b5_mg], ['si', 'procesado', undefined, 322, undefined]);
+  assert.match(c.extra.fuente_usda, /^BEDCA 2264/); // chorizo español: BEDCA, huecos de USDA; sin término para que usda.mjs no lo pise
   const m = byId.get('mayonesa');
   assert.deepEqual([m.extra.incluir, m.estado, m.extra.fdc_id], ['si', 'procesado', '171009']);
   assert.ok(!flagsOf('mayonesa', '15 g de mahonesa').includes('sin_alias'));
