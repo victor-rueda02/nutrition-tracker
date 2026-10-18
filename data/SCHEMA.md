@@ -28,9 +28,21 @@ están en `data/nutrients.json` (61 columnas: energía, macros, grasas, vitamina
 Para añadir un nutriente, añade una entrada a ese fichero.
 
 ## Columnas de trabajo y desconocidas
-`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id` y `fuente_usda` (las dos últimas las rellena `scripts/usda.mjs`: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron) se conservan al
+`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron) y `pendiente_revisar` se conservan al
 importar y exportar y no intervienen en ningún cálculo. Cualquier otra cabecera desconocida también se conserva,
 con un aviso (si parece un nutriente con la unidad cambiada, el aviso sugiere la correcta).
+
+### Filas añadidas desde la app con «Estimar con IA»
+Cuando confirmas una estimación con ingredientes que no tenías, cada alimento de USDA elegido se añade al documento
+del dispositivo como una fila nueva: `id` a partir del nombre que confirmaste (único), `alias` vacío, `estado` el del
+ingrediente en el plato (normalmente `cocinado`: gramos del plato terminado), `grupo` = su id,
+`variante_por_defecto=si`, `incluir=si` (así la próxima estimación lo usa y no se duplica), `tipo=usda_app`,
+`termino_busqueda_usda` (el término usado), `fdc_id` y `fuente_usda` (mismo formato que `scripts/usda.mjs filas`;
+con «sin enriquecer», vacíos B9, B1, B2, B3 y hierro), `notas` («Añadido con «Estimar con IA» el AAAA-MM-DD (plato)»)
+y **`pendiente_revisar=si`**: aparecen en Documento → Pulir el documento → «Añadidos con IA, pendientes de revisar»
+hasta que pulses «Revisado» (la marca se borra). Ponles alias o fúndelos con tus variantes en tu documento. Si el
+`fdc_id` ya está en el documento, se reutiliza esa fila. Para publicarlas, exporta el documento y cópialo a
+`data/foods.csv`; mientras tanto, «Buscar actualización del documento» las conserva (no son conflicto).
 
 ## Validación al importar
 **Error (la fila se rechaza):** id vacío, con formato inválido o duplicado; nombre vacío; valor de nutriente no
@@ -95,6 +107,10 @@ lleva `grupo` = su id, `variante_por_defecto=si` y `tipo=receta`.
 node scripts/recetas.mjs              # informe: obligatorios por receta y qué ingrediente deja huecos; no escribe
 node scripts/recetas.mjs --aplicar    # escribe las filas en data/foods.csv (--foods y --recetas para otras rutas)
 ```
-Para "guardar como receta" desde la app: generar un objeto con este mismo formato (ingredientes = líneas de la
-comida, `peso_final_g` = lo que pese el plato) y calcular con `computeReceta` de `scripts/recetas-lib.mjs` (funciones
-puras, sin Node; hoy viven en `scripts/` y habría que moverlas a `frontend/js/core/`).
+**Desde la app** («Guardar como receta» en el Diario o al estimar con IA, y Documento → Pulir el documento →
+«Recetas»): mismo formato y mismo cálculo (`frontend/js/core/recetas.js`, que también usa el script). La fila se
+escribe en el documento del dispositivo con los mismos campos que `--aplicar`, y la definición se guarda en el
+dispositivo (va en la copia del diario). La lista muestra las de `data/recetas.json` más las tuyas (con el mismo id,
+gana la tuya); «Exportar recetas.json» da el fichero completo para copiarlo en `data/`, y «Recalcular todas» vuelve a
+calcular las filas con los nutrientes actuales. Una receta estimada con IA usa los gramos del plato terminado (en
+proporción, sin `peso_final_g`).

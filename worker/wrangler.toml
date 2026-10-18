@@ -1,5 +1,6 @@
 # Cloudflare Worker (plan gratuito).
-# Secrets (NO van aquí):  wrangler secret put GEMINI_API_KEY   y   wrangler secret put APP_TOKEN
+# Secrets (NO van aquí):  npm run worker:secret:gemini, npm run worker:secret:token
+#   y npm run worker:secret:usda («Estimar con IA»: la clave de api.data.gov, solo los 40 caracteres)
 name = "nutrition-tracker-ai"
 main = "src/index.js"
 compatibility_date = "2025-09-01"

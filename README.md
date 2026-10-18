@@ -75,12 +75,15 @@ Worker.
    intenta registrar uno por su cuenta y falla si ese nombre está ocupado: vuelve a ejecutarlo tú. Al terminar muestra la
    dirección del Worker: `https://nutrition-tracker-ai.TU-SUBDOMINIO.workers.dev`.
 5. Genera el token compartido entre la app y el Worker y guárdalo en tu gestor de contraseñas: `npm run token`
-6. Pon los dos secretos (te los pide por teclado; pégalos y pulsa Intro):
+6. Pon los secretos (te los pide por teclado; pégalos y pulsa Intro):
 
    ```
    npm run worker:secret:gemini    # tu clave de Gemini
+   npm run worker:secret:usda      # tu clave de FoodData Central (api.data.gov): solo los 40 caracteres, sin comillas
    npm run worker:secret:token     # el token del paso 5
    ```
+
+   La de USDA solo hace falta para «Estimar con IA» (platos que no están en tu documento); sin ella, dictar funciona igual.
 
 7. Comprueba en el navegador: `https://nutrition-tracker-ai.TU-SUBDOMINIO.workers.dev/health` debe responder
    `{"ok":true,"configurado":true,"token":"sin_token"}`.
@@ -130,6 +133,7 @@ decimal) o «(CSV con comas)» (el formato de `data/foods.csv`).
 | «No se pudo contactar con el servidor de la IA…» al Probar o al dictar | `ALLOWED_ORIGIN` no es tu GitHub Pages (el navegador bloquea la respuesta) o la dirección del Worker está mal | `ALLOWED_ORIGIN = "https://TU-USUARIO.github.io"` en `worker/wrangler.toml`, `npm run worker:deploy`, y revisa la dirección en Documento → Conexión |
 | «El Worker responde, pero el token no es correcto» / «El token no es correcto» | El token de la app no es el del Worker | Ponlo igual en los dos: `npm run worker:secret:token` y Documento → Conexión |
 | «El Worker responde, pero le faltan secretos» | Falta `GEMINI_API_KEY` o `APP_TOKEN` en el Worker | `npm run worker:secret:gemini` / `npm run worker:secret:token` |
+| «El Worker no tiene la clave de USDA…» o «USDA rechaza la clave del Worker…» al estimar | Falta `USDA_API_KEY` en el Worker o no es válida | `npm run worker:secret:usda` y pega solo la clave (40 letras y números) |
 | «Se ha alcanzado el límite de uso gratuito de la IA» | Cuota gratuita de Gemini agotada | Espera; mientras, «Añadir a mano». El texto dictado se conserva |
 | «El servicio de IA ha fallado» | Error de Gemini o modelo no disponible | Prueba de nuevo; mira `npm run worker:logs`; revisa `GEMINI_MODEL` |
 | No ves un cambio de la app | Caché de la app | Ciérrala y ábrela dos veces |
