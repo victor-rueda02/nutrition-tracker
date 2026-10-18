@@ -163,8 +163,8 @@ El sábado 24-10-2026, por ejemplo: «RH + movilidad», 2600 kcal, hidratos 4 g/
 Si no tienes plan, Objetivos → «Crear plan» genera uno con:
 
 - un periodo «Mis objetivos» abierto desde hoy, con tu perfil y **todos** los valores de referencia de
-  `data/targets.json` escritos de forma explícita (kcal, macros y los 31 micronutrientes; B1, niacina y ALA ya
-  calculados con las 2000 kcal de referencia, así que no cambian si cambias las kcal);
+  `data/targets.json` escritos de forma explícita (kcal, macros y micronutrientes), salvo la B1, la niacina y el ALA:
+  esos no se escriben para que se sigan calculando con las kcal de cada día (si pones 3000 kcal, suben con ellas);
 - los tipos `fuerza` («Fuerza», de lunes a viernes), `rh_movilidad` («RH + movilidad», sábado) y `descanso`
   («Descanso», domingo), cada uno con las kcal, proteína, hidratos y grasa de referencia, para que pongas las tuyas.
 

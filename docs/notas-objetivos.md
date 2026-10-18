@@ -21,7 +21,8 @@ formato, con un ejemplo completo y el orden de prioridad, está en `docs/OBJETIV
   Con algún error no se importa nada.
 - **Histórico**: el Diario llama a `targetsForDate(día mostrado)`; cada día se evalúa con su plan.
 - **«Crear plan»** (sin plan o sin periodos): un periodo «Mis objetivos» abierto desde hoy, con el perfil elegido y la
-  referencia de `targets.json` escrita entera (B1, niacina y ALA ya calculados con 2000 kcal), y los tipos de la semana
+  referencia de `targets.json` escrita entera salvo B1, niacina y ALA (se dejan fuera para que sigan a las kcal del
+  día; escritos quedarían congelados con 2000 kcal), y los tipos de la semana
   de Victor (`TIPOS_SEMANA`): `fuerza` lun-vie, `rh_movilidad` sábado, `descanso` domingo. Cada tipo trae energía,
   proteína, hidratos y grasa de referencia (lo que cambia entre tipos); los micros solo en el periodo, para que
   cambiarlos en el periodo valga para todos los días.

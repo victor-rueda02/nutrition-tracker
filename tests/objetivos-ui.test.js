@@ -206,7 +206,8 @@ test('«Crear plan» sin plan: periodo desde hoy con la referencia explícita y 
   assert.match(t.$('[role=status]').textContent, /Plan creado desde hoy con la referencia EFSA \(Hombre adulto\) y tus tipos de día/);
   const plan = await t.store.getSetting('plan_objetivos');
   const [p] = plan.periodos;
-  assert.deepEqual([plan.perfil, p.inicio, p.fin, Object.keys(p.valores).length], ['hombre', '2026-10-16', undefined, TARGETS.objetivos.length]);
+  assert.deepEqual([plan.perfil, p.inicio, p.fin, Object.keys(p.valores).length], ['hombre', '2026-10-16', undefined, TARGETS.objetivos.length - 3]); // sin B1, niacina ni ALA
+  assert.equal(p.valores.vitamina_b1_mg, undefined);
   assert.deepEqual(Object.values(p.tipos).map((x) => x.nombre), ['Fuerza', 'RH + movilidad', 'Descanso']);
   assert.equal(t.btn('Crear plan'), undefined); // ya hay plan
   assert.match(t.$('.objetivos-hoy').textContent, /Mis objetivos · desde el 16-10-2026 · Fuerza/);

@@ -342,12 +342,13 @@ export const TIPOS_SEMANA = [
 const DE_TIPO = ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']; // lo que cambia de un tipo de día a otro
 
 // «Crear plan»: un periodo abierto desde `fecha` con la referencia de targets.json (perfil `perfil`) escrita de forma
-// explícita (kcal, macros y micros; B1, niacina y ALA ya calculados con las kcal de referencia) y tus tipos de día
+// explícita (kcal, macros y micros; B1, niacina y ALA no, porque se calculan con las kcal de cada día) y tus tipos de día
 // (TIPOS_SEMANA), cada uno con las kcal y macros de referencia para que pongas las suyas. Sirve de plantilla.
 export function planDeReferencia({ fecha, perfil, targets, catalog }) {
   const plan = emptyPlan(targets.perfiles[perfil] ? perfil : targets.perfilPorDefecto);
   const valores = {};
   for (const t of targetsForDate(fecha, { plan, targets, catalog }).list) {
+    if (t.porMj != null || t.pctEnergia != null) continue; // B1, niacina y ALA: fuera, para que sigan a las kcal del día
     const e = Object.fromEntries(LIMITES.filter((k) => t[k] !== null).map((k) => [k, t[k]]));
     if (Object.keys(e).length) valores[t.clave] = e;
   }

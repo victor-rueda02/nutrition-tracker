@@ -314,13 +314,13 @@ test('«Crear plan»: periodo abierto desde hoy con la referencia explícita y t
   assert.equal(plan.perfil, 'hombre');
   const [p] = plan.periodos;
   assert.deepEqual([plan.periodos.length, p.id, p.nombre, p.inicio, p.fin], [1, 'objetivos_20261018', 'Mis objetivos', '2026-10-18', undefined]);
-  // todos los objetivos de targets.json, escritos con su valor de referencia
-  assert.deepEqual(Object.keys(p.valores), targets.list.map((t) => t.clave));
+  // los objetivos de targets.json, escritos con su valor de referencia, salvo los que dependen de las kcal
+  const segunKcal = ['vitamina_b1_mg', 'vitamina_b3_mg', 'ala_g'];
+  assert.deepEqual(Object.keys(p.valores), targets.list.map((t) => t.clave).filter((k) => !segunKcal.includes(k)));
   assert.deepEqual(p.valores.energia_kcal, { objetivo: 2000 });
   assert.deepEqual(p.valores.proteina_g, { min: 50 });
   assert.deepEqual(p.valores.sodio_mg, { max: 2000 });
   assert.deepEqual(p.valores.hierro_mg, { min: 11 });
-  assert.deepEqual(p.valores.vitamina_b1_mg, { min: 0.84 }); // ya calculada: no depende de las kcal
   assert.deepEqual(p.valores.epa_dha, { min: 0.25 });
   // los tres tipos, con kcal y macros de referencia, y la semana
   assert.deepEqual(Object.entries(p.tipos).map(([k, x]) => [k, x.nombre]), [['fuerza', 'Fuerza'], ['rh_movilidad', 'RH + movilidad'], ['descanso', 'Descanso']]);
@@ -342,4 +342,18 @@ test('regresión: lo escrito en la unidad de la columna no se redondea (0,25 g d
   const r = en(plan, '2026-10-18');
   assert.deepEqual([lim(r, 'epa_dha')[0], lim(r, 'ala_g')[0], lim(r, 'fibra_g')[1]], [0.25, 1.11, 32.75]);
   assert.equal(lim(r, 'proteina_g')[0], 137.8); // convertido (1,85 × 74,5 = 137,825): se redondea a 1 decimal
+});
+
+test('«Crear plan»: con las kcal cambiadas a 3000, B1, niacina y ALA se recalculan (no quedan congelados en 2000 kcal)', () => {
+  const plan = planDeReferencia({ fecha: '2026-10-18', perfil: 'hombre', ...ctx });
+  const segun = (r) => ['vitamina_b1_mg', 'vitamina_b3_mg', 'ala_g'].map((k) => lim(r, k));
+  assert.deepEqual(segun(en(plan, '2026-10-19')), [[0.84, null, null, 'referencia'], [13.39, null, null, 'referencia'], [1.11, null, null, 'referencia']]);
+  // las kcal del tipo «Fuerza» (lunes) y las del periodo (las usa un día sin tipo), a 3000
+  let editado = editPeriod(plan, { fecha: '2026-10-19', capa: 'fuerza', valores: { energia_kcal: { objetivo: 3000 } }, modo: 'todo' }).plan;
+  const a3000 = [[1.26, null, null, 'referencia'], [20.08, null, null, 'referencia'], [1.67, null, null, 'referencia']]; // 0,1 y 1,6 mg/MJ; 0,5 % / 9
+  assert.deepEqual(segun(en(editado, '2026-10-19')), a3000);
+  assert.deepEqual(segun(en(editado, '2026-10-25')), segun(en(plan, '2026-10-25'))); // domingo (descanso): sus 2000 kcal
+  editado = editPeriod(plan, { fecha: '2026-10-19', valores: { energia_kcal: { objetivo: 3000 } }, modo: 'todo' }).plan;
+  delete editado.periodos[0].semana.lun; // lunes sin tipo: manda el periodo
+  assert.deepEqual(segun(en(editado, '2026-10-19')), a3000);
 });
