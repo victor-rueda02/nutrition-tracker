@@ -56,9 +56,9 @@ test('el estado del propio alimento en su alias sí cuenta ("pistachos crudos", 
 // ---------- 2. Cortes y especies ----------
 test('documento: pechuga de pollo nueva; "pollo", "pavo" y "pechuga" a secas no identifican a ningún alimento', () => {
   const p = byId.get('pechuga_pollo_cruda');
-  assert.deepEqual([p.nombre, p.alias, p.estado, p.grupo, p.varianteDefecto], ['Pechuga de pollo sin piel cruda', ['pechuga de pollo'], 'crudo', 'pechuga_pollo', true]);
+  assert.deepEqual([p.nombre, p.alias, p.estado, p.grupo, p.varianteDefecto], ['Pechuga de pollo sin piel cruda', ['pechuga de pollo', 'filete de pollo'], 'crudo', 'pechuga_pollo', true]);
   assert.equal(p.extra.termino_busqueda_usda, 'Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw');
-  assert.deepEqual(byId.get('muslo_pollo_con_piel').alias, ['muslo de pollo', 'contramuslo']);
+  assert.deepEqual(byId.get('muslo_pollo_con_piel').alias, ['muslo de pollo', 'contramuslo', 'jamoncito de pollo']);
   assert.deepEqual(byId.get('pechuga_pavo_cruda').alias, ['pechuga de pavo']);
   const terms = new Set(realList.flatMap((f) => [f.nombre, ...(f.alias ?? [])]).map(normalizeText));
   for (const generic of ['pollo', 'pavo', 'pechuga']) assert.ok(!terms.has(generic), generic);
