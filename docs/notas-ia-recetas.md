@@ -1,7 +1,7 @@
 # Notas de la rama `ia-recetas`: «Estimar con IA» y «Guardar como receta»
 
 Rama `ia-recetas`, avanzada (fast-forward) a `main` en `1fcddd2` antes de empezar. Sin merge, push ni despliegue.
-Tests: **341 pasan** (`npm test`), todos con IA y USDA simulados. `npm run worker:check` empaqueta el Worker (sin publicar).
+Tests: **342 pasan** (`npm test`), todos con IA y USDA simulados. `npm run worker:check` empaqueta el Worker (sin publicar).
 
 ## 1. Qué hace
 
@@ -175,11 +175,12 @@ sin base. Si después publicas tu documento con esas filas, tampoco hay conflict
 
 Tu `data/foods.csv` (69 alimentos, 55 a la IA) y el modelo `gemini-3.1-flash-lite`.
 
-**Llamadas en total: Gemini 6 (de 10) y USDA 11 (de 30).**
+**Llamadas en total: Gemini 7 (de 10) y USDA 14 (de 30).**
 - Ronda 1 (Gemini 2, USDA 2): sin pantalla, solo Gemini; USDA rechazó la clave antigua.
 - Ronda 2 (Gemini 2): corrección del prompt.
 - Ronda 3 (Gemini 2, USDA 9 de un tope de 10): la app de verdad en jsdom, pulsando «Estimar con IA», con Gemini y
   USDA reales a través del código del Worker. Solo el dictado inicial se simuló.
+- Ronda 4 (Gemini 1, USDA 3): la paella completa, con el sugerido corregido (más abajo).
 
 ### Rondas 1 y 2 (prompt)
 - Primera ronda: la leche iba a USDA teniéndola en tu documento, y el azafrán salía con 5 g para no quitarlo.
@@ -231,14 +232,38 @@ Aviso: «No dijiste la cantidad: ración estimada de 450 g. Cámbiala si no es a
 | sal | 5 | Tu documento | | la fila que acababa de crear la lasaña: se reutiliza, no se duplica |
 
 Pie: «Elige un alimento en los ingredientes marcados.» y «Añadir a la comida» desactivado. Con el tope de 10 llamadas
-solo cupieron 3 de los 5 términos. Para completarla harían falta 3 llamadas más: 2 búsquedas y el detalle.
+solo cupieron 3 de los 5 términos.
+
+### Ronda 4: «un plato de paella» completa (3 llamadas a USDA)
+Lo ya buscado salió de la caché. Gemini dio la misma propuesta que en la segunda ronda. Ración estimada de 450 g ·
+suma 450 g de 450 g.
+
+| Ingrediente | g | Origen | Elegido en USDA (completitud) |
+|---|---|---|---|
+| arroz cocido | 200 | USDA · nuevo | Rice, white, medium-grain, cooked, unenriched · 24/31 (⚠ incompleto) |
+| pechuga de pollo cocinada | 80 | USDA · nuevo | Chicken, broilers or fryers, breast, meat only, cooked, roasted · 31/31 |
+| calamar cocinado | 60 | USDA · nuevo | **Mollusks, squid, mixed species, raw** · 31/31 (antes: «cooked, fried») |
+| gambas cocinadas | 40 | USDA · nuevo | Crustaceans, shrimp, mixed species, cooked, moist heat · 31/31 |
+| judías verdes cocinadas | 30 | USDA · nuevo | Beans, snap, green, cooked, boiled, drained, without salt · 31/31 |
+| Tomate frito | 20 | Tu documento | |
+| Aceite de oliva | 18 | Tu documento | |
+| sal | 2 | USDA · nuevo | Salt, table · 31/31 |
+
+Confirmación: 6 alimentos añadidos, pendientes de revisar. **Total 674 kcal y 48,9 g de proteína** (150 kcal por
+100 g). El arroz lleva el aviso «Alimento incompleto (24/31)».
 
 ### Lo que enseña la prueba
 - El flujo funciona de punta a punta: una llamada a Gemini por «Estimar», una búsqueda por término que falta, una de
   detalle al confirmar, filas nuevas reutilizadas en la siguiente estimación y nada en el diario hasta Guardar.
-- **Calamar «fried» como sugerido** para «cooked»: el sugerido del script elige el más completo entre los más
-  parecidos, y el frito lo es. El aviso de fortificación lo delata y se puede elegir otro en el selector. Una mejora
-  posible en `suggest`: penalizar palabras de preparación («fried», «breaded») que no están en el término.
+- **Calamar «fried» como sugerido** para «cooked» (corregido): el sugerido elegía el más completo entre los más
+  parecidos, y el frito lo era. Ahora una preparación que el término no pide reduce el parecido a la mitad (lista
+  `PREPARACIONES` de `usda-core.js`: fried, breaded, battered, coated, floured, with sauce, in sauce, with gravy,
+  canned, in oil, in syrup y glazed). Si el término la pide («Squid, cooked, fried»), vale. La revisión avisa
+  «Preparación que no pidió la IA» si eliges una así. Afecta también al sugerido de `scripts/usda.mjs`; tus `fdcId`
+  ya elegidos en `eleccion.csv` no cambian.
+- Para el calamar «cooked», SR Legacy no tiene calamar cocinado sin freír, así que ahora se sugiere el crudo: con
+  gramos del plato cocinado, rinde algo menos de kcal y proteína de las reales (pierde agua al cocinarse), pero mucho
+  menos error que el frito.
 - El arroz cocido de SR Legacy solo tiene 24/31: la pantalla lo avisa.
 
 ## 6. Ficheros compartidos que toco (para integrar con la rama `objetivos`)
@@ -268,7 +293,7 @@ Cambios pequeños y localizados:
 
 ## 7. Pendiente o a vigilar
 - Arreglar la línea `USDA_API_KEY` de `.env` (sección 4).
-- Sugerido de USDA con preparaciones de más («fried» para «cooked»): ver la sección 5.
+- Posible mejora: avisar cuando el elegido de USDA está crudo («raw») y el ingrediente está cocinado.
 - **Precisión**: las proporciones son típicas, no las tuyas. Las kcal y los macros salen razonables, pero los
   micronutrientes pueden desviarse. Para lo que repitas, mejor «Guardar como receta» con tus gramos.
 - Las filas cocinadas de USDA quedan en su propio grupo: fusionarlas con tus variantes es trabajo de «Pendientes de
