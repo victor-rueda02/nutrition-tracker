@@ -87,3 +87,12 @@ test('recetas: filas cocinadas que se dictan en gramos de plato sin aviso ("verd
     assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags], [id, 'alta', []], `${text} (${estado_dicho})`);
   }
 });
+
+test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. UU. no declarada queda sin dato', () => {
+  const c = byId.get('corn_flakes').nutrients;
+  assert.deepEqual([c.energia_kcal, c.proteina_g, c.hidratos_g, c.azucares_g, c.fibra_g, c.sodio_mg], [373, 6.7, 82, 0.9, 4.4, 600]); // sodio = sal 1,5 g ÷ 2,5
+  assert.deepEqual([c.vitamina_b1_mg, c.vitamina_b9_ug, c.vitamina_b12_ug, c.hierro_mg], [0.3, 282.2, 2.1, 7]); // B9 en DFE = 1,7 × 166 µg de ácido fólico
+  for (const k of ['vitamina_a_ug', 'vitamina_c_mg', 'vitamina_d_ug']) assert.equal(c[k], undefined, k);
+  assert.equal(c.potasio_mg, 107); // natural del maíz: de USDA
+  assert.equal(byId.get('corn_flakes').extra.termino_busqueda_usda, undefined); // usda.mjs no la vuelve a rellenar
+});

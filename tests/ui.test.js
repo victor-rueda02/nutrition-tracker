@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
-import { realFoods, catalog, settings, readFile } from './helpers.js';
+import { realFoods, rulesFoods, catalog, settings, readFile } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 
@@ -245,7 +245,8 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
 });
 
 test('Diario: superar un UL es un aviso distinto de "objetivo cumplido"', { skip }, async () => {
-  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] }); // 981 µg de vitamina A por 100 g
+  // Copia congelada del documento: sus corn flakes traen la fortificación de EE. UU. (981 µg de vitamina A por 100 g).
+  const t = await setup({ foods: rulesFoods, meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] });
   await t.act(() => t.btn('Diario').click());
   assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado/);
   assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\): 3924 µg \(UL 3000 µg\)/);
