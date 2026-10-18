@@ -1,7 +1,7 @@
 # Notas de la rama `ia-recetas`: «Estimar con IA» y «Guardar como receta»
 
 Rama `ia-recetas`, avanzada (fast-forward) a `main` en `1fcddd2` antes de empezar. Sin merge, push ni despliegue.
-Tests: **342 pasan** (`npm test`), todos con IA y USDA simulados. `npm run worker:check` empaqueta el Worker (sin publicar).
+Tests: **377 pasan** (tras integrar `main` con `objetivos`) (`npm test`), todos con IA y USDA simulados. `npm run worker:check` empaqueta el Worker (sin publicar).
 
 ## 1. Qué hace
 
@@ -263,7 +263,8 @@ Confirmación: 6 alimentos añadidos, pendientes de revisar. **Total 674 kcal y 
   ya elegidos en `eleccion.csv` no cambian.
 - Para el calamar «cooked», SR Legacy no tiene calamar cocinado sin freír, así que ahora se sugiere el crudo: con
   gramos del plato cocinado, rinde algo menos de kcal y proteína de las reales (pierde agua al cocinarse), pero mucho
-  menos error que el frito.
+  menos error que el frito. La revisión lo avisa: «Dato en crudo para un ingrediente cocinado: kcal y proteína algo
+  subestimadas» (`datoCrudoParaCocinado` en `core/estimate.js`; solo avisa, no bloquea).
 - El arroz cocido de SR Legacy solo tiene 24/31: la pantalla lo avisa.
 
 ## 6. Ficheros compartidos que toco (para integrar con la rama `objetivos`)
@@ -283,7 +284,8 @@ Cambios pequeños y localizados:
   La lógica está en `ui/estimate-screen.js` y `ui/recetas-screen.js`.
 - `frontend/js/main.js`: carga `data/recetas.json` y lo pasa como `recetasBase`.
 - `frontend/js/core/backup.js`: campo `recetas` en la copia (opcional al leer: las copias antiguas valen).
-- `frontend/sw.js`: `VERSION` a `nt-v7` y 9 ficheros nuevos (incluido `../data/recetas.json`).
+- `frontend/sw.js`: 9 ficheros nuevos (incluido `../data/recetas.json`). Tras integrar `objetivos` (que la dejó en
+  `nt-v10`), `VERSION` queda en `nt-v11`.
 - `frontend/index.html`: `css/ia-recetas.css`.
 - `frontend/js/core/draft.js`: `resolveUnmatchedWithLines`.
 - `frontend/js/core/schema.js`: `pendiente_revisar` en `WORK_COLUMNS`.
@@ -291,9 +293,18 @@ Cambios pequeños y localizados:
 - `scripts/dev-server.mjs`: rutas nuevas, `USDA_API_KEY` y la caché en disco de USDA.
 - `scripts/usda-lib.mjs`, `scripts/recetas.mjs` y `tests/recetas.test.js`: imports de los módulos movidos.
 
+### Integración con `objetivos` (`main` traído a `ia-recetas`)
+Conflictos en `app.js`, `sw.js`, `index.html` y `backup.js`, resueltos según `docs/notas-objetivos.md`:
+- **`app.js`**: imports de las dos ramas; la copia lleva `plan` y `recetas`; en la importación, `planCopia` y
+  `recetas`; en la vista de la copia, la línea del plan de `objetivos` y la de recetas. La pantalla Objetivos queda en
+  `ui/objetivos-screen.js`, como en `main`. En `screens` están `objetivos`, `estimar` y `recetas`.
+- **`sw.js`**: los ficheros de las dos ramas y `nt-v11`.
+- **`index.html`**: `objetivos.css` y `ia-recetas.css`.
+- **`backup.js`**: `buildBackup({ plan, recetas })` y `parseBackup` devuelve los dos. Test de regresión en
+  `tests/recetas-app.test.js`.
+
 ## 7. Pendiente o a vigilar
 - Arreglar la línea `USDA_API_KEY` de `.env` (sección 4).
-- Posible mejora: avisar cuando el elegido de USDA está crudo («raw») y el ingrediente está cocinado.
 - **Precisión**: las proporciones son típicas, no las tuyas. Las kcal y los macros salen razonables, pero los
   micronutrientes pueden desviarse. Para lo que repitas, mejor «Guardar como receta» con tus gramos.
 - Las filas cocinadas de USDA quedan en su propio grupo: fusionarlas con tus variantes es trabajo de «Pendientes de
