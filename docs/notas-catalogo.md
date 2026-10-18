@@ -49,7 +49,7 @@ Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 lla
 | `d1795d7` | 4. Recetas | `scripts/recetas.mjs` + `recetas-lib.mjs` + `tests/recetas.test.js`, `data/recetas.json` (con una receta de ejemplo que nunca va al catálogo), formato en `data/SCHEMA.md`. `verduras_asadas_hacendado` calculada y `parrillada_verduras_hacendado` nueva (proporciones del envase) |
 | `b9d8807` | 5. Corn flakes | Etiqueta de Corn Flakes 0 % azúcar Hacendado; vacías A, C y D (fortificación de EE. UU.) |
 | `1c941fa` | 6. Incompletos | BEDCA + huecos de USDA en merluza (merluza europea, no whiting), jamón serrano, pan de barra (B1, B2, B9 y hierro sin enriquecer) y galleta María; nuevos `brocoli` y `champinon` (BEDCA); EPA/DHA = 0 vegetales; atún USDA 173708 (escurrido, con sal) |
-| (siguiente) | 6. Merluza | Macros de la etiqueta de la merluza que compra Victor (merluza del Cabo: 82 kcal, 18 g de proteína; BEDCA daba 11,9 g); micros de BEDCA; agua de USDA (la de BEDCA no cuadra con 18 g de proteína) |
+| `25c6c09` | 6. Merluza | Macros de la etiqueta de la merluza que compra Victor (merluza del Cabo: 82 kcal, 18 g de proteína; BEDCA daba 11,9 g); micros de BEDCA; agua de USDA (la de BEDCA no cuadra con 18 g de proteína) |
 
 ## Informe de completitud (31 obligatorios, umbral 80 %)
 
