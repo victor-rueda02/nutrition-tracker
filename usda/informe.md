@@ -4,18 +4,16 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 ## Resumen
 
-- Alimentos en el documento: 66
-- Completos (≥ 80 % de 31 obligatorios): 51
-- Incompletos: 15
-- Con fdcId elegido: 52
+- Alimentos en el documento: 69
+- Completos (≥ 80 % de 31 obligatorios): 57
+- Incompletos: 12
+- Con fdcId elegido: 47
 - Buscables sin fdcId elegido: 0
-- Omitidos (excluidos, sin término o recetas): 16
+- Omitidos (excluidos, sin término o recetas): 24
 
 ## Avisos de fortificación (revisar contra el envase)
 
-- corn_flakes (fdcId 174648, Cereals ready-to-eat, RALSTON Corn Flakes): B1 = 4.483 mg por 100 g: imposible sin fortificar en un cereal; hierro = 19.4 mg por 100 g: imposible sin fortificar en un cereal
 - pan_molde_blanco (fdcId 174924, Bread, white, commercially prepared (includes soft bread crumbs)): ácido fólico añadido (431) = 86 µg — vaciados: vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg
-- pan_blanco_barra (fdcId 172675, Bread, french or vienna (includes sourdough)): ácido fólico añadido (431) = 67 µg — vaciados: vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg
 
 ## Valores sospechosos
 
@@ -71,8 +69,8 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 ### semillas_chia
 
 - USDA: Seeds, chia seeds, dried — fdcId 170554 — SR Legacy
-- Obligatorios: 23/31 (74 %) — **incompleto**
-- Faltan: Vitamina A (RAE), Vitamina D, Vitamina K, Vitamina B5 (ác. pantoténico), Vitamina B6, Colina, EPA (20:5 n-3), DHA (22:6 n-3)
+- Obligatorios: 25/31 (81 %)
+- Faltan: Vitamina A (RAE), Vitamina D, Vitamina K, Vitamina B5 (ác. pantoténico), Vitamina B6, Colina
 - Alternativa usada: vitamina_b9_ug: folato total (417), sin ácido fólico añadido (431)
 
 ### crema_cacahuete
@@ -85,15 +83,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - USDA: Rice, white, long-grain, regular, raw, unenriched — fdcId 169756 — SR Legacy
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
-### corn_flakes
-
-- USDA: Cereals ready-to-eat, RALSTON Corn Flakes — fdcId 174648 — SR Legacy
-- Obligatorios: 31/31 (100 %)
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-- Alternativa usada: vitamina_b9_ug: folato total (417), sin ácido fólico añadido (431)
-- ⚠ Fortificación: B1 = 4.483 mg por 100 g: imposible sin fortificar en un cereal
-- ⚠ Fortificación: hierro = 19.4 mg por 100 g: imposible sin fortificar en un cereal
 
 ### salsa_tomate_frito
 
@@ -121,13 +110,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 - USDA: Kiwifruit, green, raw — fdcId 168153 — SR Legacy
 - Obligatorios: 31/31 (100 %)
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
-### jamon_curado
-
-- USDA: Ham, prosciutto — fdcId 2705879 — Survey (FNDDS) (**estimado**)
-- Obligatorios: 29/31 (94 %)
-- Faltan: Vitamina B5 (ác. pantoténico), Manganeso
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
 ### jamon_cocido
@@ -214,14 +196,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Alternativa usada: sin enriquecer: vacíos vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg (USDA está enriquecido)
 - ⚠ Fortificación: ácido fólico añadido (431) = 86 µg (enriquecimiento vaciado)
 
-### pan_blanco_barra
-
-- USDA: Bread, french or vienna (includes sourdough) — fdcId 172675 — SR Legacy
-- Obligatorios: 26/31 (84 %)
-- Faltan: Vitamina B1 (tiamina), Vitamina B2 (riboflavina), Vitamina B3 (niacina), Vitamina B9 (folato, DFE), Hierro
-- Alternativa usada: sin enriquecer: vacíos vitamina_b9_ug, vitamina_b1_mg, vitamina_b2_mg, vitamina_b3_mg, hierro_mg (USDA está enriquecido)
-- ⚠ Fortificación: ácido fólico añadido (431) = 67 µg (enriquecimiento vaciado)
-
 ### queso_tierno_loncha
 
 - USDA: Cheese, edam — fdcId 173419 — SR Legacy
@@ -249,8 +223,8 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 ### pimiento_amarillo
 
 - USDA: Peppers, sweet, yellow, raw — fdcId 169383 — SR Legacy
-- Obligatorios: 25/31 (81 %)
-- Faltan: Vitamina E, Vitamina K, Colina, ALA (18:3 n-3), EPA (20:5 n-3), DHA (22:6 n-3)
+- Obligatorios: 27/31 (87 %)
+- Faltan: Vitamina E, Vitamina K, Colina, ALA (18:3 n-3)
 
 ### calabacin
 
@@ -299,27 +273,13 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 ### atun_lata_aceite
 
-- USDA: Fish, tuna, light, canned in oil, without salt, drained solids — fdcId 174227 — SR Legacy
-- Obligatorios: 26/31 (84 %)
-- Faltan: Vitamina A (RAE), Vitamina D, Vitamina E, Vitamina K, Colina
+- USDA: Fish, tuna, light, canned in oil, drained solids — fdcId 173708 — SR Legacy
+- Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
 ### merluza_cocida
 
 - USDA: Fish, whiting, mixed species, cooked, dry heat — fdcId 175161 — SR Legacy
-- Obligatorios: 31/31 (100 %)
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
-### galleta_maria
-
-- USDA: Cookies, butter, commercially prepared, unenriched — fdcId 172819 — SR Legacy
-- Obligatorios: 26/31 (84 %)
-- Faltan: Vitamina D, Vitamina E, Vitamina K, Colina, Selenio
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
-### merluza_cruda
-
-- USDA: Fish, whiting, mixed species, raw — fdcId 173713 — SR Legacy
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
@@ -336,7 +296,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 ## Incompletos, de peor a mejor
 
-- chorizo: 0/31 (0 %) — sin datos de USDA
 - coca_cola: 0/31 (0 %) — sin datos de USDA
 - crema_calabacin: 0/31 (0 %) — sin datos de USDA
 - lengua_cerdo: 0/31 (0 %) — sin datos de USDA
@@ -348,15 +307,20 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - salsa_cerdo_lata: 0/31 (0 %) — sin datos de USDA
 - tinto_verano: 0/31 (0 %) — sin datos de USDA
 - tortilla_patata: 0/31 (0 %) — sin datos de USDA
-- verduras_asadas_hacendado: 0/31 (0 %) — sin datos de USDA
 - yogur_griego_vainilla: 0/31 (0 %) — sin datos de USDA
-- semillas_chia: 23/31 (74 %)
 
 ## Para resolver a mano
 
+- corn_flakes: sin termino_busqueda_usda
+- jamon_curado: sin termino_busqueda_usda
 - patata_asada: excluido (incluir=no) ("Potatoes, baked, flesh and skin, without salt")
+- pan_blanco_barra: sin termino_busqueda_usda
+- brocoli: sin termino_busqueda_usda
+- champinon: sin termino_busqueda_usda
 - merluza_cocida: excluido (incluir=no) ("Fish, whiting, mixed species, cooked, dry heat")
-- verduras_asadas_hacendado: excluido (incluir=no) ("(descomponer en pimiento, calabacín, berenjena, cebolla)")
+- galleta_maria: sin termino_busqueda_usda
+- merluza_cruda: sin termino_busqueda_usda
+- verduras_asadas_hacendado: receta por descomponer ("(receta: data/recetas.json)")
 - crema_calabacin: excluido (incluir=no) ("(descomponer en ingredientes)")
 - tortilla_patata: excluido (incluir=no) ("(descomponer: patata, huevo, aceite, cebolla)")
 - lentejas_caseras: excluido (incluir=no) ("(descomponer en ingredientes)")
@@ -364,9 +328,10 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - coca_cola: excluido (incluir=no) ("Beverages, carbonated, cola, regular")
 - tinto_verano: excluido (incluir=no)
 - ron: excluido (incluir=no) ("Alcoholic beverage, distilled, rum, 80 proof")
-- chorizo: excluido (incluir=no) ("Sausage, chorizo, pork and beef, smoked")
+- chorizo: sin termino_busqueda_usda
 - lengua_cerdo: excluido (incluir=no) ("Pork, fresh, variety meats and by-products, tongue, raw")
 - salsa_cerdo_lata: excluido (incluir=no) ("Gravy, pork, canned")
 - salchicha_desayuno_cerdo: excluido (incluir=no) ("Sausage, pork, fresh, raw")
 - yogur_griego_vainilla: excluido (incluir=no)
 - queso_monterey_jack: excluido (incluir=no) ("Cheese, monterey")
+- parrillada_verduras_hacendado: receta por descomponer ("(receta: data/recetas.json)")

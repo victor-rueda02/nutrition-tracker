@@ -98,7 +98,7 @@ test('plan de búsqueda del documento real: omite incluir=no, sin término y rec
   const omit = (id) => plan.find((p) => p.food.id === id).omitido;
   assert.equal(omit('arroz_blanco_crudo'), null);
   assert.equal(omit('ron'), 'excluido (incluir=no)');
-  assert.equal(plan.filter((p) => !p.omitido).length, 49);
+  assert.equal(plan.filter((p) => !p.omitido).length, 45);
 });
 
 // ---------- cliente HTTP simulado ----------

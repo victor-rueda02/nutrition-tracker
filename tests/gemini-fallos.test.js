@@ -211,7 +211,7 @@ test('peso_en_crudo con variante cocinada en el grupo: se queda en la fila marca
 test('peso_en_crudo: columna si/no (vacío = no), se exporta y solo viaja a la IA si está marcado', () => {
   assert.equal(byId.get('pechuga_pollo_cruda').pesoEnCrudo, true);
   const marcados = new Set(realFoods.filter((f) => f.pesoEnCrudo).map((f) => f.id));
-  assert.equal(marcados.size, 18);
+  assert.equal(marcados.size, 20);
   for (const f of realList) assert.equal('peso_en_crudo' in f, marcados.has(f.id), f.id);
   assert.ok(realList.filter((f) => marcados.has(f.id)).every((f) => f.peso_en_crudo === true));
 

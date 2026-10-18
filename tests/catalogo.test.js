@@ -37,9 +37,10 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   for (const [id, text] of [['pan_blanco_barra', '60 g de pan'], ['pan_blanco_barra', '60 g de barra de pan'], ['jamon_cocido', '30 g de jamón cocido'], ['jamon_cocido', '30 g de jamón york']]) {
     assert.ok(!flagsOf(id, text).includes('sin_alias'), text);
   }
-  // pan de barra: el enriquecimiento de EE. UU. vaciado a propósito (sin dato, no 0)
+  // pan de barra español sin enriquecer: B1, B2, B9 y hierro de BEDCA; B3 sin dato (USDA solo la tiene enriquecida)
   const pan = byId.get('pan_blanco_barra');
-  for (const k of ['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'vitamina_b3_mg', 'hierro_mg']) assert.equal(pan.nutrients[k], undefined, k);
+  assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, undefined]);
+  assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
   assert.equal(pan.extra.fdc_id, '172675');
   assert.equal(byId.get('jamon_cocido').extra.fdc_id, '168295');
 });
@@ -95,4 +96,22 @@ test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. U
   for (const k of ['vitamina_a_ug', 'vitamina_c_mg', 'vitamina_d_ug']) assert.equal(c[k], undefined, k);
   assert.equal(c.potasio_mg, 107); // natural del maíz: de USDA
   assert.equal(byId.get('corn_flakes').extra.termino_busqueda_usda, undefined); // usda.mjs no la vuelve a rellenar
+});
+
+test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para que usda.mjs no los pise', () => {
+  const eleccion = readFile('../usda/eleccion.csv');
+  for (const [id, bedca] of [['merluza_cruda', 2347], ['jamon_curado', 2273], ['pan_blanco_barra', 2160], ['galleta_maria', 2675], ['brocoli', 1177], ['champinon', 2384]]) {
+    const f = byId.get(id);
+    assert.match(f.extra.fuente_usda, new RegExp(`^BEDCA ${bedca} `), id);
+    assert.equal(f.extra.termino_busqueda_usda, undefined, id);
+    assert.match(eleccion, new RegExp(`(^|\n)${id};[^;]*;;;`), id); // sin fdcId elegido
+  }
+  assert.match(eleccion, /(^|\n)corn_flakes;[^;]*;;;/); // etiqueta: igual
+  for (const id of ['brocoli', 'champinon']) assert.equal(byId.get(id).pesoEnCrudo, true, id);
+  assert.ok(!flagsOf('champinon', '50 g de champiñones laminados').includes('sin_alias'));
+  assert.ok(!flagsOf('brocoli', '150 g de brécol').includes('sin_alias'));
+  // EPA y DHA = 0 en vegetales (criterio de Victor): la chía queda completa
+  for (const id of ['semillas_chia', 'pimiento_amarillo']) assert.deepEqual([byId.get(id).nutrients.epa_g, byId.get(id).nutrients.dha_g], [0, 0], id);
+  // atún: escurrido y con sal (el aceite se dicta aparte)
+  assert.equal(byId.get('atun_lata_aceite').extra.fdc_id, '173708');
 });
