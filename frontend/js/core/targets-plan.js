@@ -245,7 +245,8 @@ function absolutos(clave, unit, entrada, { peso, kcal }) {
   if (esPorKg(u)) f = isNum(peso) ? peso : null;
   else if (u === '%kcal') f = isNum(kcal) ? kcal / 100 / KCAL_POR_G[clave] : null;
   const lim = {};
-  for (const k of LIMITES) lim[k] = isNum(entrada[k]) && f !== null ? round(entrada[k] * f, decimales(unit)) : null;
+  // solo se redondea lo convertido: lo escrito en la unidad de la columna se usa tal cual (0,25 g de EPA + DHA)
+  for (const k of LIMITES) lim[k] = isNum(entrada[k]) && f !== null ? (f === 1 ? entrada[k] : round(entrada[k] * f, decimales(unit))) : null;
   return lim;
 }
 
@@ -332,6 +333,32 @@ export function planFromLegacy(o, { desde, targets }) {
   return plan;
 }
 
+// Tu semana de entrenamiento: los tipos de día con los que nace un plan creado desde la app.
+export const TIPOS_SEMANA = [
+  { clave: 'fuerza', nombre: 'Fuerza', dias: ['lun', 'mar', 'mie', 'jue', 'vie'] },
+  { clave: 'rh_movilidad', nombre: 'RH + movilidad', dias: ['sab'] },
+  { clave: 'descanso', nombre: 'Descanso', dias: ['dom'] },
+];
+const DE_TIPO = ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']; // lo que cambia de un tipo de día a otro
+
+// «Crear plan»: un periodo abierto desde `fecha` con la referencia de targets.json (perfil `perfil`) escrita de forma
+// explícita (kcal, macros y micros; B1, niacina y ALA ya calculados con las kcal de referencia) y tus tipos de día
+// (TIPOS_SEMANA), cada uno con las kcal y macros de referencia para que pongas las suyas. Sirve de plantilla.
+export function planDeReferencia({ fecha, perfil, targets, catalog }) {
+  const plan = emptyPlan(targets.perfiles[perfil] ? perfil : targets.perfilPorDefecto);
+  const valores = {};
+  for (const t of targetsForDate(fecha, { plan, targets, catalog }).list) {
+    const e = Object.fromEntries(LIMITES.filter((k) => t[k] !== null).map((k) => [k, t[k]]));
+    if (Object.keys(e).length) valores[t.clave] = e;
+  }
+  const tipos = Object.fromEntries(TIPOS_SEMANA.map((x) => [x.clave, {
+    nombre: x.nombre, valores: Object.fromEntries(DE_TIPO.filter((k) => valores[k]).map((k) => [k, { ...valores[k] }])),
+  }]));
+  const semana = Object.fromEntries(DIAS_SEMANA.map((d) => [d, TIPOS_SEMANA.find((x) => x.dias.includes(d))?.clave ?? null]));
+  plan.periodos.push({ id: `objetivos_${fecha.replace(/-/g, '')}`, nombre: 'Mis objetivos', inicio: fecha, valores, tipos, semana });
+  return plan;
+}
+
 export function setPerfil(plan, perfil) {
   return { ...clone(plan ?? emptyPlan()), perfil };
 }
@@ -339,6 +366,7 @@ export function setPerfil(plan, perfil) {
 // "Hoy es: Entreno": excepción con ese tipo en la fecha; tipo null la quita (y la excepción, si no le queda nada más).
 export function setDayType(plan, fecha, tipo) {
   const p = clone(plan);
+  p.excepciones ??= [];
   const i = p.excepciones.findIndex((e) => e.fecha === fecha);
   if (tipo) {
     if (i >= 0) p.excepciones[i].tipo = tipo; else p.excepciones.push({ fecha, tipo });

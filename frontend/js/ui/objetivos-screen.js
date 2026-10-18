@@ -3,7 +3,7 @@
 // («desde hoy» por defecto, para no cambiar los días pasados) e importar y exportar el plan (JSON).
 // La lógica está en core/targets-plan.js; estilos propios en css/objetivos.css.
 import {
-  parsePlan, validatePlan, targetsForDate, dayContext, editPeriod, setDayType, setPerfil, planToJSON, nombreTipo, unidadesPara, LIMITES,
+  parsePlan, validatePlan, targetsForDate, dayContext, editPeriod, setDayType, setPerfil, planToJSON, nombreTipo, unidadesPara, planDeReferencia, LIMITES,
 } from '../core/targets-plan.js';
 import { parseNumber } from '../core/numbers.js';
 
@@ -168,6 +168,12 @@ export function objetivosScreen(ui) {
   const perfilSel = h('select', { 'aria-label': 'Perfil de referencia', onchange: (e) => guardar(setPerfil(state.plan, e.target.value), 'Perfil guardado.') },
     Object.entries(targets.perfiles).map(([k, label]) => h('option', { value: k, selected: k === t.perfil }, label)));
   const periodos = [...(state.plan?.periodos ?? [])].sort((a, b) => (a.inicio < b.inicio ? -1 : 1));
+  // Sin periodos: un plan de partida con la referencia escrita y tus tipos de día, para exportarlo y usarlo de plantilla.
+  const crear = () => {
+    const plan = planDeReferencia({ fecha: hoy, perfil: t.perfil, targets, catalog });
+    o.capa = 'periodo'; o.modo = 'desde_hoy';
+    return guardar(plan, `Plan creado desde hoy con la referencia EFSA (${targets.perfiles[plan.perfil] ?? plan.perfil}) y tus tipos de día. Pon tus kcal en cada tipo o expórtalo para editarlo.`);
+  };
   const seccionPlan = h('section', { class: 'panel objetivos-plan', 'aria-label': 'Plan de objetivos' },
     h('h2', {}, 'Plan'),
     h('p', {}, state.plan ? `${state.plan.nombre ?? 'Plan'}: ${periodos.length} ${periodos.length === 1 ? 'periodo' : 'periodos'}, ${state.plan.excepciones.length} ${state.plan.excepciones.length === 1 ? 'excepción' : 'excepciones'}.` : 'Sin plan: se usan las referencias EFSA.'),
@@ -176,6 +182,7 @@ export function objetivosScreen(ui) {
       h('span', { class: 'line-grams' }, `${fechaCorta(p.inicio)} → ${p.fin ? fechaCorta(p.fin) : 'sin fin'}`)))) : null,
     h('label', {}, 'Perfil de referencia (EFSA)', perfilSel),
     h('div', { class: 'row wrap' },
+      periodos.length ? null : h('button', { class: 'primary', onclick: crear }, 'Crear plan'),
       h('button', { class: 'secondary', onclick: () => fileIn.click() }, 'Importar plan'), fileIn,
       h('button', { class: 'secondary', disabled: !state.plan, onclick: exportar }, 'Exportar plan')),
     o.importe ? importeView(o.importe) : null,

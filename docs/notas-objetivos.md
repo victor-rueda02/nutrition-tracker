@@ -20,6 +20,12 @@ formato, con un ejemplo completo y el orden de prioridad, está en `docs/OBJETIV
 - **Importar sustituye** el plan del dispositivo (no se fusiona) tras enseñar el resumen, los errores y los avisos.
   Con algún error no se importa nada.
 - **Histórico**: el Diario llama a `targetsForDate(día mostrado)`; cada día se evalúa con su plan.
+- **«Crear plan»** (sin plan o sin periodos): un periodo «Mis objetivos» abierto desde hoy, con el perfil elegido y la
+  referencia de `targets.json` escrita entera (B1, niacina y ALA ya calculados con 2000 kcal), y los tipos de la semana
+  de Victor (`TIPOS_SEMANA`): `fuerza` lun-vie, `rh_movilidad` sábado, `descanso` domingo. Cada tipo trae energía,
+  proteína, hidratos y grasa de referencia (lo que cambia entre tipos); los micros solo en el periodo, para que
+  cambiarlos en el periodo valga para todos los días.
+- **Redondeo**: solo lo convertido (g/kg, kcal/kg, %kcal); lo escrito en la unidad de la columna se usa tal cual.
 
 ## Qué hay
 
@@ -67,7 +73,7 @@ por:
 > **Plan de objetivos** (rama `objetivos`): periodos, tipos de día (entreno/descanso), excepciones por fecha, rangos y
 > g/kg o % de kcal; cada día del Diario con los objetivos de ese día. Ver «Plan de objetivos» en la sección 3.
 
-Actualizar el número de tests (ahora 323).
+Actualizar el número de tests (ahora 329).
 
 ## Para el coordinador (integración con `ia-recetas`)
 

@@ -5,12 +5,13 @@ import { loadTargets, resolveTargets } from '../frontend/js/core/targets.js';
 import { diaryReport, evaluate } from '../frontend/js/core/diary.js';
 import {
   parsePlan, validatePlan, targetsForDate, periodoVigente, dayContext, editPeriod, setDayType, setPerfil, planFromLegacy, emptyPlan, planToJSON, claveDia,
+  planDeReferencia, TIPOS_SEMANA,
 } from '../frontend/js/core/targets-plan.js';
 import { catalog, readFile, realFoods } from './helpers.js';
 
 const { targets } = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog);
 const ctx = { targets, catalog };
-const EJEMPLO = readFile('../docs/OBJETIVOS-FORMATO.md').match(/```json\n([\s\S]*?)```/)[1];
+const [EJEMPLO, EJEMPLO_SEMANA] = [...readFile('../docs/OBJETIVOS-FORMATO.md').matchAll(/```json\n([\s\S]*?)```/g)].map((m) => m[1]);
 const ejemplo = parsePlan(EJEMPLO, ctx).plan;
 const PLAN = (o = {}) => ({ tipo: 'plan_objetivos', version: 1, periodos: [], ...o });
 const P = (o = {}) => ({ id: 'p', nombre: 'P', inicio: '2026-01-01', ...o });
@@ -264,4 +265,81 @@ test('el diario evalúa cada día con los objetivos de ese día', () => {
   assert.deepEqual([antes.valor, antes.origen], [2000, 'referencia']);
   assert.equal(lun.total, dom.total);
   assert.ok(lun.pct < dom.pct);
+});
+
+// ---------- cualquier número de tipos de día ----------
+const CUATRO = PLAN({
+  periodos: [P({
+    peso_kg: 75,
+    tipos: {
+      fuerza: { nombre: 'Fuerza', valores: { energia_kcal: { objetivo: 2900 } } },
+      pierna: { nombre: 'Pierna', valores: { energia_kcal: { objetivo: 3000 } } },
+      rh_movilidad: { nombre: 'RH + movilidad', valores: { energia_kcal: { objetivo: 2600 } } },
+      descanso: { nombre: 'Descanso', valores: { energia_kcal: { objetivo: 2400 } } },
+    },
+    semana: { lun: 'fuerza', mar: 'pierna', mie: 'fuerza', jue: 'pierna', vie: 'fuerza', sab: 'rh_movilidad', dom: 'descanso' },
+  })],
+});
+
+test('el segundo ejemplo del formato (tres tipos) es válido: el sábado es «RH + movilidad»', () => {
+  const r = parsePlan(EJEMPLO_SEMANA, ctx);
+  assert.deepEqual([r.ok, r.errors, r.avisos], [true, [], []]);
+  const sab = en(r.plan, '2026-10-24');
+  assert.deepEqual(sab.tipoDia, { clave: 'rh_movilidad', nombre: 'RH + movilidad', origen: 'semana' });
+  assert.deepEqual(lim(sab, 'energia_kcal'), [null, 2600, null, 'tipo']);
+  assert.deepEqual(lim(sab, 'hidratos_g'), [null, 300, null, 'tipo']);
+  assert.deepEqual(lim(sab, 'proteina_g'), [135, null, null, 'periodo']);
+  assert.deepEqual(lim(sab, 'grasa_total_g'), [null, 70, null, 'referencia']);
+  assert.deepEqual(['2026-10-19', '2026-10-23', '2026-10-25'].map((f) => en(r.plan, f).tipoDia.nombre), ['Fuerza', 'Fuerza', 'Descanso']);
+});
+
+test('cuatro tipos de día: cada día de la semana con el suyo; la excepción y la edición valen para cualquiera', () => {
+  assert.deepEqual(validatePlan(CUATRO, ctx).errors, []);
+  const semana = ['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23', '2026-10-24', '2026-10-25'].map((f) => {
+    const r = en(CUATRO, f);
+    return [r.tipoDia.nombre, r.kcal];
+  });
+  assert.deepEqual(semana, [['Fuerza', 2900], ['Pierna', 3000], ['Fuerza', 2900], ['Pierna', 3000], ['Fuerza', 2900], ['RH + movilidad', 2600], ['Descanso', 2400]]);
+  const movido = setDayType(CUATRO, '2026-10-24', 'pierna');
+  assert.deepEqual(en(movido, '2026-10-24').tipoDia, { clave: 'pierna', nombre: 'Pierna', origen: 'excepcion' });
+  const editado = editPeriod(CUATRO, { fecha: '2026-10-24', capa: 'rh_movilidad', valores: { energia_kcal: { objetivo: 2700 } } }).plan;
+  assert.deepEqual(validatePlan(editado, ctx).errors, []);
+  assert.deepEqual(['2026-10-17', '2026-10-24'].map((f) => en(editado, f).kcal), [2600, 2700]); // desde hoy: el sábado anterior igual
+  assert.equal(en(editado, '2026-10-24').tipoDia.nombre, 'RH + movilidad');
+});
+
+test('«Crear plan»: periodo abierto desde hoy con la referencia explícita y tus tres tipos de día', () => {
+  const plan = planDeReferencia({ fecha: '2026-10-18', perfil: 'hombre', ...ctx });
+  assert.deepEqual(validatePlan(plan, ctx), { ok: true, plan, errors: [], avisos: [] });
+  assert.equal(plan.perfil, 'hombre');
+  const [p] = plan.periodos;
+  assert.deepEqual([plan.periodos.length, p.id, p.nombre, p.inicio, p.fin], [1, 'objetivos_20261018', 'Mis objetivos', '2026-10-18', undefined]);
+  // todos los objetivos de targets.json, escritos con su valor de referencia
+  assert.deepEqual(Object.keys(p.valores), targets.list.map((t) => t.clave));
+  assert.deepEqual(p.valores.energia_kcal, { objetivo: 2000 });
+  assert.deepEqual(p.valores.proteina_g, { min: 50 });
+  assert.deepEqual(p.valores.sodio_mg, { max: 2000 });
+  assert.deepEqual(p.valores.hierro_mg, { min: 11 });
+  assert.deepEqual(p.valores.vitamina_b1_mg, { min: 0.84 }); // ya calculada: no depende de las kcal
+  assert.deepEqual(p.valores.epa_dha, { min: 0.25 });
+  // los tres tipos, con kcal y macros de referencia, y la semana
+  assert.deepEqual(Object.entries(p.tipos).map(([k, x]) => [k, x.nombre]), [['fuerza', 'Fuerza'], ['rh_movilidad', 'RH + movilidad'], ['descanso', 'Descanso']]);
+  assert.deepEqual(p.tipos.rh_movilidad.valores, { energia_kcal: { objetivo: 2000 }, proteina_g: { min: 50 }, hidratos_g: { objetivo: 260 }, grasa_total_g: { objetivo: 70 } });
+  assert.deepEqual(p.semana, { lun: 'fuerza', mar: 'fuerza', mie: 'fuerza', jue: 'fuerza', vie: 'fuerza', sab: 'rh_movilidad', dom: 'descanso' });
+  assert.equal(TIPOS_SEMANA.length, 3);
+  // los objetivos del día son los mismos que la referencia
+  const ref = en(null, '2026-10-19');
+  const creado = en(plan, '2026-10-19');
+  assert.deepEqual(creado.list.map((t) => [t.clave, t.min, t.objetivo, t.max, t.ul]), ref.list.map((t) => [t.clave, t.min, t.objetivo, t.max, t.ul]));
+  assert.deepEqual([creado.tipoDia.nombre, en(plan, '2026-10-24').tipoDia.nombre, en(plan, '2026-10-25').tipoDia.nombre], ['Fuerza', 'RH + movilidad', 'Descanso']);
+  // perfil mujer: sus valores
+  assert.deepEqual(planDeReferencia({ fecha: '2026-10-18', perfil: 'mujer', ...ctx }).periodos[0].valores.hierro_mg, { min: 16 });
+  assert.equal(planDeReferencia({ fecha: '2026-10-18', perfil: 'marciano', ...ctx }).perfil, 'hombre');
+});
+
+test('regresión: lo escrito en la unidad de la columna no se redondea (0,25 g de EPA + DHA no pasa a 0,3)', () => {
+  const plan = PLAN({ periodos: [P({ peso_kg: 74.5, valores: { epa_dha: { min: 0.25 }, ala_g: { min: 1.11 }, fibra_g: { objetivo: 32.75 }, proteina_g: { unidad: 'g/kg', min: 1.85 } } })] });
+  const r = en(plan, '2026-10-18');
+  assert.deepEqual([lim(r, 'epa_dha')[0], lim(r, 'ala_g')[0], lim(r, 'fibra_g')[1]], [0.25, 1.11, 32.75]);
+  assert.equal(lim(r, 'proteina_g')[0], 137.8); // convertido (1,85 × 74,5 = 137,825): se redondea a 1 decimal
 });

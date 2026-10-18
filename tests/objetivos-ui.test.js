@@ -195,3 +195,73 @@ test('copia del diario: lleva el plan; se restaura si el dispositivo no tiene; u
   await roto.act(() => roto.btn('Importar 2 comidas').click());
   assert.equal(await roto.store.getSetting('plan_objetivos'), undefined);
 });
+
+const opciones = (t, sel) => t.$$(`${sel} option`).map((x) => x.textContent);
+
+test('«Crear plan» sin plan: periodo desde hoy con la referencia explícita y tus tres tipos; se exporta como plantilla', { skip }, async () => {
+  const t = await setup({ meals: COMIDAS });
+  await abrirObjetivos(t);
+  assert.equal(t.btn('Exportar plan').disabled, true);
+  await t.act(() => t.btn('Crear plan').click());
+  assert.match(t.$('[role=status]').textContent, /Plan creado desde hoy con la referencia EFSA \(Hombre adulto\) y tus tipos de día/);
+  const plan = await t.store.getSetting('plan_objetivos');
+  const [p] = plan.periodos;
+  assert.deepEqual([plan.perfil, p.inicio, p.fin, Object.keys(p.valores).length], ['hombre', '2026-10-16', undefined, TARGETS.objetivos.length]);
+  assert.deepEqual(Object.values(p.tipos).map((x) => x.nombre), ['Fuerza', 'RH + movilidad', 'Descanso']);
+  assert.equal(t.btn('Crear plan'), undefined); // ya hay plan
+  assert.match(t.$('.objetivos-hoy').textContent, /Mis objetivos · desde el 16-10-2026 · Fuerza/);
+  assert.deepEqual(opciones(t, 'select[aria-label="Hoy es"]'), ['Según la semana (Fuerza)', 'Fuerza', 'RH + movilidad', 'Descanso']);
+  assert.match(hoy(t, 'hierro_mg').textContent, /al menos 11 mg.*periodo/);
+  await t.act(() => t.btn('Exportar plan').click());
+  assert.deepEqual(JSON.parse(t.saved[0].text), plan);
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Mis objetivos · Fuerza/);
+  assert.match(fila(t, 'energia_kcal').textContent, /\/ 2000 kcal/); // los mismos valores que la referencia
+  assert.match(fila(t, 'vitamina_b1_mg').textContent, /\/ 0,84 mg/);
+  // con el perfil mujer elegido antes (plan sin periodos): sigue ofreciendo «Crear plan», con sus valores
+  const m = await setup();
+  await abrirObjetivos(m);
+  await m.elegir('select[aria-label="Perfil de referencia"]', 'mujer');
+  await m.act(() => m.btn('Crear plan').click());
+  assert.deepEqual((await m.store.getSetting('plan_objetivos')).periodos[0].valores.hierro_mg, { min: 16 });
+});
+
+const CUATRO = {
+  tipo: 'plan_objetivos', version: 1, nombre: 'Cuatro tipos', excepciones: [],
+  periodos: [{
+    id: 'semana', nombre: 'Semana', inicio: '2026-01-01',
+    tipos: {
+      fuerza: { nombre: 'Fuerza', valores: { energia_kcal: { objetivo: 2900 } } },
+      pierna: { nombre: 'Pierna', valores: { energia_kcal: { objetivo: 3000 } } },
+      rh_movilidad: { nombre: 'RH + movilidad', valores: { energia_kcal: { objetivo: 2600 } } },
+      descanso: { nombre: 'Descanso', valores: { energia_kcal: { objetivo: 2400 } } },
+    },
+    semana: { lun: 'fuerza', mar: 'pierna', mie: 'fuerza', jue: 'pierna', vie: 'fuerza', sab: 'rh_movilidad', dom: 'descanso' },
+  }],
+};
+
+test('cuatro tipos de día: «Hoy es» y «Qué valores» los listan todos y el Diario dice el tipo de cada día', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('s', '2026-10-10', [['arroz_blanco_crudo', 100]]), ...COMIDAS], ajustes: { plan_objetivos: CUATRO } });
+  await abrirObjetivos(t);
+  assert.deepEqual(opciones(t, 'select[aria-label="Hoy es"]'), ['Según la semana (Fuerza)', 'Fuerza', 'Pierna', 'RH + movilidad', 'Descanso']);
+  assert.deepEqual(opciones(t, 'select[aria-label="Qué valores"]'), ['Por defecto del periodo', 'Días de tipo «Fuerza»', 'Días de tipo «Pierna»', 'Días de tipo «RH + movilidad»', 'Días de tipo «Descanso»']);
+  await t.elegir('select[aria-label="Hoy es"]', 'pierna');
+  assert.match(t.$('.objetivos-hoy').textContent, /Semana · desde el 01-01-2026 · Pierna/);
+  assert.match(hoy(t, 'energia_kcal').textContent, /3000 kcal.*tipo «Pierna»/);
+  await t.elegir('select[aria-label="Qué valores"]', 'rh_movilidad');
+  const kcal = t.$('input[aria-label="Energía: objetivo"]');
+  assert.equal(kcal.value, '2600');
+  kcal.value = '2700';
+  await t.act(() => t.btn('Guardar').click());
+  const plan = await t.store.getSetting('plan_objetivos');
+  assert.deepEqual(plan.periodos.map((p) => [p.inicio, p.fin, p.tipos.rh_movilidad.valores.energia_kcal.objetivo]), [['2026-01-01', '2026-10-15', 2600], ['2026-10-16', undefined, 2700]]);
+  // el Diario, día a día hacia atrás
+  await t.act(() => t.btn('‹ Volver').click());
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    if (i) await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+    dias.push(t.$('.objetivos-dia').textContent.replace('Objetivos: Semana · ', ''));
+  }
+  assert.deepEqual(dias, ['Pierna · excepción del día', 'Pierna', 'Fuerza', 'Pierna', 'Fuerza', 'Descanso', 'RH + movilidad']); // vie 16 … sáb 10
+  assert.match(fila(t, 'energia_kcal').textContent, /\/ 2600 kcal/); // el sábado 10, con lo de entonces
+});

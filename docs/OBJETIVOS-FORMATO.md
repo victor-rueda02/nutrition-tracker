@@ -96,6 +96,80 @@ Cada día del diario se evalúa con los objetivos que el plan da para **ese día
 }
 ```
 
+## Segundo ejemplo: semana con tres tipos de día
+
+Puedes tener tantos tipos como quieras; la app los lista todos en «Hoy es», en la edición y en el Diario. Aquí, una
+semana de fuerza de lunes a viernes, recuperación (RH + movilidad) el sábado y descanso el domingo; las kcal y los
+macros cambian por tipo y el resto sale del periodo o de la referencia:
+
+```json
+{
+  "tipo": "plan_objetivos",
+  "version": 1,
+  "nombre": "Semana de fuerza",
+  "perfil": "hombre",
+  "periodos": [
+    {
+      "id": "fuerza_2026",
+      "nombre": "Fuerza otoño 2026",
+      "inicio": "2026-10-19",
+      "peso_kg": 75,
+      "valores": {
+        "proteina_g": { "unidad": "g/kg", "min": 1.8 },
+        "fibra_g": { "min": 30 },
+        "magnesio_mg": { "min": 400 },
+        "vitamina_d_ug": { "min": 20 }
+      },
+      "tipos": {
+        "fuerza": {
+          "nombre": "Fuerza",
+          "valores": {
+            "energia_kcal": { "objetivo": 2900 },
+            "hidratos_g": { "unidad": "g/kg", "objetivo": 5 },
+            "grasa_total_g": { "unidad": "%kcal", "min": 25, "max": 30 }
+          }
+        },
+        "rh_movilidad": {
+          "nombre": "RH + movilidad",
+          "valores": {
+            "energia_kcal": { "objetivo": 2600 },
+            "hidratos_g": { "unidad": "g/kg", "objetivo": 4 }
+          }
+        },
+        "descanso": {
+          "nombre": "Descanso",
+          "valores": {
+            "energia_kcal": { "objetivo": 2400 },
+            "hidratos_g": { "unidad": "g/kg", "objetivo": 3 },
+            "grasa_total_g": { "unidad": "%kcal", "min": 30, "max": 35 }
+          }
+        }
+      },
+      "semana": {
+        "lun": "fuerza", "mar": "fuerza", "mie": "fuerza", "jue": "fuerza", "vie": "fuerza",
+        "sab": "rh_movilidad", "dom": "descanso"
+      }
+    }
+  ],
+  "excepciones": []
+}
+```
+
+El sábado 24-10-2026, por ejemplo: «RH + movilidad», 2600 kcal, hidratos 4 g/kg × 75 = 300 g, proteína al menos
+135 g (del periodo) y grasa, la referencia EFSA (70 g), porque ese tipo no la define.
+
+## Empezar desde la app: «Crear plan»
+
+Si no tienes plan, Objetivos → «Crear plan» genera uno con:
+
+- un periodo «Mis objetivos» abierto desde hoy, con tu perfil y **todos** los valores de referencia de
+  `data/targets.json` escritos de forma explícita (kcal, macros y los 31 micronutrientes; B1, niacina y ALA ya
+  calculados con las 2000 kcal de referencia, así que no cambian si cambias las kcal);
+- los tipos `fuerza` («Fuerza», de lunes a viernes), `rh_movilidad` («RH + movilidad», sábado) y `descanso`
+  («Descanso», domingo), cada uno con las kcal, proteína, hidratos y grasa de referencia, para que pongas las tuyas.
+
+Desde ahí, ajusta las kcal de cada tipo en la pantalla o exporta el plan y edítalo como plantilla.
+
 ## Campos
 
 ### Raíz
