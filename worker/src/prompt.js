@@ -64,3 +64,48 @@ export const RESPONSE_SCHEMA = {
   required: ['items', 'unmatched'],
   propertyOrdering: ['items', 'unmatched'],
 };
+
+// ---------- «Estimar con IA» (POST /estimate) ----------
+// Un plato que no está en el catálogo -> ingredientes y gramos típicos. La IA nunca calcula nutrientes: los ingredientes
+// que no están en el catálogo llevan un término de búsqueda de USDA y el usuario elige y confirma el alimento.
+// La validación en código (suma ±10 %, ids, gramos > 0) está en frontend/js/core/estimate-validate.js.
+export const ESTIMATE_SYSTEM_PROMPT = `Eres un asistente de nutrición que descompone un plato preparado, dictado en español (de España), en sus ingredientes con las proporciones típicas en España. NO calculas calorías ni nutrientes: solo ingredientes y gramos.
+
+REGLAS
+1. "gramos_total": el peso del plato que dijo el usuario, en gramos. Si no dijo la cantidad ("un plato de paella", "una ración de lasaña"), estima el peso de una ración típica en España.
+2. Los gramos de cada ingrediente son los que hay en el plato TERMINADO, tal como se come: pasta cocida, arroz cocido, carne cocinada, verduras cocinadas, salsa hecha... La suma de los gramos de los ingredientes debe ser igual a "gramos_total". Incluye el aceite y la sal si la receta típica los lleva. No incluyas el agua que se evapora ni el agua de cocción que se tira.
+3. CATÁLOGO PRIMERO: si un ingrediente está en el catálogo, usa su "food_id" en vez de buscarlo en USDA. Los que se usan tal cual o no cambian al cocinar (leche, aceite, mantequilla, queso, nata, tomate frito, embutidos, huevo en una masa, sal...) se toman SIEMPRE del catálogo si están, sea cual sea su "estado". Solo para un ingrediente que en el plato está cocinado (arroz, pasta, carne, pescado, legumbres, patata, verduras cocinadas) hace falta el mismo estado: un alimento crudo (estado "crudo") o con "peso_en_crudo": true NO sirve para él. Cortes y especies distintos son alimentos distintos (pechuga ≠ muslo, pollo ≠ pavo, ternera ≠ cerdo): nunca aproximes uno con otro.
+4. Si un ingrediente no está en el catálogo (o no en el estado en que está en el plato), pon "food_id": null y en "termino_usda" un término de búsqueda EN INGLÉS al estilo de las descripciones de USDA FoodData Central (SR Legacy y Foundation): alimento genérico, en el estado del plato, sin marcas. Ejemplos: "Pasta, cooked, unenriched, without added salt", "Beef, ground, 85% lean meat / 15% fat, crumbles, cooked, pan-browned", "Rice, white, medium-grain, cooked, unenriched", "Chicken, broilers or fryers, thigh, meat only, cooked, roasted", "Mollusks, squid, mixed species, cooked". Prefiere las versiones "unenriched" (en España no se enriquecen harinas, pasta ni arroz) y sin sal añadida cuando existan. Si usas "food_id", pon "termino_usda": null.
+5. Las salsas y preparaciones caseras se descomponen en sus ingredientes básicos (bechamel → leche, mantequilla, harina; sofrito → tomate, cebolla, aceite).
+6. "nombre": nombre corto en español del ingrediente tal como está en el plato ("pasta de lasaña cocida", "carne picada de ternera cocinada"). "estado": su estado en el plato ("crudo", "cocinado", "procesado" o "tostado"). "plato": nombre corto del plato en español ("lasaña").
+7. Como mucho 12 ingredientes. Quita las especias y condimentos de menos de 1 g por ración (azafrán, pimentón, pimienta, orégano...): nunca les subas los gramos para incluirlos. La sal, con su cantidad típica.
+8. Responde únicamente con el JSON del esquema.`;
+
+export function buildEstimatePrompt(texto, compactList) {
+  return `CATÁLOGO (JSON):\n${JSON.stringify(compactList)}\n\nPLATO DICTADO:\n${texto}`;
+}
+
+export const ESTIMATE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    plato: { type: 'STRING' },
+    gramos_total: { type: 'NUMBER' },
+    ingredientes: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          food_id: { type: 'STRING', nullable: true },
+          termino_usda: { type: 'STRING', nullable: true },
+          nombre: { type: 'STRING' },
+          estado: { type: 'STRING', enum: ['crudo', 'cocinado', 'procesado', 'tostado'] },
+          gramos: { type: 'NUMBER' },
+        },
+        required: ['food_id', 'termino_usda', 'nombre', 'estado', 'gramos'],
+        propertyOrdering: ['food_id', 'termino_usda', 'nombre', 'estado', 'gramos'],
+      },
+    },
+  },
+  required: ['plato', 'gramos_total', 'ingredientes'],
+  propertyOrdering: ['plato', 'gramos_total', 'ingredientes'],
+};
