@@ -135,7 +135,7 @@ decimal) o «(CSV con comas)» (el formato de `data/foods.csv`).
 | «El Worker responde, pero le faltan secretos» | Falta `GEMINI_API_KEY` o `APP_TOKEN` en el Worker | `npm run worker:secret:gemini` / `npm run worker:secret:token` |
 | «El Worker no tiene la clave de USDA…» o «USDA rechaza la clave del Worker…» al estimar | Falta `USDA_API_KEY` en el Worker o no es válida | `npm run worker:secret:usda` y pega solo la clave (40 letras y números) |
 | «Se ha alcanzado el límite de uso gratuito de la IA» | Cuota gratuita de Gemini agotada | Espera; mientras, «Añadir a mano». El texto dictado se conserva |
-| «El servicio de IA ha fallado» | Error de Gemini o modelo no disponible | Prueba de nuevo; mira `npm run worker:logs`; revisa `GEMINI_MODEL` |
+| «El servicio de IA ha fallado» | Error de Gemini o modelo no disponible | Prueba de nuevo; mira `npm run worker:logs`; revisa `GEMINI_MODEL` y `GEMINI_MODEL_FALLBACK` (si Google devuelve 5xx, el Worker reintenta una vez y prueba el modelo de respaldo) |
 | No ves un cambio de la app | Caché de la app | Ciérrala y ábrela dos veces |
 
 ## Coste

@@ -21,7 +21,37 @@ export const MAX_TERMINOS = MAX_INGREDIENTES; // búsquedas de USDA por petició
 export const MAX_FDC = 20; // detalle de USDA: una sola llamada
 
 // Llama al proveedor configurado. El modelo sale de UNA variable: GEMINI_MODEL (wrangler.toml).
-const defaultCallModel = (env, args) => callGemini({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL, ...args });
+// Si Google falla (5xx), UN reintento con el mismo modelo tras RETRY_MS y, si vuelve a fallar, UNA llamada al modelo de
+// respaldo GEMINI_MODEL_FALLBACK (si está puesto y es otro). Un modelo que Google ya no encuentra (404) pasa directo al
+// respaldo. 429, clave y demás errores no se reintentan. Devuelve { text, model } (el modelo que contestó).
+export const RETRY_MS = 2000;
+const esperar = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+export async function callModelResiliente(env, args, { call = callGemini, sleep = esperar } = {}) {
+  const ask = async (model) => ({ text: await call({ apiKey: env.GEMINI_API_KEY, model, ...args }), model });
+  const respaldo = env.GEMINI_MODEL_FALLBACK && env.GEMINI_MODEL_FALLBACK !== env.GEMINI_MODEL ? env.GEMINI_MODEL_FALLBACK : null;
+  const caido = (e) => e instanceof ProviderError && e.status >= 500;
+  let error;
+  try {
+    return await ask(env.GEMINI_MODEL);
+  } catch (e) {
+    error = e;
+  }
+  if (caido(error)) {
+    console.error(`IA: ${env.GEMINI_MODEL} falló (${error.status}); reintento en ${RETRY_MS / 1000} s`);
+    await sleep(RETRY_MS);
+    try {
+      return await ask(env.GEMINI_MODEL);
+    } catch (e) {
+      error = e;
+    }
+  }
+  if (respaldo && (caido(error) || (error instanceof ProviderError && error.status === 404))) {
+    console.error(`IA: ${env.GEMINI_MODEL} sigue fallando (${error.status}); pruebo el respaldo ${respaldo}`);
+    return ask(respaldo); // si también falla, su error es el que se clasifica
+  }
+  throw error;
+}
+const defaultCallModel = (env, args) => callModelResiliente(env, args);
 
 function corsHeaders(origin, env) {
   if (!origin || origin !== env.ALLOWED_ORIGIN) return {};
@@ -101,8 +131,11 @@ async function askModel(env, callModel, args, validate, cors) {
   let lastError = 'sin intentos';
   for (let attempt = 1; attempt <= 2; attempt++) {
     let rawModel;
+    let modelo = env.GEMINI_MODEL;
     try {
-      rawModel = await callModel(env, args);
+      const r = await callModel(env, args);
+      rawModel = typeof r === 'string' ? r : r.text; // los simulados devuelven el texto; el real, { text, model }
+      if (typeof r !== 'string' && r.model) modelo = r.model;
     } catch (e) {
       const c = classifyProviderError(e, env);
       console.error(`IA: ${c.error} (${c.status ?? 'sin respuesta'}) ${c.detalle}`); // para `npm run worker:logs`; nunca la clave
@@ -112,7 +145,7 @@ async function askModel(env, callModel, args, validate, cors) {
     if (!parsed.ok) { lastError = parsed.error; continue; }
     const v = validate(parsed.data);
     if (!v.ok) { lastError = v.error; continue; }
-    return json(200, { ...v.result, model: env.GEMINI_MODEL, attempts: attempt }, cors);
+    return json(200, { ...v.result, model: modelo, attempts: attempt }, cors);
   }
   return json(502, { error: 'respuesta_invalida', detalle: lastError }, cors);
 }

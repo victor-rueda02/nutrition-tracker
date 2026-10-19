@@ -8,5 +8,6 @@ compatibility_date = "2025-09-01"
 [vars]
 # Modelo de Gemini: se cambia SOLO aquí. Comprueba en Google AI Studio cuál está disponible en el plan gratuito.
 GEMINI_MODEL = "gemini-3.1-flash-lite"
+GEMINI_MODEL_FALLBACK = "gemini-3.5-flash-lite" # respaldo si Google devuelve 5xx dos veces (regla 10 de CLAUDE.md)
 # Solo el ORIGEN (sin ruta ni barra final) de tu GitHub Pages, p. ej. https://tuusuario.github.io
 ALLOWED_ORIGIN = "https://victor-rueda02.github.io"

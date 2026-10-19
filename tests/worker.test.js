@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { handleRequest } from '../worker/src/index.js';
+import { handleRequest, callModelResiliente, RETRY_MS } from '../worker/src/index.js';
 import { callGemini, ProviderError } from '../worker/src/providers/gemini.js';
 import { realList, rulesList } from './helpers.js';
 
@@ -180,4 +180,97 @@ test('el Worker distingue qué le pasa a Google (cuota, modelo, clave, caído, p
   assert.equal(logs.length, casos.length + 1);
   assert.match(logs[1], /google_caido \(503\).*high demand/);
   assert.ok(!logs.join('\n').includes('SECRETO-123'));
+});
+
+// ---------- resiliencia ante Google: un reintento tras 2 s y modelo de respaldo ----------
+function proveedor(...salidas) {
+  const calls = [];
+  const sleeps = [];
+  const call = async ({ model, apiKey }) => {
+    calls.push({ model, apiKey });
+    const s = salidas[Math.min(calls.length - 1, salidas.length - 1)];
+    if (s instanceof Error) throw s;
+    return s;
+  };
+  return { calls, sleeps, opts: { call, sleep: async (ms) => { sleeps.push(ms); } } };
+}
+const silencio = async (fn) => { const o = console.error; console.error = () => {}; try { return await fn(); } finally { console.error = o; } };
+const envR = { ...env, GEMINI_MODEL: 'primario', GEMINI_MODEL_FALLBACK: 'respaldo' };
+const e503 = () => new ProviderError(503, 'high demand');
+
+test('Google bien: una sola llamada, sin esperas', async () => {
+  const p = proveedor('{"ok":1}');
+  assert.deepEqual(await callModelResiliente(envR, {}, p.opts), { text: '{"ok":1}', model: 'primario' });
+  assert.deepEqual([p.calls.length, p.sleeps], [1, []]);
+});
+
+test('5xx: reintenta UNA vez con el mismo modelo tras 2 s', async () => {
+  const p = proveedor(e503(), 'texto');
+  const r = await silencio(() => callModelResiliente(envR, {}, p.opts));
+  assert.deepEqual([r.model, p.calls.map((c) => c.model), p.sleeps], ['primario', ['primario', 'primario'], [RETRY_MS]]);
+  assert.equal(RETRY_MS, 2000);
+});
+
+test('5xx dos veces: pasa al modelo de respaldo (una llamada) y devuelve el modelo que contestó', async () => {
+  const p = proveedor(e503(), new ProviderError(500, 'x'), 'del respaldo');
+  const r = await silencio(() => callModelResiliente(envR, {}, p.opts));
+  assert.deepEqual([r.text, r.model, p.calls.map((c) => c.model), p.sleeps], ['del respaldo', 'respaldo', ['primario', 'primario', 'respaldo'], [2000]]);
+  assert.ok(p.calls.every((c) => c.apiKey === 'CLAVE-SECRETA-XYZ'));
+});
+
+test('también falla el respaldo: tres llamadas como máximo y se clasifica el error del respaldo', async () => {
+  const p = proveedor(e503(), e503(), new ProviderError(429, 'cuota del respaldo'));
+  await assert.rejects(silencio(() => callModelResiliente(envR, {}, p.opts)), (e) => e.status === 429);
+  assert.equal(p.calls.length, 3);
+});
+
+test('sin respaldo (o igual que el principal): solo el reintento, y se propaga el 5xx', async () => {
+  for (const e of [env, { ...env, GEMINI_MODEL_FALLBACK: env.GEMINI_MODEL }, { ...env, GEMINI_MODEL_FALLBACK: '' }]) {
+    const p = proveedor(e503());
+    await assert.rejects(silencio(() => callModelResiliente(e, {}, p.opts)), (x) => x.status === 503);
+    assert.equal(p.calls.length, 2);
+  }
+});
+
+test('429, clave rechazada o petición mala: ni reintento ni respaldo (no se gasta más cuota)', async () => {
+  for (const status of [429, 401, 403, 400]) {
+    const p = proveedor(new ProviderError(status, 'x'));
+    await assert.rejects(silencio(() => callModelResiliente(envR, {}, p.opts)), (x) => x.status === status);
+    assert.deepEqual([p.calls.length, p.sleeps], [1, []]);
+  }
+});
+
+test('modelo principal retirado (404): directo al respaldo, sin esperar', async () => {
+  const p = proveedor(new ProviderError(404, 'not found'), 'ok');
+  const r = await silencio(() => callModelResiliente(envR, {}, p.opts));
+  assert.deepEqual([r.model, p.calls.map((c) => c.model), p.sleeps], ['respaldo', ['primario', 'respaldo'], []]);
+});
+
+test('el Worker informa del modelo que contestó (respaldo) en la respuesta', async () => {
+  const cm = async () => ({ text: good, model: 'respaldo' });
+  const body = await (await handleRequest(req(), envR, { callModel: cm })).json();
+  assert.equal(body.model, 'respaldo');
+  const normal = await (await handleRequest(req(), envR, { callModel: model(good) })).json();
+  assert.equal(normal.model, 'primario'); // los simulados que devuelven texto: el principal
+});
+
+test('el Worker con Google caído de verdad (fetch simulado): 503, 503, respaldo bueno -> 200', async () => {
+  const vistos = [];
+  const fetchOriginal = globalThis.fetch;
+  const respuestas = [503, 503, 200];
+  globalThis.fetch = async (url) => {
+    vistos.push(String(url).match(/models\/([^:]+):/)[1]);
+    const status = respuestas[vistos.length - 1];
+    return status === 200
+      ? new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: good }] } }] }), { status })
+      : new Response('{"error":{"status":"UNAVAILABLE"}}', { status });
+  };
+  const setTimeoutOriginal = globalThis.setTimeout;
+  globalThis.setTimeout = (fn) => setTimeoutOriginal(fn, 0); // sin esperar los 2 s de verdad
+  try {
+    const r = await silencio(() => handleRequest(req(), envR));
+    assert.equal(r.status, 200);
+    assert.equal((await r.json()).model, 'respaldo');
+    assert.deepEqual(vistos, ['primario', 'primario', 'respaldo']);
+  } finally { globalThis.fetch = fetchOriginal; globalThis.setTimeout = setTimeoutOriginal; }
 });
