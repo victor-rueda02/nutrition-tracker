@@ -122,3 +122,19 @@ test('merluza: macros de la etiqueta de Victor (merluza del Cabo), micros de BED
   assert.ok(m.nutrients.agua_g + m.nutrients.proteina_g + m.nutrients.grasa_total_g <= 100); // agua coherente con la etiqueta
   assert.match(m.extra.fuente_usda, /^Etiqueta de la merluza/);
 });
+
+test('lentejas caseras: receta cocinada, "lentejas" a secas es la receta y no choca con las lentejas secas', () => {
+  const r = byId.get('lentejas_caseras');
+  assert.deepEqual([r.estado, r.pesoEnCrudo, r.extra.incluir, r.varianteDefecto, r.grupo], ['cocinado', false, 'si', true, 'lentejas_caseras']);
+  assert.deepEqual(r.alias, ['lentejas', 'lentejas caseras', 'lentejas con chorizo', 'lentejas guisadas']);
+  assert.match(r.extra.notas, /^Gramos del plato cocinado\. Proporciones estimadas; sustituir por pesos reales cuando los pese/);
+  assert.ok(!r.alias.some((a) => ['lentejas secas', 'lentejas crudas'].includes(a)));
+  const s = byId.get('lentejas_secas');
+  assert.deepEqual([s.estado, s.pesoEnCrudo, s.extra.incluir, s.grupo], ['crudo', true, 'si', 'lentejas_secas']);
+  assert.ok(!flagsOf('lentejas_caseras', '300 g de lentejas con chorizo').includes('sin_alias'));
+  assert.ok(!flagsOf('lentejas_secas', '80 g de lentejas secas').includes('sin_alias'));
+  // ingrediente solo para la receta: fuera de la lista que va a la IA
+  assert.equal(byId.get('morro_cerdo').extra.incluir, 'no');
+  assert.ok(!realList.some((f) => f.id === 'morro_cerdo'));
+  assert.equal(byId.get('morro_cerdo').extra.fdc_id, '167857'); // oreja de cerdo: ni BEDCA ni USDA tienen morro
+});

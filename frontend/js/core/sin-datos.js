@@ -32,7 +32,8 @@ export function lineaAEstimar(d, key, foodsById) {
 // Un fragmento del dictado (entre comas, «y», «+») suena a plato si:
 //  · lleva «con» y la IA lo ha repartido en 2 o más alimentos, con a lo sumo una cantidad dicha y antes del «con»
 //    ("lentejas con chorizo", "300 g de lasaña con carne"; "170 g de arroz con 2 huevos" pesa cada cosa: no es un plato), o
-//  · lleva «casero/a(s)» ("lentejas caseras") y se resolvió a algún alimento.
+//  · lleva «casero/a(s)» y la IA lo repartió en 2 o más alimentos. Una sola línea (la receta "lentejas caseras"
+//    resuelta como tal) no es un plato partido.
 // Las líneas ya estimadas con IA no cuentan, ni al editar una comida guardada.
 const SEPARADOR = /\s*(?:,|;|\+|\s+y\s+|\s+e\s+)\s*/i;
 const NUMERO_PALABRA = new Set(['dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'medio', 'media']);
@@ -58,7 +59,7 @@ export function detectarPlatos(d, foodsById) {
     };
     const keys = candidatas.filter(lleva).map((l) => l.key);
     const conCon = keys.length >= 2 && conUnaCantidad(seg);
-    const casero = esCasero(seg) && keys.length >= 1;
+    const casero = esCasero(seg) && keys.length >= 2;
     if (!conCon && !casero) continue;
     keys.forEach((k) => usadas.add(k));
     platos.push({ texto: seg, keys });

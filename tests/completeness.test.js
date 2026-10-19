@@ -62,14 +62,14 @@ test('fichero de ejemplo: el huevo está completo y el resto aparece como pendie
   assert.equal(rep.incomplete[0].ratio <= rep.incomplete.at(-1).ratio, true);
 });
 
-test('catálogo real con nutrientes de USDA, BEDCA y recetas: 57 completos (la chía, con EPA y DHA = 0 de vegetal); incompletos los 12 con incluir=no sin datos', () => {
+test('catálogo real con nutrientes de USDA, BEDCA y recetas: 60 completos (la chía, con EPA y DHA = 0 de vegetal); incompletos los 11 con incluir=no sin datos', () => {
   const { foods } = parseFoodsCSV(readFile('./fixtures/alimentos_iniciales.csv'), { catalog });
   const rep = completenessReport(foods, settings);
-  assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [69, 57, 12]);
+  assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [71, 60, 11]);
   const chia = rep.perFood.find((p) => p.id === 'semillas_chia');
   assert.deepEqual([chia.filled, chia.incomplete], [25, false]);
   const sinDatos = rep.incomplete.filter((p) => p.filled === 0).map((p) => p.id);
-  assert.equal(sinDatos.length, 12);
+  assert.equal(sinDatos.length, 11);
   assert.ok(foods.filter((f) => sinDatos.includes(f.id)).every((f) => f.extra.incluir === 'no'));
   // pan de molde: enriquecimiento de EE. UU. vaciado a propósito (sin dato, no 0)
   const pan = foods.find((f) => f.id === 'pan_molde_blanco');

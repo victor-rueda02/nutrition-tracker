@@ -63,7 +63,7 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   await t.act(() => t.btn('Procesar').click());
   assert.equal(t.calls.length, 1);
   assert.equal(t.calls[0].texto, 'para desayunar 80 g de avena, 2 huevos y un plátano');
-  assert.equal(t.calls[0].alimentos.length, 55); // sin los incluir=no
+  assert.equal(t.calls[0].alimentos.length, 57); // sin los incluir=no
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('nutrients'));
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('densidad')); // la densidad no viaja: la conversión de ml es local
   // confirmación
@@ -114,19 +114,19 @@ test('cambiar alimento con el buscador del documento (sin acentos ni plurales)',
 });
 
 test('alimento excluido (incluir=no): motivo claro, se activa con un toque y se reinterpreta la frase', { skip }, async () => {
-  const lentejas = realFoods.find((f) => f.id === 'lentejas_caseras');
-  const first = { items: [ITEM('kiwi_verde', 69, 'un kiwi')], unmatched: [{ text: 'medio kilo de lentejas', motivo: 'no_en_catalogo' }], warnings: [] };
-  const second = { items: [ITEM('kiwi_verde', 69, 'un kiwi'), ITEM('lentejas_caseras', 500, 'medio kilo de lentejas')], unmatched: [], warnings: [] };
+  const lentejas = realFoods.find((f) => f.id === 'crema_calabacin');
+  const first = { items: [ITEM('kiwi_verde', 69, 'un kiwi')], unmatched: [{ text: 'medio kilo de crema de calabacín', motivo: 'no_en_catalogo' }], warnings: [] };
+  const second = { items: [ITEM('kiwi_verde', 69, 'un kiwi'), ITEM('crema_calabacin', 500, 'medio kilo de crema de calabacín')], unmatched: [], warnings: [] };
   const t = await setup({ responses: [first, second] });
-  t.type(t.$('textarea'), 'medio kilo de lentejas y un kiwi');
+  t.type(t.$('textarea'), 'medio kilo de crema de calabacín y un kiwi');
   await t.act(() => t.btn('Procesar').click());
   assert.match(t.root.textContent, /Excluido del catálogo \(incluir=no\)/);
   await t.act(() => t.btn(`Activar «${lentejas.nombre}»`).click());
   assert.equal(t.calls.length, 2);
-  assert.equal(t.calls[0].alimentos.some((f) => f.id === 'lentejas_caseras'), false);
-  assert.equal(t.calls[1].alimentos.some((f) => f.id === 'lentejas_caseras'), true);
+  assert.equal(t.calls[0].alimentos.some((f) => f.id === 'crema_calabacin'), false);
+  assert.equal(t.calls[1].alimentos.some((f) => f.id === 'crema_calabacin'), true);
   assert.deepEqual(t.$$('li.card[data-key] input.grams').map((i) => i.value), ['69', '500']);
-  assert.equal((await t.store.getCatalogRecord()).foods.find((f) => f.id === 'lentejas_caseras').extra.incluir, 'si');
+  assert.equal((await t.store.getCatalogRecord()).foods.find((f) => f.id === 'crema_calabacin').extra.incluir, 'si');
 });
 
 test('sin_porcion: "Poner gramos" añade la línea vacía y no se guarda hasta teclear los gramos', { skip }, async () => {
@@ -429,7 +429,7 @@ test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }
   assert.ok(t.saved[0].text.startsWith('﻿id;nombre;'));
   assert.match(t.saved[0].text, /aceite_oliva;.*;0,91;/);
   assert.ok(t.saved[1].text.startsWith('﻿id,nombre,'));
-  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 69 alimentos/);
+  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 71 alimentos/);
 });
 
 test('importar el diario: resumen antes de aplicar, fusión por id, nunca borra; repetir no duplica', { skip }, async () => {

@@ -1,15 +1,20 @@
-# Informe USDA (2026-10-18)
+# Informe USDA (2026-10-19)
 
 Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes de copiarlo a `data/foods.csv`.
 
 ## Resumen
 
-- Alimentos en el documento: 69
-- Completos (≥ 80 % de 31 obligatorios): 57
+- Alimentos en el documento: 71
+- Completos (≥ 80 % de 31 obligatorios): 59
 - Incompletos: 12
 - Con fdcId elegido: 47
 - Buscables sin fdcId elegido: 0
 - Omitidos (excluidos, sin término o recetas): 24
+
+## Errores
+
+- patata_asada: no se aplica el fdcId 170093 porque el alimento no se busca en USDA (excluido (incluir=no))
+- merluza_cocida: no se aplica el fdcId 175161 porque el alimento no se busca en USDA (excluido (incluir=no))
 
 ## Avisos de fortificación (revisar contra el envase)
 
@@ -166,12 +171,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
-### patata_asada
-
-- USDA: Potatoes, baked, flesh and skin, without salt — fdcId 170093 — SR Legacy
-- Obligatorios: 31/31 (100 %)
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
 ### pechuga_pavo_cruda
 
 - USDA: Turkey, whole, breast, meat only, raw — fdcId 171098 — SR Legacy
@@ -255,6 +254,19 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 
+### lentejas_secas
+
+- USDA: Lentils, raw — fdcId 172420 — SR Legacy
+- Obligatorios: 31/31 (100 %)
+- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
+
+### morro_cerdo
+
+- USDA: Pork, fresh, variety meats and by-products, ears, frozen, raw — fdcId 167857 — SR Legacy
+- Obligatorios: 27/31 (87 %)
+- Faltan: Vitamina D, Vitamina E, Vitamina K, Colina
+- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
+
 ### solomillo_ternera
 
 - USDA: Beef, loin, tenderloin steak, boneless, separable lean only, trimmed to 0" fat, select, raw — fdcId 171769 — SR Legacy
@@ -274,12 +286,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 ### atun_lata_aceite
 
 - USDA: Fish, tuna, light, canned in oil, drained solids — fdcId 173708 — SR Legacy
-- Obligatorios: 31/31 (100 %)
-- Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
-
-### merluza_cocida
-
-- USDA: Fish, whiting, mixed species, cooked, dry heat — fdcId 175161 — SR Legacy
 - Obligatorios: 31/31 (100 %)
 - Alternativa usada: ala_g: ALA desde 18:3 sin diferenciar (619)
 

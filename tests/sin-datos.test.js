@@ -11,7 +11,9 @@ import { loadTargets, resolveTargets } from '../frontend/js/core/targets.js';
 import { realFoods, catalog, settings, readFile } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
-const byId = new Map(realFoods.map((f) => [f.id, f]));
+// El catálogo real ya trae datos de las lentejas (receta); el caso original, una fila sin ningún nutriente, se reproduce así.
+const foods = realFoods.map((f) => (f.id === 'lentejas_caseras' ? { ...f, nutrients: {} } : f));
+const byId = new Map(foods.map((f) => [f.id, f]));
 const item = (food_id, grams, source_text) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false });
 const draftDe = (text, items, extra = {}) => createDraft({ text, meal: 'comida', result: { items, unmatched: [], warnings: [] }, foodsById: byId, ...extra });
 const LENTEJAS = 'lentejas caseras con chorizo';
@@ -62,9 +64,10 @@ test('un plato partido: «X con Y» (una sola cantidad, o ninguna) se ofrece com
   assert.deepEqual(detectarPlatos(dosPlatos, byId).map((p) => p.texto), [LENTEJAS, 'arroz con huevo']);
 });
 
-test('«caseras» se ofrece como plato aunque la IA lo haya resuelto a una sola línea', () => {
-  const d = draftDe('lentejas caseras', [item('lentejas_caseras', 200, 'lentejas caseras')]);
-  assert.deepEqual(detectarPlatos(d, byId).map((p) => p.texto), ['lentejas caseras']);
+test('«caseras» se ofrece como plato si la IA lo repartió en varios alimentos; una receta resuelta como una sola línea, no', () => {
+  const d = draftDe('lentejas caseras chorizo', itemsLentejas);
+  assert.deepEqual(detectarPlatos(d, byId).map((p) => p.texto), ['lentejas caseras chorizo']);
+  assert.deepEqual(detectarPlatos(draftDe('lentejas caseras', [item('lentejas_caseras', 200, 'lentejas caseras')]), byId), []);
   assert.deepEqual(detectarPlatos(draftDe('200 g de arroz', [item('arroz_blanco_crudo', 200, '200 g de arroz')]), byId), []);
 });
 
@@ -119,7 +122,7 @@ async function setup(dictado) {
     async health() { return { ok: true }; },
   });
   let n = 0;
-  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, recetasBase: [], initial: { foods: realFoods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW, idGen: () => `m${++n}`, saveFile: async () => 'compartido' });
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, recetasBase: [], initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW, idGen: () => `m${++n}`, saveFile: async () => 'compartido' });
   await app.whenIdle();
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];

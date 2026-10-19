@@ -17,10 +17,14 @@ export {
 } from '../frontend/js/core/usda-core.js';
 
 // Alimentos del documento que se buscan y motivo de los que no.
-export function searchPlan(foods) {
+// incluir: los incluir=no que SÍ se buscan, para volcar datos en ingredientes que solo se usan en recetas sin activarlos
+// (la fila sigue con incluir=no): 'todos' o una lista/Set de ids.
+export function searchPlan(foods, { incluir = [] } = {}) {
+  const ids = incluir === 'todos' ? null : new Set(incluir);
   return foods.map((f) => {
     const termino = (f.extra?.termino_busqueda_usda ?? '').trim();
-    if (normalizeText(f.extra?.incluir) === 'no') return { food: f, termino, omitido: 'excluido (incluir=no)' };
+    const forzado = incluir === 'todos' || ids.has(f.id);
+    if (normalizeText(f.extra?.incluir) === 'no' && !forzado) return { food: f, termino, omitido: 'excluido (incluir=no)' };
     if (!termino) return { food: f, termino, omitido: 'sin termino_busqueda_usda' };
     if (termino.startsWith('(')) return { food: f, termino, omitido: 'receta por descomponer' };
     return { food: f, termino, omitido: null };
@@ -173,8 +177,8 @@ export function informeMarkdown({ report, resultado, plan, elegidosIds, errores 
 }
 
 // ---------- Orquestación (la usa el CLI; aquí para poder probarla con un cliente simulado) ----------
-export async function runCandidatos({ client, foods, map, required, threshold, onProgress = () => {} }) {
-  const plan = searchPlan(foods);
+export async function runCandidatos({ client, foods, map, required, threshold, incluir = [], onProgress = () => {} }) {
+  const plan = searchPlan(foods, { incluir });
   const rows = [];
   for (const p of plan) {
     const base = { id: p.food.id, nombre: p.food.nombre, termino: p.termino };
@@ -193,9 +197,9 @@ export async function runCandidatos({ client, foods, map, required, threshold, o
 
 // Solo se aplican los alimentos que "candidatos" busca: los omitidos (incluir=no, sin término o recetas, p. ej. con
 // datos de BEDCA o de una etiqueta) se saltan aunque tengan fdcId en eleccion.csv, para no pisar sus datos.
-export async function runFilas({ client, foods, eleccionText, map, sobrescribir = false }) {
+export async function runFilas({ client, foods, eleccionText, map, sobrescribir = false, incluir = [] }) {
   const { elegidos: todos, errores } = readEleccion(eleccionText);
-  const plan = searchPlan(foods);
+  const plan = searchPlan(foods, { incluir });
   const omitidos = new Map(plan.filter((x) => x.omitido).map((x) => [x.food.id, x.omitido]));
   const saltados = todos.filter((e) => omitidos.has(e.id));
   const elegidos = todos.filter((e) => !omitidos.has(e.id));
