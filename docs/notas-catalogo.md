@@ -104,3 +104,8 @@ crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere acti
    desde la app habría que moverlo a `frontend/js/core/`. Formato y reglas en `data/SCHEMA.md`.
 7. **CLAUDE.md, sección 5**: actualizar recuentos (69 alimentos, 57 completos, 254 tests) y mencionar
    `tests/fixtures/reglas_variantes.csv`.
+
+## `usda.mjs`: ingredientes solo de receta (19-10-2026)
+`candidatos` y `filas` aceptan `--incluir-excluidos` (todos los `incluir=no` con término) o `--incluir id1,id2` para
+volcar datos USDA en ingredientes que solo se usan en recetas, **sin activarlos** (la fila sigue con `incluir=no`).
+Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-file=.env scripts/usda.mjs filas --incluir morro_cerdo`.

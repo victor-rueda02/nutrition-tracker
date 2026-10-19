@@ -355,3 +355,26 @@ test('sugerido: una preparación que el término no pide (fried, breaded, batter
   assert.deepEqual(preparacionesDeMas('Shrimp, cooked', 'Crustaceans, shrimp, mixed species, cooked, breaded and fried'), ['fried', 'breaded']);
   assert.deepEqual(preparacionesDeMas('Rice, white, cooked', 'Rice, white, medium-grain, cooked, unenriched'), []);
 });
+
+test('--incluir-excluidos / --incluir id: los incluir=no se buscan y se rellenan sin activarlos (recetas)', async () => {
+  const foods = parseFoodsCSV(csv('id,nombre,proteina_g,termino_busqueda_usda,incluir',
+    'arroz,Arroz,,Rice,si', 'morro,Morro,,"Pork, ears",no', 'ron,Ron,,Rum,no', 'sin,Sin término,,,no', 'rec,Receta,,(receta: data/recetas.json),no'), { catalog }).foods;
+  const motivo = (incluir) => Object.fromEntries(searchPlan(foods, { incluir }).map((p) => [p.food.id, p.omitido]));
+  assert.deepEqual(motivo(undefined), { arroz: null, morro: 'excluido (incluir=no)', ron: 'excluido (incluir=no)', sin: 'excluido (incluir=no)', rec: 'excluido (incluir=no)' });
+  assert.equal(motivo(['morro']).morro, null);
+  assert.equal(motivo(['morro']).ron, 'excluido (incluir=no)'); // solo ese id
+  assert.deepEqual(motivo('todos'), { arroz: null, morro: null, ron: null, sin: 'sin termino_busqueda_usda', rec: 'receta por descomponer' }); // sin término o receta siguen omitidos
+  const api = fakeApi((url, body) => (url.endsWith('/foods/search') ? { foods: [usdaFood(7, body.query, 'SR Legacy')] } : body.fdcIds.map((id) => usdaFood(id, `x${id}`, 'SR Legacy', { shape: 'full' }))));
+  const client = createUsdaClient({ apiKey: 'k', fetchImpl: api.fetchImpl });
+  const c = await runCandidatos({ client, foods, map, required, threshold, incluir: ['morro'] });
+  assert.deepEqual(c.rows.map((r) => [r.id, r.estado.startsWith('omitido')]), [['arroz', false], ['morro', false], ['ron', true], ['sin', true], ['rec', true]]);
+  const r = await runFilas({ client, foods, eleccionText: 'id;fdcId\nmorro;7\nron;8\n', map, incluir: ['morro'] });
+  assert.equal(r.resultado.find((x) => x.id === 'morro').error, undefined);
+  const morro = r.propuestos.find((f) => f.id === 'morro');
+  assert.equal(morro.extra.fdc_id, '7');
+  assert.equal(morro.extra.incluir, 'no'); // sigue excluido
+  assert.deepEqual(r.errores, ['ron: no se aplica el fdcId 8 porque el alimento no se busca en USDA (excluido (incluir=no))']);
+  // CLI: la opción se reconoce (sin clave, el script se detiene antes de red, pero no debe rechazar la opción)
+  const sc = spawnSync(process.execPath, [join(root, 'scripts', 'usda.mjs'), 'filas', '--incluir', 'morro'], { cwd: tmpdir(), encoding: 'utf8', env: { ...process.env, USDA_API_KEY: '' } });
+  assert.match(sc.stderr, /Falta la variable USDA_API_KEY/);
+});

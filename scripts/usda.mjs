@@ -9,6 +9,8 @@
 //       Genera usda/foods.propuesto.csv (tu documento con los nutrientes rellenos) y usda/informe.md (completitud,
 //       avisos de fortificación de EE. UU. y valores sospechosos).
 //       NUNCA toca data/foods.csv: lo revisas y lo copias tú. Sin --sobrescribir no pisa celdas con valor.
+//   --incluir-excluidos | --incluir id1,id2   (en candidatos y filas) también trata los incluir=no (todos o solo esos ids), para volcar
+//       datos en ingredientes que solo se usan en recetas SIN activarlos: la fila sigue con incluir=no.
 //   node --env-file=.env scripts/usda.mjs buscar "Rice, white, long-grain, raw"
 //   node --env-file=.env scripts/usda.mjs fila 169756 [--id arroz_blanco_crudo]
 // Las respuestas se guardan en usda/cache/ (fuera de git) para no repetir llamadas.
@@ -30,7 +32,9 @@ const write = (p, text) => { mkdirSync(dirname(p), { recursive: true }); writeFi
 
 const [cmd, ...args] = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i >= 0 ? resolve(args[i + 1]) : def; };
-const CON_VALOR = ['--foods', '--out', '--eleccion', '--id'];
+const CON_VALOR = ['--foods', '--out', '--eleccion', '--id', '--incluir'];
+const incluirIdx = args.indexOf('--incluir');
+const incluir = args.includes('--incluir-excluidos') ? 'todos' : incluirIdx >= 0 ? String(args[incluirIdx + 1] ?? '').split(',').map((s) => s.trim()).filter(Boolean) : [];
 const positional = args.filter((a, i) => !a.startsWith('--') && !CON_VALOR.includes(args[i - 1]));
 
 const nutrientList = JSON.parse(read(fromRoot('data', 'nutrients.json')));
@@ -66,7 +70,7 @@ try {
     const { foods } = loadFoods();
     const out = opt('out', fromRoot('usda', 'eleccion.csv'));
     const { rows, resumen } = await runCandidatos({
-      client, foods, map, required, threshold,
+      client, foods, map, required, threshold, incluir,
       onProgress: (id, r) => console.log(`${id}: ${r.estado}${r.candidato ? ` → ${linea(r.candidato)}` : ''}`),
     });
     // Conserva lo que ya elegiste (fdcId y sin_enriquecer) si el fichero existe.
@@ -82,7 +86,7 @@ try {
   } else if (cmd === 'filas') {
     const { foods, extraHeaders } = loadFoods();
     const eleccion = opt('eleccion', fromRoot('usda', 'eleccion.csv'));
-    const r = await runFilas({ client, foods, eleccionText: read(eleccion), map, sobrescribir: args.includes('--sobrescribir') });
+    const r = await runFilas({ client, foods, eleccionText: read(eleccion), map, sobrescribir: args.includes('--sobrescribir'), incluir });
     const headers = [...extraHeaders, ...['fdc_id', 'fuente_usda'].filter((h) => !extraHeaders.includes(h))];
     const outCsv = fromRoot('usda', 'foods.propuesto.csv');
     const outMd = fromRoot('usda', 'informe.md');
