@@ -504,10 +504,10 @@ export function mountApp(root, deps) {
   }
 
   // Cabecera de las pantallas interiores: "‹" a la izquierda (el texto "Volver" queda solo para lectores de pantalla) y el título centrado.
-  function header(title, back, { close = false } = {}) {
+  function header(title, back, { close = false, sub = '' } = {}) {
     return h('header', { class: back ? 'top with-back' : 'top' },
       back ? h('button', { type: 'button', class: 'icon back', onclick: back }, icon(doc, close ? 'close' : 'back'), h('span', { class: 'sr' }, '‹ Volver')) : h('strong', { class: 'brand' }, title),
-      back ? h('strong', {}, title) : null, back ? h('span', {}) : null);
+      back ? (sub ? h('div', { class: 'title-block' }, h('strong', {}, title), h('small', { class: 'muted' }, sub)) : h('strong', {}, title)) : null, back ? h('span', {}) : null);
   }
 
   // ---------- navegación (barra inferior y "+") ----------
@@ -516,7 +516,7 @@ export function mountApp(root, deps) {
     state.sheet = null; state.menu = false; state.meal = meal; state.addDate = date;
     state.error = ''; state.screen = 'home'; render();
   }
-  const openAlimentos = () => track((async () => { state.plantillas = await loadTemplates(); state.screen = 'alimentos'; state.pendingDelete = null; render(); })());
+  const openAlimentos = () => track((async () => { state.plantillas = await loadTemplates(); state.recetas = (await rec.todas()).filter((r) => !r.ejemplo); state.screen = 'alimentos'; state.pendingDelete = null; render(); })());
   const openCatalogList = ({ focus = false } = {}) => { state.catFocus = focus; state.screen = 'micatalogo'; render(); };
   function go(id) {
     state.sheet = null; state.menu = false;
@@ -562,14 +562,13 @@ export function mountApp(root, deps) {
     const fechaDestino = state.addDate ?? today();
     const quick = (ico, label, onclick) => h('button', { type: 'button', class: 'quick', onclick }, icon(doc, ico), h('span', {}, label));
     return h('main', { class: 'dictado-screen' },
-      header(`Añadir a ${MEAL_LABEL[state.meal].toLowerCase()}`, () => { if (state.day === fechaDestino) { state.screen = 'diary'; render(); } else openDay(fechaDestino); }, { close: true }),
+      header(`Añadir a ${MEAL_LABEL[state.meal]}`, () => { if (state.day === fechaDestino) { state.screen = 'diary'; render(); } else openDay(fechaDestino); }, { close: true, sub: shortDate(fechaDestino) }),
       h('div', { class: 'quick-row', role: 'group', 'aria-label': 'Accesos rápidos' },
         quick('hand', 'Añadir a mano', startManual),
-        quick('repeat', 'Repetir de ayer', () => openRepeat({ sourceDate: shiftDate(fechaDestino, -1), targetDate: fechaDestino, back: 'home' })),
+        quick('copy', 'Repetir de ayer', () => openRepeat({ sourceDate: shiftDate(fechaDestino, -1), targetDate: fechaDestino, back: 'home' })),
         quick('list', 'Plantillas', () => openTemplates('', 'home')),
         quick('spark', 'Estimar con IA', estimateFromText)),
-      state.addDate && state.addDate !== today() ? h('p', { class: 'muted small' }, dayLabel(state.addDate)) : null,
-      ta, mealChips(state.meal, (m) => { state.meal = m; render(); }),
+      mealChips(state.meal, (m) => { state.meal = m; render(); }), ta,
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
       h('div', { class: 'row' }, btn),
       state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : h('p', { class: 'muted small' }, `${state.foods.length} alimentos${incompletos ? ` · ${incompletos} incompletos` : ''}`));
@@ -593,12 +592,15 @@ export function mountApp(root, deps) {
     const editing = d.editing;
     const saveBtn = h('button', { class: 'primary', onclick: save }, editing ? 'Guardar cambios' : 'Guardar');
     const hint = h('div', { class: 'muted small' });
+    let pantalla = null;
+    const ajustarMargen = () => { if (pantalla) pantalla.style.paddingBottom = `${footer.offsetHeight + 24}px`; }; // el pie fijo no tapa la última tarjeta
     const paintFooter = () => {
       const v = validateDraft(state.draft);
       const t = previewTotals(state.draft, byId());
       totalsEl.textContent = `Total: ${fmtTotal(t, 'energia_kcal', 'kcal', nf0)} · ${fmtTotal(t, 'proteina_g', 'g de proteína', nf1)}`;
       saveBtn.disabled = !v.ok || state.busy;
       hint.textContent = v.empty ? (editing ? 'Añade al menos un alimento o borra la comida.' : 'Añade al menos un alimento.') : v.problems.some((p) => p.code === 'fecha') ? 'La fecha no es válida.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
+      ajustarMargen();
     };
 
     const lineCard = (line) => {
@@ -664,7 +666,7 @@ export function mountApp(root, deps) {
       editing ? h('label', {}, 'Fecha', dateIn) : null,
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
       state.busy ? h('p', { class: 'muted', role: 'status' }, 'Procesando…') : null,
-      d.text ? h('p', { class: 'muted small' }, `«${d.text}»`) : null,
+      d.text ? h('p', { class: 'muted dictada' }, `«${d.text}»`) : null,
       mealChips(d.meal, (m) => { state.draft = setMeal(state.draft, m); render(); }),
       d.warnings.length ? h('ul', { class: 'warnlist' }, d.warnings.map((w) => h('li', {}, w))) : null,
       h('ul', { class: 'cards' }, d.lines.map(lineCard)),
@@ -673,7 +675,9 @@ export function mountApp(root, deps) {
       h('ul', { class: 'cards' }, d.unmatched.map(unmatchedCard)),
       editing ? h('div', { class: 'row' }, deleteControls(editing.id, editing.date, 'Borrar esta comida')) : null,
       footer);
+    pantalla = screen;
     paintFooter();
+    queueMicrotask(ajustarMargen);
     return screen;
   }
 
@@ -717,14 +721,15 @@ export function mountApp(root, deps) {
           h('button', { class: 'primary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
           h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
         connMsg),
-      pulir: h('section', { class: 'panel' },
-        h('div', { class: 'row wrap' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`), h('button', { class: 'secondary', onclick: () => { state.recetasBack = 'pulir'; rec.open(); } }, 'Recetas'))),
+      pulir: h('ul', { class: 'menu-list' },
+        h('li', {}, h('button', { class: 'menu-row', onclick: () => openLog() }, h('span', { class: 'menu-ico' }, icon(doc, 'list')), h('span', { class: 'menu-text' }, `Frases a revisar (${state.registro.length})`), icon(doc, 'chevron', 'menu-chev'))),
+        h('li', {}, h('button', { class: 'menu-row', onclick: () => { state.recetasBack = 'pulir'; rec.open(); } }, h('span', { class: 'menu-ico' }, icon(doc, 'chef')), h('span', { class: 'menu-text' }, 'Recetas'), icon(doc, 'chevron', 'menu-chev')))),
       copia: h('section', { class: 'panel' },
         h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). Lleva también tus objetivos, plantillas y frases a revisar; no incluye el token.`),
         doc.defaultView?.isSecureContext === false ? h('p', { class: 'warn small' }, 'Sin https (prueba en red local): el fichero se descarga en vez de abrir el menú Compartir, y la app no funciona sin conexión.') : null,
         state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
-        h('div', { class: 'row wrap' },
-          h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
+        h('div', { class: 'row col' },
+          h('button', { class: 'primary', onclick: () => exportDiary() }, 'Exportar diario'),
           h('button', { class: 'secondary', onclick: () => backupIn.click() }, 'Importar diario'), backupIn),
         state.backupImport ? backupView(state.backupImport) : null),
     };
@@ -747,13 +752,14 @@ export function mountApp(root, deps) {
     const fill = h('span', {});
     fill.style.width = `${Math.min(1, r.pct ?? 0) * 100}%`;
     const pct = r.pct !== null && r.estado !== 'sin_dato' ? `${nf0.format(r.pct * 100)} %` : '';
-    const excepcional = r.superaUl || r.estado === 'excedido' || r.estado === 'por_encima' || r.estado === 'sin_dato';
+    const excepcional = r.superaUl; // el % y el color ya dicen el resto; el texto de estado sigue en el DOM para lectores de pantalla
     return h('li', { class: r.superaUl ? 'nut over-ul' : 'nut', 'data-clave': r.clave },
-      h('div', { class: 'row between nut-head' }, h('span', { class: 'nut-label' }, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo)),
-        pct ? h('span', { class: `nut-pct ${r.estado}` }, pct) : null),
+      h('div', { class: 'row between nut-head' },
+        h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), ' ', h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo)), r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null),
+        h('span', { class: `nut-pct ${r.estado}` }, pct)),
       h('div', { class: `meter ${r.estado}`, role: 'img', 'aria-label': pct || 'sin dato' }, fill),
       h('div', { class: excepcional ? 'small nut-estado' : 'small nut-estado sr' },
-        h('span', { class: `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
+        h('span', { class: r.superaUl ? 'estado sr' : `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
         r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null,
         r.superaUl && r.notaUl ? h('div', { class: 'small muted nota-ul' }, r.notaUl) : null));
   }
@@ -773,7 +779,7 @@ export function mountApp(root, deps) {
         h('button', { class: 'icon', 'aria-label': 'Día anterior', onclick: () => openDay(shiftDate(state.day, -1)) }, icon(doc, 'prev')),
         h('div', { class: 'daytitle' }, h('strong', { class: 'daylabel' }, rel ?? shortDate(state.day)), rel ? h('small', { class: 'muted' }, shortDate(state.day)) : null),
         h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, icon(doc, 'next'))),
-      h('button', { type: 'button', class: 'icon top-action', 'aria-label': 'Más opciones del día', 'aria-haspopup': 'menu', 'aria-expanded': String(state.menu), onclick: () => { state.menu = !state.menu; render(); } }, icon(doc, 'dots')));
+      h('button', { type: 'button', class: 'icon top-action', 'aria-label': 'Más opciones del día', 'aria-haspopup': 'menu', 'aria-expanded': String(state.menu), onclick: () => { state.menu = !state.menu; render(); } }, h('span', { class: 'dots-ring' }, icon(doc, 'dots'))));
   }
 
   function diaryScreen() {
@@ -811,8 +817,8 @@ export function mountApp(root, deps) {
       state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : null,
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
         rep.avisosUl.length ? h('section', { class: 'alert-ul alert-strip', role: 'alert' },
-          h('strong', {}, '⚠ Máximo tolerable (UL) superado: '), rep.avisosUl.map((r) => r.label).join(', '),
-          h('button', { type: 'button', class: 'link', onclick: () => { state.screen = 'informe'; render(); } }, 'Ver informe diario')) : null,
+          h('button', { type: 'button', class: 'strip-btn', onclick: () => { state.screen = 'informe'; render(); } },
+            h('span', {}, '⚠ Máximo tolerable (UL) superado: ', rep.avisosUl.map((r) => r.label).join(', ')), icon(doc, 'chevron'))) : null,
         h('section', { class: 'panel resumen' },
           h('h2', { class: 'caps' }, 'Resumen de energía'),
           energySummary({ h, nf0 }, rep),
@@ -883,7 +889,7 @@ export function mountApp(root, deps) {
     const openRecetas = () => { state.recetasBack = 'alimentos'; return rec.open(); };
     const alimentos = () => alimentosScreen({
       h, doc, state, incompleteInfo, openCatalog: openCatalogList, openRecetas, openTemplates: () => openTemplates('', 'alimentos'),
-      nRecetas: state.foods.filter((f) => f.extra?.tipo === 'receta').length, nPlantillas: state.plantillas.length,
+      nRecetas: state.recetas.length, nPlantillas: state.plantillas.length,
       openIncompletos: () => { state.catFilter = 'incompletos'; openCatalogList(); },
       reviewUpdate: () => { state.catBack = 'alimentos'; state.screen = 'catalogo'; render(); }, postponeUpdate: () => postponeCatalogUpdate(),
       pendientes: pendientesView({ h, state, est }),
@@ -924,7 +930,7 @@ export function mountApp(root, deps) {
       extras.push(sheet({ h, doc, title: `Añadir a ${MEAL_LABEL[meal]}`, close: cierra, items: [
         { icon: 'mic', primary: true, label: 'Dictar comida', onclick: () => openAdd({ meal, date }) },
         { icon: 'hand', label: 'Añadir a mano', onclick: () => { state.sheet = null; state.meal = meal; state.addDate = date; startManual(); } },
-        { icon: 'repeat', label: 'Repetir de ayer', onclick: () => { state.sheet = null; openRepeat({ sourceDate: shiftDate(date, -1), targetDate: date, targetMeal: meal, back: 'diaryTarget' }); } },
+        { icon: 'copy', label: 'Repetir de ayer', onclick: () => { state.sheet = null; openRepeat({ sourceDate: shiftDate(date, -1), targetDate: date, targetMeal: meal, back: 'diaryTarget' }); } },
         { icon: 'list', label: 'Plantillas', onclick: () => { state.sheet = null; openTemplates('', 'diary'); } },
       ] }));
     }

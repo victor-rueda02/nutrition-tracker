@@ -64,7 +64,9 @@ export function reportScreen(ui) {
   const fila = (nombre, valor, { fuerte = false, aviso = false } = {}) => h('li', { class: `kv${fuerte ? ' strong' : ''}` }, h('span', {}, nombre), h('span', { class: aviso ? 'warn' : null }, valor));
   const energia = d.objetivo
     ? h('section', { class: 'panel' },
-      h('h2', {}, d.resto !== null && d.resto < 0 ? 'Excedido' : 'Restante'),
+      h('div', { class: 'ring-row' },
+        h('h2', {}, d.resto !== null && d.resto < 0 ? 'Excedido' : 'Restante'),
+        ring({ h, segments: d.resto === null ? [] : [{ color: d.resto < 0 ? 'var(--bar-over)' : 'var(--c-energia)', frac: d.resto < 0 ? 1 : Math.min(1, d.consumido / d.objetivo) }], value: d.resto === null ? '—' : nf0.format(Math.abs(d.resto)), label: '' })),
       h('ul', { class: 'kvs' },
         fila('Objetivo de energía', `${nf0.format(d.objetivo)} kcal`, { fuerte: true }),
         fila('Consumido', d.consumido === null ? 'sin dato' : `− ${nf0.format(d.consumido)} kcal${d.parcial ? ' (parcial)' : ''}`),

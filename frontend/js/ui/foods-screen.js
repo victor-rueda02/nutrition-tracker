@@ -24,9 +24,8 @@ export function alimentosScreen(ui) {
       h('div', { class: 'row' },
         h('button', { type: 'button', class: 'secondary', onclick: ui.reviewUpdate }, 'Revisar'),
         h('button', { type: 'button', class: 'link', onclick: ui.postponeUpdate }, 'Ahora no'))) : null,
-    card('alimentos', 'Mi catálogo', state.foods.length ? `${state.foods.length} alimentos` : 'No hay documento de alimentos. Impórtalo en Documento.',
-      [h('button', { type: 'button', class: 'secondary pill', onclick: () => ui.openCatalog() }, 'Ver catálogo'),
-        incompletos ? h('button', { type: 'button', class: 'link', onclick: ui.openIncompletos }, `${incompletos} incompletos`) : null], () => ui.openCatalog()),
+    card('alimentos', 'Mi catálogo', state.foods.length ? [`${state.foods.length} alimentos`, incompletos ? [' · ', h('button', { type: 'button', class: 'link inline', onclick: ui.openIncompletos }, `${incompletos} incompletos`)] : null] : 'No hay documento de alimentos. Impórtalo en Documento.',
+      h('button', { type: 'button', class: 'secondary pill', onclick: () => ui.openCatalog() }, 'Ver catálogo'), () => ui.openCatalog()),
     card('chef', 'Recetas', `${ui.nRecetas} ${ui.nRecetas === 1 ? 'receta' : 'recetas'}`,
       h('button', { type: 'button', class: 'secondary pill', onclick: ui.openRecetas }, 'Ver recetas'), ui.openRecetas),
     card('list', 'Plantillas', `${ui.nPlantillas} ${ui.nPlantillas === 1 ? 'plantilla' : 'plantillas'}`,
@@ -55,9 +54,9 @@ export function catalogoListScreen(ui) {
     for (const x of rows.slice(0, 80)) {
       const inc = ui.incompleteInfo(x);
       list.append(h('li', { class: 'food-row', 'data-id': x.id },
-        h('div', { class: 'food-main' }, h('strong', {}, x.nombre), h('small', { class: 'muted' }, x.alias.slice(0, 3).join(' · ') || x.id)),
+        h('div', { class: 'food-main' }, h('strong', {}, x.nombre), x.alias.length ? h('small', { class: 'muted' }, x.alias.slice(0, 3).join(' · ')) : null),
         h('div', { class: 'food-side' },
-          typeof x.nutrients?.energia_kcal === 'number' ? h('span', { class: 'food-kcal' }, `${Math.round(x.nutrients.energia_kcal)} kcal`) : h('span', { class: 'food-kcal muted' }, 'sin dato'),
+          typeof x.nutrients?.energia_kcal === 'number' ? h('span', { class: 'food-kcal' }, `${Math.round(x.nutrients.energia_kcal)} kcal`, h('small', { class: 'muted' }, '/100 g')) : h('span', { class: 'food-kcal muted' }, 'sin dato'),
           isExcluded(x) ? h('span', { class: 'food-tag' }, 'excluido') : inc ? h('span', { class: 'food-tag warn' }, 'pendiente de completar') : null)));
     }
   }
