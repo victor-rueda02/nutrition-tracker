@@ -1,0 +1,184 @@
+/* Navegación y pantallas nuevas: barra inferior, cabeceras, hojas, Diario con anillos, Informe diario, Alimentos y Más.
+   Solo tokens de la paleta de styles.css (docs/notas-estetica.md). */
+.sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; }
+.ico { width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+button.icon { color:var(--link); }
+.ico-mas, .ico-dots { stroke-width:4.5; }
+
+/* Barra inferior fija */
+main { padding-bottom:calc(120px + env(safe-area-inset-bottom)); }
+.tabbar { position:fixed; left:0; right:0; bottom:0; z-index:4; display:grid; grid-template-columns:1fr 1fr 88px 2fr; align-items:center;
+  padding:6px 8px calc(6px + env(safe-area-inset-bottom)); background:var(--surface); border-radius:20px 20px 0 0; box-shadow:0 -2px 14px rgba(20,24,40,.10); }
+.tabbar > * { justify-self:center; }
+.tabbar > .tab { max-width:120px; }
+.tab { display:flex; flex-direction:column; align-items:center; gap:2px; border:none; background:none; color:var(--muted); min-height:56px; width:100%; padding:6px 4px; border-radius:12px; font-size:.78rem; font-weight:600; }
+.tab .ico { width:26px; height:26px; }
+.tab.active { color:var(--accent); }
+.fab { width:60px; height:60px; border-radius:50%; padding:0; border:none; background:var(--fab); color:var(--on-fab); display:grid; place-items:center; box-shadow:0 4px 12px rgba(228,87,31,.35); }
+.fab .ico { width:32px; height:32px; stroke-width:2.6; }
+
+/* Cabeceras */
+.top.with-back { grid-template-columns:48px 1fr 48px; padding-left:8px; padding-right:8px; }
+.top.with-back > strong { font-size:1.2rem; }
+.icon.back { color:var(--fg); padding:0; display:grid; place-items:center; }
+.icon.back .ico { width:26px; height:26px; stroke-width:2.6; }
+.daynav .icon .ico { width:24px; height:24px; stroke-width:2.6; }
+.top.big { align-items:flex-end; padding-top:calc(env(safe-area-inset-top) + 16px); padding-bottom:10px; }
+.top.big h1 { margin:0; font-size:2rem; line-height:1.15; }
+.top.big p { margin:0; }
+
+/* Diario: cabecera con día y tres puntos */
+.diary-top { display:flex; justify-content:center; position:sticky; gap:0; }
+.diary-top .daynav { display:flex; align-items:center; justify-content:center; gap:4px; position:static; margin:0; padding:0; background:none; }
+.daytitle { display:flex; flex-direction:column; align-items:center; min-width:7.5rem; line-height:1.15; }
+.daylabel { font-size:1.3rem; text-transform:capitalize; }
+.top-action { position:absolute; right:8px; top:calc(env(safe-area-inset-top) + 8px); }
+.diary-top .top-action .ico { width:30px; height:30px; }
+
+/* Menú de los tres puntos y hojas inferiores */
+.popmenu-wrap { position:fixed; inset:0; z-index:9; }
+.popmenu { list-style:none; margin:0; padding:4px 0; position:absolute; right:12px; top:calc(env(safe-area-inset-top) + var(--header-h)); width:min(300px, calc(100% - 24px)); background:var(--surface); border-radius:var(--radius); box-shadow:0 8px 28px rgba(20,24,40,.25); }
+.popitem { display:flex; width:100%; justify-content:space-between; align-items:center; gap:12px; border:none; border-radius:0; background:none; padding:12px 16px; text-align:left; }
+.popmenu li + li .popitem { border-top:1px solid var(--line); }
+.popitem .ico { color:var(--fg); }
+.action-sheet .sheet-items { list-style:none; margin:0; padding:0; }
+.sheet-item { display:flex; align-items:center; gap:14px; width:100%; text-align:left; border:none; border-radius:12px; background:none; padding:10px 6px; min-height:56px; }
+.sheet-item + .sheet-item { border-top:none; }
+.sheet-ico { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:var(--soft); color:var(--link); flex:none; }
+.sheet-text { display:flex; flex-direction:column; }
+.sheet-label { font-weight:600; font-size:1.05rem; }
+
+/* Resumen de energía: tres anillos hechos con conic-gradient */
+.caps { text-transform:uppercase; letter-spacing:.03em; font-size:.85rem; font-weight:700; color:var(--fg); margin:4px 0 12px; }
+.rings { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin:0 0 16px; }
+.ring-box { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; }
+.ring { position:relative; width:100%; max-width:120px; aspect-ratio:1; border-radius:50%; display:grid; place-items:center; }
+.ring-in { position:absolute; inset:11%; border-radius:50%; background:var(--surface); display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.1; font-variant-numeric:tabular-nums; }
+.ring-in strong { font-size:1.15rem; }
+.ring-in span { font-size:.75rem; color:var(--muted); }
+.ring-label { font-weight:600; font-size:.9rem; text-align:center; display:flex; align-items:center; gap:4px; }
+.ring-label.alert { color:var(--bar-over); }
+.ring-warn { display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; background:var(--bar-over); color:var(--surface); font-size:.7rem; font-weight:800; }
+.resumen .nuts { margin-top:4px; }
+
+/* Comidas del Diario: "+" propio, kcal a la derecha y acciones secundarias plegadas */
+.card.meal { padding:0 16px; }
+.meal-head { min-height:56px; justify-content:flex-start; gap:8px; }
+.meal-head > strong { flex:1; font-size:1.2rem; }
+.meal-add { color:var(--link); margin-left:-10px; }
+.meal-add .ico { width:28px; height:28px; stroke-width:2.4; }
+.registro-actions { min-height:44px; }
+.more-actions { margin:0; position:relative; }
+.more-actions > summary { min-width:44px; justify-content:center; color:var(--link); list-style:none; }
+.more-actions > summary::before { content:none; }
+.more-list { display:flex; flex-direction:column; align-items:flex-start; position:absolute; right:0; z-index:2; min-width:14rem; background:var(--surface); border-radius:var(--radius); box-shadow:0 8px 28px rgba(20,24,40,.25); padding:4px 8px; }
+.more-list .link { text-align:left; width:100%; }
+.line-name { font-weight:600; }
+
+/* Informe diario */
+.informe-fecha { text-align:center; font-weight:700; font-size:1.1rem; margin:4px 0 2px; }
+.informe .objetivos-dia { text-align:center; margin:0 0 8px; }
+.ring-row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.ring-row h2 { margin:0; font-size:1.25rem; }
+.ring-row .ring-box { width:46%; max-width:190px; }
+.ring-row .ring-label { font-size:.85rem; color:var(--muted); }
+.legend { list-style:none; margin:12px 0 4px; padding:0; }
+.legend li { display:flex; align-items:center; gap:10px; min-height:44px; border-top:1px solid var(--line); }
+.legend .dot { width:14px; height:14px; border-radius:50%; flex:none; }
+.legend-pct { margin-left:auto; font-variant-numeric:tabular-nums; }
+.kvs { list-style:none; margin:0; padding:0; }
+.kv { display:flex; justify-content:space-between; gap:12px; align-items:baseline; min-height:44px; padding:10px 0; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+.kv:first-child { border-top:none; }
+.kv.strong { font-weight:700; }
+.grupo h3 { margin:16px 0 8px; font-size:1rem; text-transform:capitalize; color:var(--muted); }
+.informe .nut-head { font-size:.95rem; }
+
+/* Alimentos: tarjetas y lista del catálogo */
+.card-link .card-head { display:flex; gap:12px; align-items:flex-start; }
+.card-ico { width:44px; height:44px; border-radius:50%; background:var(--soft); color:var(--link); display:grid; place-items:center; flex:none; }
+.card-body { flex:1; min-width:0; }
+.card-body h2 { margin:0; font-size:1.15rem; }
+.card-body p { margin:2px 0 0; }
+button.pill { border-radius:999px; border:2px solid var(--fg); font-weight:700; letter-spacing:.04em; text-transform:uppercase; font-size:.85rem; padding:10px 22px; }
+.chev { margin:-6px -8px 0 0; }
+.searchbar { display:flex; align-items:center; gap:8px; background:var(--soft); border-radius:999px; padding:0 14px; margin:4px 0 12px; }
+.searchbar .ico { color:var(--muted); }
+.searchbar input[type=search] { border:none; background:none; min-height:48px; padding:0; }
+.segment { display:flex; gap:4px; background:var(--soft); border-radius:999px; padding:4px; margin-bottom:8px; }
+.seg { flex:1; border:none; border-radius:999px; background:none; padding:8px 6px; font-weight:600; }
+.seg[aria-pressed="true"] { background:var(--fg); color:var(--bg); }
+.food-count { margin:4px 4px 8px; }
+.food-list { list-style:none; margin:0 -16px; padding:0; background:var(--surface); border-radius:var(--radius); }
+.food-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 16px; min-height:56px; border-top:1px solid var(--line); }
+.food-row:first-child { border-top:none; }
+.food-main { display:flex; flex-direction:column; min-width:0; }
+.food-tag { flex:none; font-size:.8rem; color:var(--muted); font-weight:600; }
+.food-tag.warn { color:var(--warn); }
+.food-list .empty { padding:16px; }
+
+/* Más: lista de ajustes con chevrons */
+.menu-list { list-style:none; margin:0 -16px; padding:0; background:var(--surface); border-radius:var(--radius); overflow:hidden; }
+.menu-row { display:flex; align-items:center; gap:14px; width:100%; min-height:64px; padding:10px 16px; border:none; border-radius:0; background:none; text-align:left; font-size:1.05rem; font-weight:600; }
+.menu-list li + li .menu-row { border-top:1px solid var(--line); }
+.menu-ico { color:var(--fg); display:grid; place-items:center; }
+.menu-text { flex:1; display:flex; flex-direction:column; min-width:0; }
+.menu-chev { color:var(--fg); }
+
+/* Dictado: accesos rápidos arriba */
+.quick-row { display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin:4px 0 12px; }
+.quick { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:6px; padding:10px 2px; min-height:76px; border:none; border-radius:var(--radius); background:var(--surface); box-shadow:var(--shadow); font-size:.78rem; font-weight:600; text-align:center; line-height:1.15; }
+.quick .ico { width:28px; height:28px; color:var(--link); }
+.dictado-screen .chips { margin-top:12px; }
+.dictado-screen .row { margin-top:12px; }
+.dictado-screen button.primary { min-height:52px; font-size:1.05rem; border-radius:999px; }
+
+@media (max-width:360px) { .rings { gap:4px; } .ring-in strong { font-size:1rem; } .quick { font-size:.72rem; } }
+
+/* Ronda 1: botón desactivado neutro, dictado, resumen compacto, avisos de UL en una línea */
+button.primary:disabled, button.primary:disabled:hover { background:var(--dis-bg); color:var(--dis-fg); border-color:var(--dis-bg); opacity:1; }
+.dictado { resize:none; border-radius:var(--radius); min-height:140px; }
+.dictado:focus, .dictado:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.dictado-screen .chips { flex-wrap:nowrap; gap:4px; background:var(--soft); border-radius:999px; padding:4px; margin:12px 0; }
+.dictado-screen .chip { flex:1; min-width:0; padding:8px 2px; border:none; background:none; font-size:.85rem; }
+.dictado-screen .chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
+.dictado-screen .quick { justify-content:flex-start; } .quick span { min-height:2.3em; display:flex; align-items:center; }
+.dictado-screen .muted.small { margin:8px 4px 0; }
+main:has(> footer.bar) { padding-bottom:calc(200px + env(safe-area-inset-bottom)); }
+button.review { border-color:var(--warn); color:var(--warn); background:var(--soft); font-weight:600; }
+.sheet-item.primary-row { background:var(--accent); color:var(--on-accent); font-weight:700; border-radius:14px; padding:10px 14px; min-height:56px; margin-bottom:6px; }
+.sheet-item.primary-row .sheet-ico { background:rgba(255,255,255,.2); color:var(--on-accent); }
+.popmenu { border:1px solid var(--line); }
+.row.col { flex-direction:column; align-items:stretch; }
+.row.col > button { width:100%; min-height:48px; }
+.panel .row.wrap > button.secondary { flex:1 1 100%; min-height:48px; }
+
+/* Nutrientes: nombre, valor y % en la primera línea; el estado en texto solo si es excepcional */
+.nut-pct { font-weight:700; font-variant-numeric:tabular-nums; margin-left:8px; }
+.nut-pct.por_encima, .nut-pct.excedido, .over-ul .nut-pct { color:var(--bar-over); }
+.nut-pct.cumplido, .nut-pct.en_objetivo, .nut-pct.dentro { color:var(--bar-met); }
+.nut-estado.sr { position:absolute; }
+.nut { position:relative; }
+.nota-ul { margin-top:2px; }
+.alert-strip { display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; padding:8px 16px; border-width:1px; background:var(--soft); font-size:.9rem; }
+.alert-strip .link { padding:0 4px; min-height:44px; }
+.parciales { margin:0 0 8px; font-size:.8rem; }
+.resumen .nut-head { flex-wrap:nowrap; }
+.resumen .meter { margin:4px 0 0; }
+.resumen .nuts { gap:10px; }
+.rings { margin-bottom:12px; } .ring { max-width:104px; }
+.tag { font-size:.8rem; }
+.plegable > summary { list-style:none; justify-content:space-between; padding-right:0; }
+.plegable > summary::before { content:none; }
+.plegable > summary h2 { margin:0; }
+.plegable > summary::after { content:"⌃"; font-size:1.2rem; transition:transform .15s; transform:rotate(180deg); display:inline-block; width:44px; text-align:center; color:var(--link); }
+.plegable[open] > summary::after { transform:none; }
+.grupo h3 { font-size:.95rem; font-weight:600; }
+.informe { padding-bottom:calc(150px + env(safe-area-inset-bottom)); }
+
+/* Alimentos y plantillas */
+.food-side { display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex:none; }
+.food-kcal { font-variant-numeric:tabular-nums; font-weight:600; }
+.card-link .card-head + .row { margin-top:10px; }
+.plantillas .plantilla .registro-actions button.secondary { border-radius:999px; border:2px solid var(--fg); font-weight:700; min-height:44px; }
+.plantillas .plantilla .registro-actions button.link { min-width:44px; min-height:44px; }
+.card[class*=" k-"] { border-left-color:var(--c-macro, var(--line)); }

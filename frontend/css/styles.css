@@ -1,8 +1,8 @@
 /* Paleta: un único :root con su versión oscura. Valores y contrastes en docs/notas-estetica.md. */
 :root {
   color-scheme: light dark;
-  --bg:#f1f2f6; --surface:#ffffff; --fg:#1b1d2a; --muted:#5b6072; --line:#d5d8e1; --field:#767b8e; --track:#e2e5ec;
-  --accent:#b8410f; --on-accent:#ffffff;
+  --bg:#faf5ee; --surface:#ffffff; --fg:#232536; --muted:#5b6072; --line:#e3ddd3; --field:#767b8e; --track:#e9e4dc;
+  --accent:#b8410f; --on-accent:#ffffff; --fab:#e4571f; --on-fab:#ffffff; --dis-bg:#e6e1db; --dis-fg:#6b6660; --link:#0b6b6b; --ring-obj:#858ba0; --soft:#f3efe8;
   --c-energia:var(--accent); --c-proteina:#1a7a43; --c-hidratos:#0a7a87; --c-grasa:#8b3fa6;
   --bar-under:#5b6072; --bar-met:#1a7a43; --bar-over:#c62828; --warn:#8a5300;
   --scrim:rgba(10,12,20,.5); --shadow:0 1px 2px rgba(20,24,40,.06), 0 2px 8px rgba(20,24,40,.05);
@@ -11,9 +11,9 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --bg:#11131c; --surface:#232634; --fg:#f3f4f8; --muted:#a4a9ba; --line:#363a4c; --field:#7a8098; --track:#3a3e51;
-    --accent:#ff7a4d; --on-accent:#1a0b04;
+    --accent:#ff7a4d; --on-accent:#1a0b04; --fab:#e4571f; --on-fab:#ffffff; --dis-bg:#2e3344; --dis-fg:#9aa0ae; --link:#5fd0c8; --ring-obj:#8a90a8; --soft:#2b2f40;
     --c-proteina:#62d68e; --c-hidratos:#44cddb; --c-grasa:#c584d9;
-    --bar-under:#eceef3; --bar-met:#84dfa2; --bar-over:#ff6b5e; --warn:#f0b44c;
+    --bar-under:#8a90a6; --bar-met:#84dfa2; --bar-over:#ff6b5e; --warn:#f0b44c;
     --scrim:rgba(0,0,0,.6); --shadow:none;
   }
 }

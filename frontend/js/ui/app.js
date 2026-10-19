@@ -1,5 +1,6 @@
-// Interfaz: pantallas Inicio (dictado) -> Confirmación (editable) -> Guardar, más Diario (totales del día frente a los
-// objetivos), Objetivos y Documento (importar + conexión).
+// Interfaz: barra inferior Diario · Alimentos · [+] · Más. El "+" abre el dictado -> Confirmación (editable) -> Guardar. Diario
+// (resumen del día y comidas) con el Informe diario detrás de los tres puntos; Alimentos (catálogo, recetas, plantillas);
+// Más (Objetivos, Documento, Copia de seguridad, Conexión, Pulir el documento).
 // Sin frameworks: DOM con textContent (nunca innerHTML con datos). Toda la lógica de negocio está en js/core.
 import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
@@ -27,6 +28,10 @@ import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } f
 import { recetasActions, recetasScreen } from './recetas-screen.js';
 import { cleanRecetas, mergeRecetasImport } from '../core/recetas.js';
 import { objetivosScreen } from './objetivos-screen.js';
+import { bottomNav, sheet, popMenu, icon } from './nav.js';
+import { reportScreen, energySummary } from './report-screen.js';
+import { alimentosScreen, catalogoListScreen } from './foods-screen.js';
+import { masScreen } from './more-screen.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -82,9 +87,9 @@ export function mountApp(root, deps) {
     return 'descargado';
   });
   const state = {
-    screen: 'home', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
+    screen: 'diary', sheet: null, menu: false, docSection: 'documento', catQuery: '', catFilter: 'todos', catFocus: false, addDate: null, plantillasBack: 'alimentos', recetasBack: 'alimentos', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'home',
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'diary',
     estimate: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
@@ -136,7 +141,7 @@ export function mountApp(root, deps) {
       if (plan) await deps.store.setSetting('plan_objetivos', plan);
     }
     state.plan = plan ?? null;
-    if (state.screen === 'diary' || state.screen === 'objetivos') render();
+    if (['diary', 'informe', 'objetivos'].includes(state.screen)) render();
   }
   // El plan de una copia: el suyo si es válido o, en una copia antigua, el de sus objetivos.
   function planDeCopia(parsed) {
@@ -166,7 +171,7 @@ export function mountApp(root, deps) {
         const result = await interpret(text);
         const entry = newEntry({ texto: text, result, now: now() });
         if (entry) await deps.store.setSetting('registro_frases', addEntry(await loadLog(), entry));
-        state.draft = { ...createDraft({ text, meal: state.meal, result, foodsById: byId() }), logId: entry?.id ?? null };
+        state.draft = { ...createDraft({ text, meal: state.meal, result, foodsById: byId() }), logId: entry?.id ?? null, addDate: state.addDate };
         state.screen = 'confirm';
       } catch (e) {
         state.error = e.userMessage ?? `Error inesperado: ${e.message}`;
@@ -182,7 +187,7 @@ export function mountApp(root, deps) {
     return track((async () => {
       const { text, meal } = state.draft;
       try {
-        state.draft = createDraft({ text, meal, result: await interpret(text), foodsById: byId() });
+        state.draft = { ...createDraft({ text, meal, result: await interpret(text), foodsById: byId() }), addDate: state.draft.addDate };
       } catch (e) {
         state.error = e.userMessage ?? `Error inesperado: ${e.message}`;
       } finally {
@@ -192,7 +197,7 @@ export function mountApp(root, deps) {
   }
 
   function startManual() {
-    state.draft = createDraft({ text: state.text.trim(), meal: state.meal, foodsById: byId() });
+    state.draft = { ...createDraft({ text: state.text.trim(), meal: state.meal, foodsById: byId() }), addDate: state.addDate };
     state.error = ''; state.screen = 'confirm'; render();
   }
 
@@ -201,14 +206,16 @@ export function mountApp(root, deps) {
     if (state.draft.editing) return saveEdit();
     return track((async () => {
       const rec = toMealRecord(state.draft, { now: now(), idGen: deps.idGen });
+      if (state.draft.addDate) rec.date = state.draft.addDate; // "+" de una comida de otro día: se guarda en ese día
       await deps.store.addMeal(rec);
       if (state.draft.logId) {
         const log = await loadLog();
         const entry = log.find((e) => e.id === state.draft.logId);
         if (entry) await deps.store.setSetting('registro_frases', updateEntry(log, resolveEntry(entry, rec.lines)));
       }
-      state.status = `Guardado en ${MEAL_LABEL[rec.meal].toLowerCase()}: ${rec.lines.length} ${rec.lines.length === 1 ? 'alimento' : 'alimentos'}.`;
-      state.text = ''; state.draft = null; state.screen = 'home'; render();
+      const msg = `Guardado en ${MEAL_LABEL[rec.meal].toLowerCase()}: ${rec.lines.length} ${rec.lines.length === 1 ? 'alimento' : 'alimentos'}.`;
+      state.text = ''; state.draft = null; state.addDate = null;
+      await openDay(rec.date, msg);
     })(), 'No se pudo guardar');
   }
 
@@ -249,12 +256,12 @@ export function mountApp(root, deps) {
   // Pantalla Documento: se cargan antes todas las comidas para que "Exportar" comparta en el mismo toque.
   const loadTemplates = async () => cleanTemplates(await deps.store.getSetting('plantillas'));
   const loadLog = async () => cleanLog(await deps.store.getSetting('registro_frases'));
-  const openDoc = (msg = '') => track((async () => {
+  const openDoc = (msg = '', section = state.docSection) => track((async () => {
     state.allMeals = await deps.store.allMeals();
     state.plantillas = await loadTemplates();
     state.registro = await loadLog();
     state.recetasPropias = cleanRecetas(await deps.store.getSetting('recetas'));
-    state.docMsg = msg; state.screen = 'doc'; render();
+    state.docMsg = msg; state.docSection = section; state.screen = 'doc'; render();
   })());
   const fecha = () => madridNow(now()).date;
 
@@ -292,8 +299,8 @@ export function mountApp(root, deps) {
       await deps.store.setSetting('catalogo_base', { hash: u.hash, text: u.text });
       await deps.store.setSetting('catalogo_ignorado', null);
       state.catUpdate = null;
-      state.status = `Documento actualizado: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados.`;
-      state.screen = 'home'; render();
+      state.diaryMsg = `Documento actualizado: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados.`;
+      state.screen = 'diary'; render();
     })(), 'No se pudo actualizar el documento');
   }
 
@@ -302,7 +309,8 @@ export function mountApp(root, deps) {
     return track((async () => {
       await deps.store.setSetting('catalogo_ignorado', state.catUpdate.hash);
       state.catUpdate = { ...state.catUpdate, ignorado: true };
-      state.screen = state.catBack === 'doc' ? 'doc' : 'home'; render();
+      if (state.screen === 'catalogo') state.screen = state.catBack;
+      render();
     })());
   }
 
@@ -414,9 +422,9 @@ export function mountApp(root, deps) {
     })(), 'No se pudo abrir');
   }
 
-  const openTemplates = (msg = '') => track((async () => {
+  const openTemplates = (msg = '', back = state.plantillasBack) => track((async () => {
     state.plantillas = await loadTemplates();
-    state.plantillasMsg = msg; state.pendingDelete = null; state.screen = 'plantillas'; render();
+    state.plantillasBack = back; state.plantillasMsg = msg; state.pendingDelete = null; state.screen = 'plantillas'; render();
   })());
 
   // Guardar una comida del Diario como plantilla (con nombre; sin repetir nombres).
@@ -428,7 +436,7 @@ export function mountApp(root, deps) {
       const t = templateFromRecord(rec, { nombre, list, now: now(), idGen: deps.idGen });
       await deps.store.setSetting('plantillas', addTemplate(list, t));
       state.templateForm = null;
-      state.diaryMsg = `Plantilla «${t.nombre}» guardada. La tienes en Inicio → Plantillas.`;
+      state.diaryMsg = `Plantilla «${t.nombre}» guardada. La tienes en Alimentos → Plantillas.`;
       render();
     })(), 'No se pudo guardar la plantilla');
   }
@@ -495,13 +503,30 @@ export function mountApp(root, deps) {
       h('button', { type: 'button', class: 'chip', 'aria-pressed': String(m === current), onclick: () => onPick(m) }, MEAL_LABEL[m])));
   }
 
-  function header(title, back) {
+  // Cabecera de las pantallas interiores: "‹" a la izquierda (el texto "Volver" queda solo para lectores de pantalla) y el título centrado.
+  function header(title, back, { close = false } = {}) {
     return h('header', { class: back ? 'top with-back' : 'top' },
-      back ? h('button', { class: 'link', onclick: back }, '‹ Volver') : h('strong', { class: 'brand' }, title),
-      back ? h('strong', {}, title) : h('nav', {},
-        h('button', { class: 'link', onclick: () => openDay(today()) }, 'Diario'),
-        h('button', { class: 'link', onclick: () => openDoc() }, 'Documento')));
+      back ? h('button', { type: 'button', class: 'icon back', onclick: back }, icon(doc, close ? 'close' : 'back'), h('span', { class: 'sr' }, '‹ Volver')) : h('strong', { class: 'brand' }, title),
+      back ? h('strong', {}, title) : null, back ? h('span', {}) : null);
   }
+
+  // ---------- navegación (barra inferior y "+") ----------
+  // El "+" central abre directamente el dictado, con la comida de la hora. El "+" de cada comida abre su hoja de opciones.
+  function openAdd({ meal = defaultMeal(now()), date = null } = {}) {
+    state.sheet = null; state.menu = false; state.meal = meal; state.addDate = date;
+    state.error = ''; state.screen = 'home'; render();
+  }
+  const openAlimentos = () => track((async () => { state.plantillas = await loadTemplates(); state.screen = 'alimentos'; state.pendingDelete = null; render(); })());
+  const openCatalogList = ({ focus = false } = {}) => { state.catFocus = focus; state.screen = 'micatalogo'; render(); };
+  function go(id) {
+    state.sheet = null; state.menu = false;
+    if (id === 'diary') return openDay(today());
+    if (id === 'alimentos') return openAlimentos();
+    if (id === 'mas') { state.screen = 'mas'; state.pendingDelete = null; render(); return undefined; }
+    return openAdd();
+  }
+  const TAB_OF = { diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas' };
+  const SIN_BARRA = ['home', 'confirm', 'repeat', 'estimar']; // llevan su propia barra de acciones
 
   function openPicker({ title, onPick }) {
     const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
@@ -534,19 +559,29 @@ export function mountApp(root, deps) {
     btn = h('button', { class: 'primary', disabled: state.busy || !state.text.trim(), onclick: process }, state.busy ? 'Procesando…' : 'Procesar');
     const incompletos = state.foods.filter(incompleteInfo).length;
     queueMicrotask(() => { try { ta.focus(); } catch { /* sin foco */ } });
-    return h('main', {},
-      header('NutritionTracker'),
-      state.status ? h('p', { class: 'ok', role: 'status' }, state.status) : null,
-      state.catUpdate && !state.catUpdate.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
-        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} con conflicto` : ''}.`),
-        h('div', { class: 'row' },
-          h('button', { class: 'secondary', onclick: () => { state.catBack = 'home'; state.screen = 'catalogo'; render(); } }, 'Revisar'),
-          h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,
-      state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : h('p', { class: 'muted' }, `${state.foods.length} alimentos${incompletos ? ` · ${incompletos} incompletos` : ''}`),
+    const fechaDestino = state.addDate ?? today();
+    const quick = (ico, label, onclick) => h('button', { type: 'button', class: 'quick', onclick }, icon(doc, ico), h('span', {}, label));
+    return h('main', { class: 'dictado-screen' },
+      header(`Añadir a ${MEAL_LABEL[state.meal].toLowerCase()}`, () => { if (state.day === fechaDestino) { state.screen = 'diary'; render(); } else openDay(fechaDestino); }, { close: true }),
+      h('div', { class: 'quick-row', role: 'group', 'aria-label': 'Accesos rápidos' },
+        quick('hand', 'Añadir a mano', startManual),
+        quick('repeat', 'Repetir de ayer', () => openRepeat({ sourceDate: shiftDate(fechaDestino, -1), targetDate: fechaDestino, back: 'home' })),
+        quick('list', 'Plantillas', () => openTemplates('', 'home')),
+        quick('spark', 'Estimar con IA', estimateFromText)),
+      state.addDate && state.addDate !== today() ? h('p', { class: 'muted small' }, dayLabel(state.addDate)) : null,
       ta, mealChips(state.meal, (m) => { state.meal = m; render(); }),
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
-      h('div', { class: 'row' }, btn, h('button', { class: 'secondary', onclick: startManual }, 'Añadir a mano')),
-      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => openRepeat({ sourceDate: shiftDate(today(), -1), back: 'home' }) }, 'Repetir de ayer'), h('button', { class: 'secondary', onclick: () => openTemplates() }, 'Plantillas')));
+      h('div', { class: 'row' }, btn),
+      state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : h('p', { class: 'muted small' }, `${state.foods.length} alimentos${incompletos ? ` · ${incompletos} incompletos` : ''}`));
+  }
+
+  // «Estimar con IA» desde el "+": el texto dictado se trata como un plato que no está en el documento.
+  function estimateFromText() {
+    const text = state.text.trim();
+    if (!text) { state.error = 'Añade al menos un alimento.'; render(); return undefined; }
+    state.draft = { ...createDraft({ text, meal: state.meal, foodsById: byId() }), addDate: state.addDate };
+    state.draft.unmatched = [{ text, motivo: 'no_en_catalogo' }];
+    return est.start(0);
   }
 
   function flagsFor(line) { return line.flags.filter((f) => FLAG_TEXT[f]).map((f) => h('div', { class: 'flag' }, FLAG_TEXT[f])); }
@@ -654,46 +689,48 @@ export function mountApp(root, deps) {
       !r.applied && parsed.foods.length > 0 ? applyBtn : null);
   }
 
+  const DOC_TITULO = { documento: 'Documento', copia: 'Copia de seguridad', conexion: 'Conexión con la IA', pulir: 'Pulir el documento' };
   function docScreen() {
+    const sec = state.docSection;
     const fileIn = h('input', { type: 'file', accept: '.csv,.json,text/csv,application/json,text/plain', hidden: true, 'aria-label': 'Elegir documento de alimentos', onchange: (e) => onFile(e.target.files[0]) });
     const ep = h('input', { type: 'url', placeholder: 'https://nutrition-tracker-ai.TU-CUENTA.workers.dev', value: state.conn.endpoint ?? '', 'aria-label': 'Dirección del Worker' });
     const tk = h('input', { type: 'password', placeholder: 'Token compartido', value: state.conn.token ?? '', 'aria-label': 'Token', autocomplete: 'off' });
     const connMsg = h('p', { class: 'muted small', role: 'status' });
     const backupIn = h('input', { type: 'file', accept: '.json,application/json', hidden: true, 'aria-label': 'Elegir copia del diario', onchange: (e) => onBackupFile(e.target.files[0]) });
     const incompletos = state.foods.filter(incompleteInfo).length;
-    return h('main', {},
-      header('Documento', () => { state.screen = 'home'; render(); }),
-      h('section', { class: 'panel' },
+    const paneles = {
+      documento: h('section', { class: 'panel' },
         h('p', {}, state.foods.length ? `${state.docName || 'Documento'}: ${state.foods.length} alimentos (${incompletos} incompletos).` : 'Sin documento cargado.'),
         h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => fileIn.click() }, 'Importar documento'), fileIn),
         deps.fetchPublished ? h('div', { class: 'row wrap' },
           h('button', { class: 'secondary', onclick: () => checkCatalogUpdate({ manual: true }) }, 'Buscar actualización del documento'),
           state.catUpdate ? h('button', { class: 'link', onclick: () => { state.catBack = 'doc'; state.screen = 'catalogo'; render(); } }, 'Revisar la versión nueva') : null) : null,
         state.catMsg ? h('p', { class: 'muted small', role: 'status' }, state.catMsg) : null,
-        state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null),
-      h('section', { class: 'panel' },
-        h('h2', {}, 'Conexión con la IA'),
+        state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
+        state.importResult ? reportView(state.importResult, h('button', { class: 'primary', onclick: () => track(applyImport().then(render), 'No se pudo importar el documento') }, `Importar ${state.importResult.parsed.foods.length} alimentos válidos`)) : null,
+        h('div', { class: 'row wrap' },
+          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(true) }, 'Exportar documento (Excel)'),
+          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(false) }, 'Exportar documento (CSV con comas)'))),
+      conexion: h('section', { class: 'panel' },
         h('label', {}, 'Worker', ep), h('label', {}, 'Token', tk),
-        h('div', { class: 'row' },
-          h('button', { class: 'secondary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
+        h('div', { class: 'row col' },
+          h('button', { class: 'primary', onclick: () => track((async () => { state.conn = { endpoint: ep.value.trim(), token: tk.value }; await deps.store.setSetting('conn', state.conn); connMsg.textContent = 'Guardado.'; })()) }, 'Guardar'),
           h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
         connMsg),
-      h('section', { class: 'panel' },
-        h('h2', {}, 'Pulir el documento'),
-        h('div', { class: 'row wrap' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`), h('button', { class: 'secondary', onclick: () => rec.open() }, 'Recetas')),
-        pendientesView({ h, state, est })),
-      h('section', { class: 'panel' },
-        h('h2', {}, 'Copia de seguridad'),
+      pulir: h('section', { class: 'panel' },
+        h('div', { class: 'row wrap' }, h('button', { class: 'secondary', onclick: () => openLog() }, `Frases a revisar (${state.registro.length})`), h('button', { class: 'secondary', onclick: () => { state.recetasBack = 'pulir'; rec.open(); } }, 'Recetas'))),
+      copia: h('section', { class: 'panel' },
         h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). Lleva también tus objetivos, plantillas y frases a revisar; no incluye el token.`),
         doc.defaultView?.isSecureContext === false ? h('p', { class: 'warn small' }, 'Sin https (prueba en red local): el fichero se descarga en vez de abrir el menú Compartir, y la app no funciona sin conexión.') : null,
         state.docMsg ? h('p', { class: 'ok', role: 'status' }, state.docMsg) : null,
         h('div', { class: 'row wrap' },
           h('button', { class: 'secondary', onclick: () => exportDiary() }, 'Exportar diario'),
           h('button', { class: 'secondary', onclick: () => backupIn.click() }, 'Importar diario'), backupIn),
-        state.backupImport ? backupView(state.backupImport) : null,
-        h('div', { class: 'row wrap' },
-          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(true) }, 'Exportar documento (Excel)'),
-          h('button', { class: 'secondary', disabled: !state.foods.length, onclick: () => exportFoods(false) }, 'Exportar documento (CSV con comas)'))));
+        state.backupImport ? backupView(state.backupImport) : null),
+    };
+    return h('main', {},
+      header(DOC_TITULO[sec] ?? 'Documento', () => { state.screen = 'mas'; render(); }),
+      paneles[sec] ?? paneles.documento);
   }
 
   const dayLabel = (date) => {
@@ -710,52 +747,87 @@ export function mountApp(root, deps) {
     const fill = h('span', {});
     fill.style.width = `${Math.min(1, r.pct ?? 0) * 100}%`;
     const pct = r.pct !== null && r.estado !== 'sin_dato' ? `${nf0.format(r.pct * 100)} %` : '';
+    const excepcional = r.superaUl || r.estado === 'excedido' || r.estado === 'por_encima' || r.estado === 'sin_dato';
     return h('li', { class: r.superaUl ? 'nut over-ul' : 'nut', 'data-clave': r.clave },
-      h('div', { class: 'row between nut-head' }, h('span', { class: 'nut-label' }, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo))),
+      h('div', { class: 'row between nut-head' }, h('span', { class: 'nut-label' }, r.label, r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null), h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo)),
+        pct ? h('span', { class: `nut-pct ${r.estado}` }, pct) : null),
       h('div', { class: `meter ${r.estado}`, role: 'img', 'aria-label': pct || 'sin dato' }, fill),
-      h('div', { class: 'small nut-estado' },
+      h('div', { class: excepcional ? 'small nut-estado' : 'small nut-estado sr' },
         h('span', { class: `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
-        r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null));
+        r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null,
+        r.superaUl && r.notaUl ? h('div', { class: 'small muted nota-ul' }, r.notaUl) : null));
   }
 
   const fmtKcal = (x) => (x.kcal === null ? 'sin dato de kcal' : `${nf0.format(x.kcal)} kcal${x.kcalParcial ? ' (parcial)' : ''}`);
 
+  const shortDate = (date) => {
+    const [y, m, d] = date.split('-').map(Number);
+    return new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d))).replace(/\./g, '');
+  };
+  const ordinarias = MEALS.filter((m) => m !== 'otro');
+
+  function dayHeader() {
+    const rel = state.day === today() ? 'Hoy' : state.day === shiftDate(today(), -1) ? 'Ayer' : null;
+    return h('header', { class: 'top diary-top' },
+      h('nav', { class: 'daynav', 'aria-label': 'Día' },
+        h('button', { class: 'icon', 'aria-label': 'Día anterior', onclick: () => openDay(shiftDate(state.day, -1)) }, icon(doc, 'prev')),
+        h('div', { class: 'daytitle' }, h('strong', { class: 'daylabel' }, rel ?? shortDate(state.day)), rel ? h('small', { class: 'muted' }, shortDate(state.day)) : null),
+        h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, icon(doc, 'next'))),
+      h('button', { type: 'button', class: 'icon top-action', 'aria-label': 'Más opciones del día', 'aria-haspopup': 'menu', 'aria-expanded': String(state.menu), onclick: () => { state.menu = !state.menu; render(); } }, icon(doc, 'dots')));
+  }
+
   function diaryScreen() {
     const obj = targetsFor(state.day);
     const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
-    const macros = rep.rows.filter((r) => MACROS.includes(r.clave));
-    const micros = rep.rows.filter((r) => !MACROS.includes(r.clave));
-    return h('main', {},
-      header('Diario', () => { state.screen = 'home'; render(); }),
-      h('nav', { class: 'daynav row between', 'aria-label': 'Día' },
-        h('button', { class: 'icon', 'aria-label': 'Día anterior', onclick: () => openDay(shiftDate(state.day, -1)) }, '‹'),
-        h('strong', { class: 'daylabel' }, dayLabel(state.day)),
-        h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, '›')),
-      state.day !== today() ? h('button', { class: 'link', onclick: () => openDay(today()) }, 'Ir a hoy') : null,
-      h('p', { class: 'muted small objetivos-dia' }, obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA'),
+    const macros = rep.rows.filter((r) => ['proteina_g', 'hidratos_g', 'grasa_total_g'].includes(r.clave));
+    const mealCard = (c, meal) => h('section', { class: 'card meal', 'data-meal': meal },
+      h('div', { class: 'row between meal-head' },
+        h('button', { type: 'button', class: 'icon meal-add', 'aria-label': `Añadir a ${MEAL_LABEL[meal].toLowerCase()}`, onclick: () => { state.sheet = { meal, date: state.day }; render(); } }, icon(doc, 'plus')),
+        h('strong', {}, MEAL_LABEL[meal]), h('span', { class: 'muted' }, c ? fmtKcal(c) : '')),
+      (c?.registros ?? []).map((r) => h('div', { class: 'registro', 'data-id': r.id },
+        h('ul', { class: 'lines' }, r.lines.map((l) => h('li', { class: 'line' },
+          h('span', { class: 'line-name' }, l.nombre), h('span', { class: 'sep' }, ' · '),
+          h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
+          h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
+        h('div', { class: 'row between registro-actions' },
+          h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
+          h('span', { class: 'row wrap' },
+            h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'),
+            deleteControls(r.id, state.day),
+            h('details', { class: 'more-actions' }, h('summary', { 'aria-label': 'Más acciones de la comida' }, icon(doc, 'dots')),
+              h('div', { class: 'more-list' },
+                h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'),
+                h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'),
+                h('button', { class: 'link', onclick: () => rec.openForm({ lines: r.record.lines, back: 'diary' }) }, 'Guardar como receta'))))),
+        state.templateForm?.recordId === r.id ? templateForm(r.record) : null)));
+    return h('main', { class: 'diario' },
+      dayHeader(),
       state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
+      state.catUpdate && !state.catUpdate.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
+        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} con conflicto` : ''}.`),
+        h('div', { class: 'row' },
+          h('button', { class: 'secondary', onclick: () => { state.catBack = 'diary'; state.screen = 'catalogo'; render(); } }, 'Revisar'),
+          h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,
+      state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : null,
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
-        rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
-          h('ul', {}, rep.avisosUl.map((r) => h('li', {}, `${r.label}: ${fmtQty(r.total, r.unit)} (UL ${fmtQty(r.ul, r.unit)})`, r.notaUl ? h('div', { class: 'small muted' }, r.notaUl) : null)))) : null,
-        rep.parciales.length ? h('p', { class: 'warn small' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
-        h('section', { class: 'panel' }, h('h2', {}, 'Energía y macros'), h('ul', { class: 'nuts' }, macros.map(nutrientRow))),
-        h('section', { class: 'panel' }, h('h2', {}, 'Micronutrientes'), h('ul', { class: 'nuts' }, micros.map(nutrientRow))),
-        h('details', { class: 'panel' }, h('summary', {}, 'Otros nutrientes'),
-          h('ul', {}, rep.otros.map((o) => h('li', {}, `${o.label}: ${o.total === null ? 'sin dato' : fmtQty(o.total, o.unit)}${o.parcial && o.total !== null ? ' (parcial)' : ''}`)))),
-        h('h2', {}, 'Comidas'),
-        rep.comidas.map((c) => h('section', { class: 'card meal' },
-          h('div', { class: 'row between meal-head' }, h('strong', {}, MEAL_LABEL[c.meal]), h('span', { class: 'muted' }, fmtKcal(c))),
-          c.registros.map((r) => h('div', { class: 'registro', 'data-id': r.id },
-            h('ul', { class: 'lines' }, r.lines.map((l) => h('li', { class: 'line' },
-              h('span', { class: 'line-name' }, l.nombre), h('span', { class: 'sep' }, ' · '),
-              h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
-              h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
-            h('div', { class: 'row between registro-actions' },
-              h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
-              h('span', { class: 'row wrap' }, h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'), h('button', { class: 'link', onclick: () => editMeal(r.record) }, 'Editar'), h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'), h('button', { class: 'link', onclick: () => rec.openForm({ lines: r.record.lines, back: 'diary' }) }, 'Guardar como receta'), deleteControls(r.id, state.day))),
-            state.templateForm?.recordId === r.id ? templateForm(r.record) : null)))),
-      ],
-      h('div', { class: 'row' }, h('button', { class: 'secondary', onclick: () => { state.screen = 'objetivos'; render(); } }, 'Objetivos')));
+        rep.avisosUl.length ? h('section', { class: 'alert-ul alert-strip', role: 'alert' },
+          h('strong', {}, '⚠ Máximo tolerable (UL) superado: '), rep.avisosUl.map((r) => r.label).join(', '),
+          h('button', { type: 'button', class: 'link', onclick: () => { state.screen = 'informe'; render(); } }, 'Ver informe diario')) : null,
+        h('section', { class: 'panel resumen' },
+          h('h2', { class: 'caps' }, 'Resumen de energía'),
+          energySummary({ h, nf0 }, rep),
+          rep.parciales.length ? h('p', { class: 'warn small parciales' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
+          h('ul', { class: 'nuts' }, macros.map(nutrientRow)))],
+      ordinarias.map((m) => mealCard(rep.comidas.find((c) => c.meal === m), m)),
+      rep.comidas.find((c) => c.meal === 'otro') ? mealCard(rep.comidas.find((c) => c.meal === 'otro'), 'otro') : null);
+  }
+
+  function informeScreen() {
+    const obj = targetsFor(state.day);
+    const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
+    return reportScreen({ h, state, deps, rep, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), header,
+      objetivosTexto: obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA',
+      back: () => { state.screen = 'diary'; render(); } });
   }
 
   // Formulario en línea del Diario para guardar una comida como plantilla.
@@ -785,29 +857,51 @@ export function mountApp(root, deps) {
         const r = state.repeat;
         state.repeat = null;
         if (state.repeatBack === 'diary') openDay(r.sourceDate);
+        else if (state.repeatBack === 'diaryTarget') openDay(r.targetDate);
         else if (state.repeatBack === 'plantillas') openTemplates();
         else { state.screen = 'home'; render(); }
       },
     });
     const catalogo = () => catalogUpdateScreen({
       h, state, header, render, applyCatalogUpdate, postponeCatalogUpdate,
-      back: () => { state.screen = state.catBack === 'doc' ? 'doc' : 'home'; render(); },
+      back: () => { state.screen = state.catBack; render(); },
     });
     const registro = () => phraseLogScreen({
       h, state, byId, header, MOTIVO_TEXT, render, removeLogEntry, clearLog, exportLog,
-      back: () => openDoc(),
+      back: () => openDoc('', 'pulir'),
     });
     const plantillas = () => templatesScreen({
       h, state, byId, header, nf0, nf1, MEAL_LABEL, render, useTemplate, deleteTemplate,
-      back: () => { state.pendingDelete = null; state.screen = 'home'; render(); },
+      back: () => { state.pendingDelete = null; state.screen = state.plantillasBack; render(); },
     });
     const objetivos = () => objetivosScreen({
       h, state, store: deps.store, targets, catalog: deps.catalog, track, render, header, today, saveFile, readFile, MACROS, UNIT_LABEL, fmtNum, fmtQty,
-      back: () => openDay(state.day),
+      back: () => { state.screen = 'mas'; render(); },
     });
     const estimar = () => estimateScreen({ h, state, byId, header, openPicker, render, thr, est, back: () => { state.estimate = null; state.screen = 'confirm'; render(); } });
-    const recetas = () => recetasScreen({ h, state, byId, header, openPicker, render, openDay, nf0, rec, keys: deps.catalog.keys, required: req, labels, back: () => openDoc() });
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas };
+    const recetas = () => recetasScreen({ h, state, byId, header, openPicker, render, openDay, nf0, rec, keys: deps.catalog.keys, required: req, labels, back: () => (state.recetasBack === 'pulir' ? openDoc('', 'pulir') : openAlimentos()) });
+    const openRecetas = () => { state.recetasBack = 'alimentos'; return rec.open(); };
+    const alimentos = () => alimentosScreen({
+      h, doc, state, incompleteInfo, openCatalog: openCatalogList, openRecetas, openTemplates: () => openTemplates('', 'alimentos'),
+      nRecetas: state.foods.filter((f) => f.extra?.tipo === 'receta').length, nPlantillas: state.plantillas.length,
+      openIncompletos: () => { state.catFilter = 'incompletos'; openCatalogList(); },
+      reviewUpdate: () => { state.catBack = 'alimentos'; state.screen = 'catalogo'; render(); }, postponeUpdate: () => postponeCatalogUpdate(),
+      pendientes: pendientesView({ h, state, est }),
+    });
+    const micatalogo = () => catalogoListScreen({ h, doc, state, incompleteInfo, render, header, back: openAlimentos });
+    const abrirSeccion = (section) => () => openDoc('', section);
+    const mas = () => masScreen({
+      h, doc, state, incompletos: state.foods.filter(incompleteInfo).length,
+      items: [
+        { icon: 'target', label: 'Objetivos', onclick: () => { state.screen = 'objetivos'; render(); } },
+        { icon: 'file', label: 'Documento', onclick: abrirSeccion('documento') },
+        { icon: 'shield', label: 'Copia de seguridad', onclick: abrirSeccion('copia') },
+        { icon: 'link', label: 'Conexión con la IA', onclick: abrirSeccion('conexion') },
+        { icon: 'edit', label: 'Pulir el documento', onclick: abrirSeccion('pulir') },
+      ],
+    });
+    const informe = informeScreen;
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
@@ -815,9 +909,28 @@ export function mountApp(root, deps) {
       const cabecera = screen.querySelector(':scope > header');
       if (cabecera) cabecera.after(aviso); else screen.prepend(aviso);
     }
-    root.replaceChildren(screen);
+    const extras = [];
+    if (!SIN_BARRA.includes(state.screen)) extras.push(bottomNav({ h, doc, active: TAB_OF[state.screen] ?? null, go }));
+    if (state.menu && state.screen === 'diary') {
+      extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
+        { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },
+        { label: 'Copiar día anterior', icon: 'copy', onclick: () => { state.menu = false; openRepeat({ sourceDate: shiftDate(state.day, -1), targetDate: state.day, back: 'diaryTarget' }); } },
+        ...(state.day !== today() ? [{ label: 'Ir a hoy', icon: 'diario', onclick: () => { state.menu = false; openDay(today()); } }] : []),
+      ] }));
+    }
+    if (state.sheet && state.screen === 'diary') {
+      const { meal, date } = state.sheet;
+      const cierra = () => { state.sheet = null; render(); };
+      extras.push(sheet({ h, doc, title: `Añadir a ${MEAL_LABEL[meal]}`, close: cierra, items: [
+        { icon: 'mic', primary: true, label: 'Dictar comida', onclick: () => openAdd({ meal, date }) },
+        { icon: 'hand', label: 'Añadir a mano', onclick: () => { state.sheet = null; state.meal = meal; state.addDate = date; startManual(); } },
+        { icon: 'repeat', label: 'Repetir de ayer', onclick: () => { state.sheet = null; openRepeat({ sourceDate: shiftDate(date, -1), targetDate: date, targetMeal: meal, back: 'diaryTarget' }); } },
+        { icon: 'list', label: 'Plantillas', onclick: () => { state.sheet = null; openTemplates('', 'diary'); } },
+      ] }));
+    }
+    root.replaceChildren(screen, ...extras);
   }
-  render();
+  openDay(today());
   track(loadPlan(), 'No se pudo cargar el plan de objetivos');
   checkCatalogUpdate();
   return { state, render, whenIdle };

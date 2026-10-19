@@ -49,9 +49,13 @@ async function setup({ estimate = ESTIMACION, busquedas = BUSQUEDAS, meals = [],
   let n = 0;
   const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, recetasBase, initial: { foods: realFoods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW, idGen: () => `m${++n}`, saveFile: async (f) => { saved.push(f); return 'compartido'; } });
   await app.whenIdle();
+  root.querySelector('button[aria-label="Añadir comida"]').click(); // la app abre en el Diario; el "+" central lleva directo al dictado
+  await app.whenIdle();
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
-  const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
+  const buscar = (text) => $$('button').find((b) => b.textContent.includes(text));
+  // El dictado ocupa toda la pantalla (sin barra inferior): para ir a una pestaña se cierra primero con la X.
+  const btn = (text) => { let b = buscar(text); if (!b && ['Diario', 'Alimentos', 'Más'].includes(text)) { buscar('‹ Volver')?.click(); b = buscar(text); } return b; };
   const type = (el, value, ev = 'input') => { el.value = value; el.dispatchEvent(new Event(ev, { bubbles: true })); };
   const act = async (fn) => { fn(); await app.whenIdle(); };
   return { app, root, store, calls, saved, $, $$, btn, type, act, Event };
@@ -106,6 +110,7 @@ test('flujo completo: «Estimar con IA» -> revisión -> confirmación -> guarda
   const [meal] = await t.store.allMeals();
   assert.deepEqual(meal.lines.map((l) => [l.food_id, l.grams]), [['aceite_oliva', 10], ['pasta_de_lasana_cocida', 120], ['carne_picada_cocinada', 80], ['salsa_tomate_frito', 60], ['queso_tierno_loncha', 40]]);
   // segunda vez: los términos ya están en la caché del iPhone (no se vuelve a USDA) y las filas se reutilizan
+  await t.act(() => t.$('button[aria-label="Añadir comida"]').click()); // guardar lleva al Diario; el "+" vuelve al dictado
   await hastaEstimar(t);
   assert.equal(t.calls.search.length, 1);
   await t.act(() => t.btn('Añadir a la comida').click());
@@ -158,12 +163,12 @@ test('sin candidatos en USDA: «Usar uno de mi documento» resuelve el ingredien
   assert.deepEqual(t.calls.foods, [[101]]);
 });
 
-test('Documento -> Pulir: «Añadidos con IA, pendientes de revisar» y «Revisado» quita la marca', { skip }, async () => {
+test('Alimentos: «Añadidos con IA, pendientes de revisar» y «Revisado» quita la marca', { skip }, async () => {
   const t = await setup();
   await hastaEstimar(t);
   await t.act(() => t.btn('Añadir a la comida').click());
   await t.act(() => t.btn('Volver').click());
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('Alimentos').click());
   const det = t.$('details.pendientes-ia');
   assert.match(det.textContent, /Añadidos con IA, pendientes de revisar \(2\)/);
   await t.act(() => det.querySelector('button.link').click());
@@ -191,10 +196,9 @@ test('Diario -> «Guardar como receta»: formulario con los ingredientes, cálcu
   const fila = (await t.store.getCatalogRecord()).foods.find((f) => f.id === 'arroz_blanco_con_aceite');
   assert.equal(fila.extra.tipo, 'receta');
   assert.ok(Math.abs(fila.nutrients.energia_kcal - (365 + 88.4) / 3.3) < 2); // (arroz + aceite) / 330 g × 100
-  // Documento -> Recetas: las del repositorio (sin el ejemplo) y la nueva; exportar recetas.json
-  await t.act(() => t.btn('Volver').click());
-  await t.act(() => t.btn('Documento').click());
-  await t.act(() => t.btn('Recetas').click());
+  // Alimentos -> Recetas: las del repositorio (sin el ejemplo) y la nueva; exportar recetas.json
+  await t.act(() => t.btn('Alimentos').click());
+  await t.act(() => t.btn('Ver recetas').click());
   const ids = t.$$('li.receta').map((li) => li.dataset.id);
   assert.deepEqual(ids, ['verduras_asadas_hacendado', 'parrillada_verduras_hacendado', 'arroz_blanco_con_aceite']);
   await t.act(() => t.btn('Exportar recetas.json').click());

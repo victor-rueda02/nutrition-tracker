@@ -37,7 +37,11 @@ async function setup({ meals = [], objetivos = {}, ajustes = {} } = {}) {
 }
 const fila = (t, clave) => t.$(`li.nut[data-clave="${clave}"]`);
 const hoy = (t, clave) => t.$(`.objetivos-hoy li[data-clave="${clave}"]`);
-const abrirObjetivos = async (t) => { await t.act(() => t.btn('Diario').click()); await t.act(() => t.btn('Objetivos').click()); };
+const masA = (t, etiqueta) => { t.btn('Más').click(); t.btn(etiqueta).click(); }; // pestaña Más -> su fila
+const verInforme = (t) => { t.$('button[aria-label="Más opciones del día"]').click(); t.btn('Ver informe diario').click(); }; // tres puntos del Diario
+const alInforme = async (t) => { await t.act(() => t.btn('Diario').click()); await t.act(() => verInforme(t)); }; // Diario del día de hoy -> Informe diario
+const volverAlInforme = async (t) => { await t.act(() => t.btn('‹ Volver').click()); await alInforme(t); }; // de Objetivos (vuelve a Más) al Informe
+const abrirObjetivos = async (t) => { await t.act(() => masA(t, 'Objetivos')); };
 const importarEjemplo = async (t) => {
   await abrirObjetivos(t);
   await t.attach(t.$('input[aria-label="Elegir plan de objetivos"]'), fichero('plan.json', EJEMPLO));
@@ -64,14 +68,16 @@ test('importar el plan: resumen antes de aplicar; qué aplica hoy, con su origen
   assert.match(seccion.textContent, /Micronutrientes \(2 de tu plan, el resto EFSA\)/); // vitamina D y sodio
   assert.match(t.$('.objetivos-plan').textContent, /Volumen otoño 2026vigente · 15-09-2026 → 20-12-2026/);
   assert.match(t.$('.objetivos-plan').textContent, /Mantenimiento · 07-01-2027 → sin fin/);
-  // el diario: hoy (entreno) y ayer (jueves, descanso)
-  await t.act(() => t.btn('‹ Volver').click());
+  // el diario: hoy (entreno) y ayer (jueves, descanso); sus objetivos se ven en el Informe diario
+  await volverAlInforme(t);
   assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Volumen otoño 2026 · Entreno/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 3100 kcal/);
   assert.match(fila(t, 'grasa_total_g').textContent, /\/ 86,1–121 g/); // rango
   assert.match(fila(t, 'grasa_total_g').textContent, /Por debajo/);
   assert.match(fila(t, 'sodio_mg').textContent, /\/ 2300 mg/);
+  await t.act(() => t.btn('‹ Volver').click());
   await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  await t.act(() => verInforme(t));
   assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Volumen otoño 2026 · Descanso/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2700 kcal/);
 });
@@ -103,10 +109,11 @@ test('«Hoy es»: cambiar el tipo de hoy crea una excepción; «Según la semana
   assert.deepEqual((await t.store.getSetting('plan_objetivos')).excepciones.find((e) => e.fecha === '2026-10-16'), { fecha: '2026-10-16', tipo: 'descanso' });
   assert.match(hoy(t, 'energia_kcal').textContent, /2700 kcal/);
   assert.match(t.$('.objetivos-hoy').textContent, /Excepción de hoy/);
-  await t.act(() => t.btn('‹ Volver').click());
+  await volverAlInforme(t);
   assert.match(t.$('.objetivos-dia').textContent, /Descanso · excepción del día/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2700 kcal/);
-  await t.act(() => t.btn('Objetivos').click());
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => masA(t, 'Objetivos'));
   await t.elegir('select[aria-label="Hoy es"]', '');
   assert.equal((await t.store.getSetting('plan_objetivos')).excepciones.some((e) => e.fecha === '2026-10-16'), false);
   assert.match(hoy(t, 'energia_kcal').textContent, /3100 kcal/);
@@ -140,9 +147,11 @@ test('editar kcal y macros «desde hoy» (por defecto): tramo nuevo y los días 
   const todo = await t.store.getSetting('plan_objetivos');
   assert.equal(todo.periodos.length, 3);
   assert.deepEqual([todo.periodos[0].valores.energia_kcal, todo.periodos[0].peso_kg], [{ objetivo: 2950 }, 75]);
-  await t.act(() => t.btn('‹ Volver').click());
+  await volverAlInforme(t);
   assert.match(fila(t, 'proteina_g').textContent, /\/ 150 g/); // 2 g/kg × 75
   // vaciar el peso con g/kg en uso: no se guarda y se dice por qué
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Más').click());
   await t.act(() => t.btn('Objetivos').click());
   t.$('input[aria-label="Peso (kg)"]').value = '';
   await t.act(() => t.btn('Guardar').click());
@@ -164,7 +173,7 @@ test('al actualizar: tus objetivos de la pantalla anterior pasan a un plan desde
   const t = await setup({ meals: [MEAL('v', '2026-10-10', [['arroz_blanco_crudo', 100]]), ...COMIDAS], objetivos: { perfil: 'mujer', valores: { energia_kcal: 2500, proteina_g: 150 } } });
   const plan = await t.store.getSetting('plan_objetivos');
   assert.deepEqual([plan.perfil, plan.periodos], ['mujer', [{ id: 'mis_objetivos', nombre: 'Mis objetivos', inicio: '2026-10-10', valores: { energia_kcal: { objetivo: 2500 }, proteina_g: { min: 150 } } }]]);
-  await t.act(() => t.btn('Diario').click());
+  await alInforme(t);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2500 kcal/);
   assert.match(fila(t, 'proteina_g').textContent, /\/ 150 g/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/);
@@ -176,20 +185,19 @@ test('al actualizar: tus objetivos de la pantalla anterior pasan a un plan desde
 test('copia del diario: lleva el plan; se restaura si el dispositivo no tiene; uno no válido no se restaura', { skip }, async () => {
   const t = await setup({ meals: COMIDAS });
   await importarEjemplo(t);
-  await t.act(() => t.btn('‹ Volver').click()); // al Diario
-  await t.act(() => t.btn('‹ Volver').click()); // al inicio
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => t.btn('‹ Volver').click()); // a Más
+  await t.act(() => t.btn('Copia de seguridad').click());
   await t.act(() => t.btn('Exportar diario').click());
   const copia = JSON.parse(t.saved.at(-1).text);
   assert.deepEqual(copia.plan_objetivos, await t.store.getSetting('plan_objetivos'));
   const nuevo = await setup();
-  await nuevo.act(() => nuevo.btn('Documento').click());
+  await nuevo.act(() => masA(nuevo, 'Copia de seguridad'));
   await nuevo.attach(nuevo.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', copia));
   assert.match(nuevo.root.textContent, /Se restaurarán los objetivos de la copia/);
   await nuevo.act(() => nuevo.btn('Importar 2 comidas').click());
   assert.deepEqual(await nuevo.store.getSetting('plan_objetivos'), copia.plan_objetivos);
   const roto = await setup();
-  await roto.act(() => roto.btn('Documento').click());
+  await roto.act(() => masA(roto, 'Copia de seguridad'));
   await roto.attach(roto.$('input[aria-label="Elegir copia del diario"]'), fichero('c.json', { ...copia, plan_objetivos: { tipo: 'plan_objetivos', version: 9, periodos: [] } }));
   assert.match(roto.root.textContent, /El plan de objetivos de la copia no es válido: no se restaura/);
   await roto.act(() => roto.btn('Importar 2 comidas').click());
@@ -215,7 +223,7 @@ test('«Crear plan» sin plan: periodo desde hoy con la referencia explícita y 
   assert.match(hoy(t, 'hierro_mg').textContent, /al menos 11 mg.*periodo/);
   await t.act(() => t.btn('Exportar plan').click());
   assert.deepEqual(JSON.parse(t.saved[0].text), plan);
-  await t.act(() => t.btn('‹ Volver').click());
+  await volverAlInforme(t);
   assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Mis objetivos · Fuerza/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2000 kcal/); // los mismos valores que la referencia
   assert.match(fila(t, 'vitamina_b1_mg').textContent, /\/ 0,84 mg/);
@@ -258,9 +266,11 @@ test('cuatro tipos de día: «Hoy es» y «Qué valores» los listan todos y el 
   assert.deepEqual(plan.periodos.map((p) => [p.inicio, p.fin, p.tipos.rh_movilidad.valores.energia_kcal.objetivo]), [['2026-01-01', '2026-10-15', 2600], ['2026-10-16', undefined, 2700]]);
   // el Diario, día a día hacia atrás
   await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Diario').click());
   const dias = [];
   for (let i = 0; i < 7; i++) {
-    if (i) await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+    if (i) { await t.act(() => t.btn('‹ Volver').click()); await t.act(() => t.$('button[aria-label="Día anterior"]').click()); }
+    await t.act(() => verInforme(t));
     dias.push(t.$('.objetivos-dia').textContent.replace('Objetivos: Semana · ', ''));
   }
   assert.deepEqual(dias, ['Pierna · excepción del día', 'Pierna', 'Fuerza', 'Pierna', 'Fuerza', 'Descanso', 'RH + movilidad']); // vie 16 … sáb 10
