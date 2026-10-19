@@ -722,7 +722,7 @@ export function mountApp(root, deps) {
           h('button', { class: 'secondary', onclick: () => track((async () => { try { connMsg.textContent = probarTexto(await deps.createAiClient({ endpoint: ep.value.trim(), token: tk.value }).health()); } catch (e) { connMsg.textContent = e.userMessage ?? e.message; } })()) }, 'Probar')),
         connMsg),
       pulir: h('ul', { class: 'menu-list' },
-        h('li', {}, h('button', { class: 'menu-row', onclick: () => openLog() }, h('span', { class: 'menu-ico' }, icon(doc, 'list')), h('span', { class: 'menu-text' }, `Frases a revisar (${state.registro.length})`), icon(doc, 'chevron', 'menu-chev'))),
+        h('li', {}, h('button', { class: 'menu-row', onclick: () => openLog() }, h('span', { class: 'menu-ico' }, icon(doc, 'list')), h('span', { class: 'menu-text' }, 'Frases a revisar'), h('span', { class: 'valor' }, ` (${state.registro.length})`), icon(doc, 'chevron', 'menu-chev'))),
         h('li', {}, h('button', { class: 'menu-row', onclick: () => { state.recetasBack = 'pulir'; rec.open(); } }, h('span', { class: 'menu-ico' }, icon(doc, 'chef')), h('span', { class: 'menu-text' }, 'Recetas'), icon(doc, 'chevron', 'menu-chev')))),
       copia: h('section', { class: 'panel' },
         h('p', { class: 'muted small' }, `El diario solo está en este dispositivo: exporta una copia de vez en cuando (${state.allMeals.length} ${state.allMeals.length === 1 ? 'comida guardada' : 'comidas guardadas'}). Lleva también tus objetivos, plantillas y frases a revisar; no incluye el token.`),

@@ -358,3 +358,95 @@ Notas del revisor: el campo Worker con «https://w» y el token de un punto en C
 
 **Aplico:** «Guardar» con 16 px de aire; la barra de color de las tarjetas de macros recta.
 **No aplico:** reordenar los macros del editor (lógica de `objetivos-screen.js`, bloque secundario según CLAUDE.md) y mover el recuento de «Frases a revisar» fuera de la etiqueta: las pruebas existentes localizan el botón por «Frases a revisar (N)», y cambiar el texto del botón rompe la comprobación de ese comportamiento. Quedan como MENORES sin aplicar.
+
+
+---
+---
+
+# Ronda 4
+
+Cambios aplicados antes de la ronda 4 (resumen de la ronda 3): selector de comida con `minmax(max-content, 1fr)` y `nowrap`; cuadro de texto de 140 px; hoja con «X»; tarjetas de Confirmar compactas, botones de «Sin resolver» a todo el ancho y kcal bajo los gramos; flecha de día desactivada sin caja; guion de los nutrientes; cabecera sin sombra y con borde; % en rojo con UL; filas dependientes sangradas en el Informe; «parcial» pegado al valor; «Editar» de recetas en verde azulado; pendientes a 17 px; «Guardar» de Objetivos con aire; barra de color de las tarjetas de macros.
+
+## Ronda 4 · diario
+
+SECCIÓN: diario
+VEREDICTO: APROBADO
+Resumen: Ronda 4 sin bloqueantes. El «+» está al 50 % y es blanco en los dos modos, la flecha del día siguiente ya no lleva caja, la franja de UL va teñida, Editar y Borrar se distinguen y la última comida queda libre sobre la barra. No hay nada cortado ni scroll horizontal, y el modo oscuro está tan cuidado como el claro.
+Quedan 2 menores: dos de los tres cambios baratos que se aplicaron en la ronda 3 no se ven del todo en las capturas.
+Puntos (máximo 8, ordenados por gravedad):
+- [MENOR] Resumen, macros · claro y oscuro · 375: «Hidratos de carbono» sigue partiendo la fila. Ahora el guion «–» queda colgando al final de la primera línea y «562 g / 260 g» baja a la segunda, con unos 2 px CSS de sangría respecto al nombre. La fila mide unos 30 px más que Proteína y Grasa total. A 430 cabe en una línea y está bien. El arreglo del registro (guion en `::before` del valor y valor sin partir) no evita el guion colgante. → A menos de 400 px, mostrar la etiqueta visible «Hidratos» (el nombre completo puede quedar en `aria-label` y en el Informe; diario_02 también usa etiqueta corta). Si se prefiere no tocar el texto, el guion tiene que formar parte del mismo bloque `white-space:nowrap` que el valor, de modo que salten juntos y el valor empiece en el mismo x que el nombre. Captura: docs/revision-estetica/ronda-4/diario/diario-claro-375.png y diario-oscuro-375.png frente a diario-claro-430.png y docs/referencia-cronometer/diario/diario_02.PNG.
+- [MENOR] Cabecera de día · claro y oscuro · 375 y 430: la sombra ya no está y hay un borde inferior fino, pero la cabecera conserva las esquinas inferiores redondeadas (unos 16 px, se ven en los dos bordes laterales a y≈100–118 px de la captura). Se sigue leyendo como una tarjeta suelta y no como la barra de la app, que es lo que se propuso en la ronda 3. → `border-bottom-left-radius:0; border-bottom-right-radius:0` en la cabecera fija y mantener solo el borde de 1 px (#E3E5E9 en claro, #343848 en oscuro). Captura: docs/revision-estetica/ronda-4/diario/diario-claro-430.png y diario-oscuro-430.png frente a docs/referencia-cronometer/diario/diario_01.PNG (cabecera recta separada por una línea).
+
+Notas del revisor: comprobado y correcto la flecha «›» desactivada sin caja y atenuada, el «⋯» en círculo, «Totales parciales», el % rojo y la punta roja de las barras y que la última tarjeta acaba unos 68 px por encima de la barra. La franja de UL ocupa dos líneas (aceptado en la ronda 3). No vuelve a pedir el carrusel, el «⋯» en la cabecera de la comida ni quitar la fila Editar/Borrar.
+
+**Aplico:** el guion deja de ser texto: el valor salta de línea sin dejar un guion colgando y empieza en el mismo punto que el nombre; la cabecera pasa a ser recta, con el borde de 1 px.
+
+## Ronda 4 · diario-anadir
+
+SECCIÓN: diario-anadir
+VEREDICTO: APROBADO
+Resumen: Los tres puntos de la ronda 3 están resueltos en claro y oscuro, a 375 y 430. A 375 el selector de comida cabe en una línea, sin palabras partidas. El cuadro de texto mide unos 141 px, así que «Procesar» acaba hacia y≈439 px. La hoja se cierra con la misma X neutra que el dictado.
+No hay bloqueantes, nada cortado ni superpuesto, ni scroll horizontal. Queda un menor, que no se puede confirmar con capturas headless. El modo oscuro está tan cuidado como el claro.
+Puntos (máximo 8, ordenados por gravedad):
+- [MENOR] Hoja «Añadir a Comida» · claro y oscuro · 375 y 430: la última fila («Plantillas») acaba a unos 15 px CSS del borde inferior. En headless el área segura es 0, así que no puedo saber si el padding inferior suma `env(safe-area-inset-bottom)`. Si no lo suma, en un iPhone con barra de inicio (34 px) el indicador quedaría encima de la fila «Plantillas». → `padding-bottom: calc(16px + env(safe-area-inset-bottom))` en el contenedor de la hoja. Conviene comprobarlo una vez en el iPhone instalado como PWA. Captura: docs/revision-estetica/ronda-4/diario-anadir/hoja-comida-claro-375.png y hoja-comida-oscuro-430.png (sin equivalente en docs/referencia-cronometer/diario-anadir/add_comida.PNG, que es pantalla completa).
+
+Notas del revisor: selector en una línea con alto constante a 375 y equilibrado a 430; cuadro de 140 px y 16 px hasta «Procesar»; hoja con X neutra, «Dictar comida» relleno y mismo icono de copiar; cabecera con fecha; contrastes correctos. No repite los accesos rápidos arriba con etiquetas en dos líneas (decisión del usuario).
+
+**Aplico:** ya lo suma (`.sheet` usa `calc(16px + env(safe-area-inset-bottom))` desde la ronda original). Queda anotado para comprobarlo en el iPhone instalado.
+
+## Ronda 4 · diario-informe
+
+SECCIÓN: diario-informe
+VEREDICTO: APROBADO
+Resumen: Los tres menores de la ronda 3 están resueltos en claro y en oscuro. B9 lleva el 459 % en rojo y en negrita, igual que Sodio; saturadas, azúcares y fibra van sangradas como en Objetivos, y «parcial» ya no baja sola. No hay nada cortado ni scroll horizontal, «Comidas del día» queda libre sobre la barra inferior y el oscuro está tan cuidado como el claro.
+Solo queda un menor: el guion se queda colgando al final de la línea cuando el valor salta a la siguiente.
+Puntos (máximo 8, ordenados por gravedad):
+- [MENOR] Filas de nutriente · claro y oscuro · 375 (y 430): cuando el valor no cabe, la primera línea acaba en «Vitamina C –» o «Hidratos de carbono –» con el guion colgando. El valor baja a la segunda línea unos 3 px CSS más a la derecha que el nombre (x≈49 frente a x≈46 en la captura), por el espacio que va delante. A 375 pasa en 9 filas (Hidratos de carbono, A, C, D, B1, B2, B3, B5, B9), así que esas filas ocupan tres alturas. A 430 pasa en B2, B5 y B9. Es el mismo defecto que se corrigió en el Diario en la ronda 3 (punto 2). → Hay dos cambios y conviene hacer los dos. 1) Dentro del grupo «Vitaminas», nombres cortos como en la referencia («B12 (cobalamina)»): «B1 (tiamina)», «B2 (riboflavina)», «B3 (niacina)», «B5 (ác. pantoténico)», «B9 (folato, DFE)», «A (RAE)». El nombre completo se queda en `aria-label`. Así casi todas las filas caben en una línea a 375. 2) Para las que aún salten: quitar el guion del texto y ponerlo como `::before` del valor; meter valor y «parcial» en un solo bloque `white-space:nowrap` sin espacio inicial, para que empiece en el mismo x que el nombre. Si no se puede evitar que el guion abra la segunda línea, quitarlo y separar con `column-gap: 6px`: el nombre en seminegrita y el valor en gris regular ya se distinguen. Captura: docs/revision-estetica/ronda-4/diario-informe/informe-largo-2-claro-375.png, informe-largo-1-claro-375.png e informe-largo-2-oscuro-430.png, frente a docs/referencia-cronometer/diario-informe/informe_diario05_micronutrientes.PNG (todas las filas en una línea, con «B12 (cobalamina)» sin «Vitamina»).
+
+Notas del revisor: cabecera, franja de UL, tarjetas con anillo, chevrons, barras grises, B9 coherente, «parcial» legible, menú con borde y sombra, margen final de unos 90 px. Fuera de esta sección: en menu-tres-puntos-oscuro-375.png el Diario sigue mostrando «Hidratos de carbono –» con el guion colgando.
+
+**Aplico:** quitar el guion y separar con un hueco (la misma solución que en el Diario).
+**No aplico:** los nombres cortos de vitaminas: son textos de los nutrientes (vienen de `data/nutrients.json`, que no se toca) y el límite del encargo es no cambiar textos.
+
+## Ronda 4 · alimentos
+
+SECCIÓN: alimentos
+VEREDICTO: CAMBIOS
+Resumen: Dos de los tres menores aplicados tras la ronda 3 se ven bien: «69 alimentos · 12 incompletos» cabe en una línea a 375 y las tres tarjetas quedan igualadas, y el nombre de los pendientes va a 17 px. Plantillas, catálogo y modo oscuro siguen a la altura.
+El `nowrap` de las kcal en Recetas ha traído una regresión: las tarjetas de receta se salen por la derecha de la pantalla en los dos modos y los dos anchos, así que no puedo aprobar.
+Puntos (máximo 8, ordenados por gravedad):
+- [BLOQUEANTE] Recetas · claro y oscuro · 375 y 430: las dos tarjetas de receta pasan del borde derecho del viewport. No se ve su esquina derecha ni su margen. A 375 la cifra de kcal desaparece del todo; a 430 solo se ven «27» y «52», cortados. La línea «5 ingredientes · en proporción · se dicta «verduras asadas»» y la de la Parrillada se cortan a mitad de palabra. Puede haber scroll horizontal. En la ronda 3 (docs/revision-estetica/ronda-3/alimentos/recetas-claro-375.png) las tarjetas cabían. La causa probable está en `frontend/css/navegacion.css`, línea 257: `.recetas .receta .muted.small { white-space:nowrap; flex:none; }`. Ese selector coge también la línea secundaria de ingredientes, que lleva las mismas clases, y no solo las kcal. → Aplicar `white-space:nowrap; flex:none` solo al elemento de las kcal (con una clase propia, p. ej. `.receta-kcal`). La línea de ingredientes debe volver a partirse con normalidad (`white-space:normal`). En la fila del título, `min-width:0` en el título para que sea él el que salte de línea. Comprobar que la tarjeta respeta los 16 px de margen derecho y que «52 kcal/100 g» se ve entero a 375. Capturas: docs/revision-estetica/ronda-4/alimentos/recetas-claro-375.png, recetas-oscuro-375.png, recetas-claro-430.png y recetas-oscuro-430.png, comparadas con docs/revision-estetica/ronda-3/alimentos/recetas-claro-375.png y docs/referencia-cronometer/alimentos/alimentos.PNG (las tarjetas respetan el margen).
+- [MENOR] Recetas, tarjeta de receta · claro y oscuro · 375 y 430: «Editar» ya va en verde azulado (#1F7A6B / #4FD1C5), lo que es correcto y coherente con el Diario. Pero la otra mitad del punto de la ronda 3 no se ha aplicado. Siguen unos 30 px CSS de aire encima del título y unos 40 px debajo de «Editar», así que cada receta mide unos 140–160 px para tres líneas de contenido. → Padding de la tarjeta de 14 px. 4 px entre el título y la línea de ingredientes. «Editar» con zona táctil de 44 px de alto, pero con un margen negativo de unos −10 px para que no sume aire visible (o toda la tarjeta pulsable con un chevron de 24 px a la derecha, como en las tarjetas de Alimentos). Capturas: recetas-claro-375.png y recetas-oscuro-430.png, comparadas con plantillas-claro-375.png (tarjeta compacta con padding de unos 16 px).
+
+Notas del revisor: ya está bien el «+» al 50 %, las tres tarjetas de Alimentos, «12 incompletos» como enlace, el catálogo con «kcal /100 g», el segmentado, Plantillas con «Usar» en píldora y «Borrar» en rojo, pendientes con nombre a 17 px y «Revisado» como botón, y el oscuro. No vuelve a pedir «Añadidos con IA» como tarjeta con icono. Con el bloqueante corregido quedaría 1 menor.
+
+**Aplico:** los dos. Era una regresión mía: el `nowrap` afectaba a la línea de ingredientes. Ahora solo lo lleva el elemento de las kcal (clase propia `receta-kcal`), el título puede encogerse y la tarjeta es más compacta.
+
+## Ronda 4 · anadir
+
+SECCIÓN: anadir
+VEREDICTO: APROBADO
+Resumen: El bloqueante de la ronda 3 está resuelto: el selector de comida cabe en una línea a 375, con alto constante, tanto en el dictado como en Confirmar. El cuadro de texto mide unos 140 px y «Procesar» acaba hacia y≈440. Los botones de «Sin resolver» y «+ Añadir alimento» van a todo el ancho, la línea de kcal está justo debajo de los gramos, el pie no tapa nada al final del scroll y el modo oscuro está tan cuidado como el claro.
+No hay bloqueantes. Quedan 2 menores, dentro del máximo para aprobar. El principal: las tarjetas de Confirmar siguen sin compactarse por tercera ronda seguida.
+Puntos (máximo 8, ordenados por gravedad):
+- [MENOR] Confirmar · claro y oscuro · 375 y 430: el registro da por aplicadas las «tarjetas compactas» en las rondas 2 y 3, pero la medida es la misma que en la ronda 2. Avena mide unos 177 px CSS y Huevo unos 196. Hay unos 28 px de aire entre el borde superior y el nombre, unos 12 px del nombre a la cita, y la X (centro en y≈335) no está alineada con el nombre (y≈347). A 375 solo caben 2,5 tarjetas por pantalla. → Padding de la tarjeta de 14 px arriba y abajo. Nombre (17 px seminegrita) y X en la misma fila con `align-items:flex-start`, y la X con `margin:-12px -12px 0 0` para conservar los 44 px táctiles. La cita a 4 px del nombre y la fila de gramos a 8 px. Objetivo: unos 140 px por tarjeta sin avisos. Antes de dar el punto por aplicado, comprobar en la captura que la altura ha bajado (puede que haya una regla más específica que pise el padding). Capturas: docs/revision-estetica/ronda-4/anadir/confirmar-claro-375.png y confirmar-claro-430.png. Sin equivalente en docs/referencia-cronometer/anadir/mas_central.PNG.
+- [MENOR] Confirmar, botón «Sí, es «…»» · claro y oscuro · 430: a 375 ocupa todo el ancho de la tarjeta, porque el texto la llena, pero a 430 mide solo lo que su texto (unos 335 px de 370) y deja un hueco a la derecha. Es el único botón de la pantalla que no va a todo el ancho; «Buscar en mi documento» y «+ Añadir alimento» sí lo hacen. → `width:100%` y 48 px de alto, para que sea igual a 375 y a 430 y se lea como la acción que desbloquea «Guardar». Capturas: docs/revision-estetica/ronda-4/anadir/confirmar-claro-430.png y confirmar-final-oscuro-430.png, comparadas con confirmar-final-claro-375.png.
+
+Notas del revisor: selector en una línea, «Procesar» activo y desactivado, X del dictado, frase dictada a 15 px, orden de la tarjeta (gramos, kcal, aviso, «Sí, es…»), unos 32 px libres entre «Sin resolver» y el pie, «Guardar» neutro, sin scroll horizontal.
+
+**Aplico:** los dos. Era cierto: una regla más específica de la cabecera de la tarjeta (el botón del nombre con 44 px de alto mínimo) mantenía la altura. Se compacta de verdad y «Sí, es …» va a todo el ancho.
+
+## Ronda 4 · mas
+
+SECCIÓN: mas
+VEREDICTO: APROBADO
+Resumen: La lista de Más, Documento, Conexión, Copia de seguridad y Pulir se ven bien en claro y en oscuro, a 375 y a 430. No hay nada cortado, tapado ni con scroll horizontal. El «+» queda al 50 % y cada pantalla tiene su acción principal rellena a todo el ancho. «Guardar» de «Kcal y macros» ya tiene aire suficiente (unos 24 px), y el final de Objetivos queda por encima de la barra.
+Quedan 3 menores, el máximo para aprobar. El único nuevo es que la barra de color del editor «Kcal y macros» no es igual en los dos modos.
+Puntos (máximo 8, ordenados por gravedad):
+- [MENOR] Objetivos, bloque «Kcal y macros» · claro y oscuro · 375 y 430: el registro de la ronda 3 da por aplicada la barra recta, pero en claro sigue el borde de color curvado en forma de «(» (Energía, Proteína, Hidratos, Grasa total). En oscuro ha desaparecido del todo: no hay barra de color y la tarjeta interior no se distingue del fondo de la tarjeta exterior. Así los cuatro macros se leen como un único bloque sin separación, y el oscuro queda menos cuidado que el claro. → En los dos modos, quitar el borde izquierdo y poner `box-shadow: inset 4px 0 0 <color del macro>` con `border-radius: 0 12px 12px 0` (o radio 0). Usar los mismos colores que la barra del bloque «Hoy» en cada modo: en oscuro, el naranja, verde, lila y cian que ya se ven en «Hoy». En oscuro, separar además la tarjeta interior con fondo #2A2F40 o con un borde de 1 px #343848. Capturas: docs/revision-estetica/ronda-4/mas/objetivos-largo-1-claro-375.png y objetivos-largo-2-claro-375.png (curvado), frente a objetivos-largo-1-oscuro-375.png, objetivos-largo-1-oscuro-430.png y objetivos-largo-2-oscuro-375.png (sin barra). Comparadas con el bloque «Hoy» de las mismas capturas y con docs/referencia-cronometer/diario-informe/informe_diario01.PNG.
+- [MENOR] Objetivos, bloque «Kcal y macros» · claro y oscuro · 375 y 430: sigue pendiente. El editor ordena Energía, Proteína, Hidratos, Grasa total, y «Hoy» de la misma pantalla y el Diario usan Energía, Proteína, Grasa total, Hidratos. No insisto en tocar `MACROS`. Basta con ordenar al pintar, o con `order` de CSS en las tarjetas (`order: 3` en Grasa total y `order: 4` en Hidratos dentro de un contenedor flex en columna), que no cambia la lógica ni las pruebas. Captura: docs/revision-estetica/ronda-4/mas/objetivos-largo-1-claro-375.png frente al bloque «Hoy» de esa misma captura.
+- [MENOR] Pulir el documento · claro y oscuro · 375 y 430: el recuento sigue dentro de la etiqueta, «Frases a revisar (0)». Respeto que las pruebas buscan ese texto, así que propongo una alternativa que no lo cambia: envolver « (0)» en un `<span class="valor">` con `margin-left:auto`, a 17 px en #5F6470 (claro) y #A3A8B8 (oscuro), justo antes del chevron. El `textContent` del botón sigue siendo «Frases a revisar (0)», pero el número se ve como valor gris a la derecha, igual que en el patrón de lista de la referencia. Captura: docs/revision-estetica/ronda-4/mas/pulir-claro-375.png y pulir-oscuro-430.png, comparadas con docs/referencia-cronometer/mas/mas_ajustes.PNG.
+
+Notas del revisor: «https://w» y el token de un punto en Conexión son datos del arnés.
+
+**Aplico:** los tres. La barra de color de las tarjetas no se pintaba en oscuro porque mezclé `none` (la sombra del tema oscuro) dentro de la lista de `box-shadow`, lo que invalida toda la regla; se corrige. Orden de los macros solo con CSS (`order`), sin tocar `objetivos-screen.js` ni `MACROS`. El recuento de Pulir va a la derecha en un `<span>` y el texto del botón no cambia.

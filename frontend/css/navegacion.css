@@ -196,9 +196,9 @@ button.review { border-color:var(--warn); color:var(--warn); background:var(--so
 .title-block strong { font-size:1.2rem; }
 .title-block small { font-size:.8rem; }
 .nut-head { align-items:flex-start; }
-.nut-main { flex:1 1 auto; min-width:0; font-size:.95rem; }
+.nut-main { flex:1 1 auto; min-width:0; font-size:.95rem; display:flex; flex-wrap:wrap; column-gap:6px; align-items:baseline; }
 .nut-label { font-weight:700; }
-.nut-valor { color:var(--muted); font-weight:400; margin-left:2px; }
+.nut-valor { color:var(--muted); font-weight:400; }
 .nut-valor .muted { color:inherit; }
 .nut-valor::before { content:"– "; }
 .nut-main .tag { display:inline-block; margin-left:6px; }
@@ -247,17 +247,35 @@ button.secondary.wide { width:100%; }
 .card[data-key] .preview { margin:4px 0 0; font-size:.9rem; }
 .daynav button:disabled { background:none; border:none; color:var(--field); opacity:.45; }
 .nut-valor::before { content:none; }
-.nut-label::after { content:" –"; font-weight:400; color:var(--muted); }
 .nut-tail { white-space:nowrap; }
-.top { border-radius:0 0 var(--radius) var(--radius); box-shadow:none; border-bottom:1px solid var(--line); }
+.top { border-radius:0; box-shadow:none; border-bottom:1px solid var(--line); }
 .nut.over-ul .nut-pct { color:var(--bar-over); }
 .informe .nut[data-clave="grasas_saturadas_g"], .informe .nut[data-clave="azucares_g"], .informe .nut[data-clave="fibra_g"] { padding-left:16px; }
 .informe .nut[data-clave="grasas_saturadas_g"] .nut-label, .informe .nut[data-clave="azucares_g"] .nut-label, .informe .nut[data-clave="fibra_g"] .nut-label { font-weight:500; }
 .recetas .receta .link { color:var(--link); }
-.recetas .receta .muted.small { white-space:nowrap; flex:none; }
+.recetas .receta .receta-kcal { white-space:nowrap; flex:none; }
+.recetas .receta .row > strong { min-width:0; }
+.recetas .card.receta { padding:12px 14px; margin:0; }
+.recetas .receta .row:last-child { margin:0 0 -6px; }
+.recetas .receta .row.between { align-items:flex-start; margin:0 0 4px; }
+.recetas .receta .link { min-height:44px; margin-left:-8px; }
 .pendientes-ia .card strong { font-size:1.05rem; font-weight:600; }
 .pendientes-ia .card .row { align-items:center; }
 .card-body p { font-size:.95rem; }
 .card-link .link.inline { white-space:nowrap; }
 .card[class*=" k-"] { border-left:none; box-shadow:inset 4px 0 0 var(--c-macro, var(--line)), var(--shadow); }
 .objetivos .row > button.primary { margin-top:16px; }
+
+/* Ronda 4 */
+.card[data-key] > .row:first-child { min-height:0; gap:4px; }
+.card[data-key] button.name { min-height:32px; padding:0; align-self:flex-start; display:flex; align-items:center; }
+.card[data-key] button.icon { min-height:44px; margin:-10px -12px -8px 0; align-self:flex-start; }
+.card[data-key] > .muted.small { margin:0 0 4px; }
+.card[data-key] button.review { width:100%; min-height:48px; margin-top:8px; }
+.objetivos ul.cards { display:grid; }
+.objetivos ul.cards > .k-energia_kcal { order:1; } .objetivos ul.cards > .k-proteina_g { order:2; }
+.objetivos ul.cards > .k-grasa_total_g { order:3; } .objetivos ul.cards > .k-hidratos_g { order:4; }
+.card[class*=" k-"] { border-left:none; border-radius:0 var(--radius) var(--radius) 0; box-shadow:inset 4px 0 0 var(--c-macro, var(--line)); }
+.objetivos .card[class*=" k-"] { background:var(--soft); }
+.menu-row .valor { margin-left:auto; color:var(--muted); font-weight:400; }
+.menu-row .valor + .menu-chev { margin-left:0; }
