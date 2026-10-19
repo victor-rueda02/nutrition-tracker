@@ -279,3 +279,7 @@ button.secondary.wide { width:100%; }
 .objetivos .card[class*=" k-"] { background:var(--soft); }
 .menu-row .valor { margin-left:auto; color:var(--muted); font-weight:400; }
 .menu-row .valor + .menu-chev { margin-left:0; }
+
+/* Ronda 5 */
+@media (prefers-color-scheme: dark) { button.review { background:#3a2f17; border-color:#f5b83d; color:#f5b83d; } }
+.menu-row .valor { font-variant-numeric:tabular-nums; font-size:1.05rem; }
