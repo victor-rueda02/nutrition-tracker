@@ -553,7 +553,7 @@ export function mountApp(root, deps) {
   function homeScreen() {
     let btn;
     const ta = h('textarea', {
-      class: 'dictado', rows: '6', placeholder: 'Toca aquí y dicta con el micrófono del teclado…', 'aria-label': 'Qué has comido', autofocus: true, value: state.text,
+      class: 'dictado', rows: '4', placeholder: 'Toca aquí y dicta con el micrófono del teclado…', 'aria-label': 'Qué has comido', autofocus: true, value: state.text,
       oninput: (e) => { state.text = e.target.value; btn.disabled = state.busy || !state.text.trim(); },
     });
     btn = h('button', { class: 'primary', disabled: state.busy || !state.text.trim(), onclick: process }, state.busy ? 'Procesando…' : 'Procesar');
@@ -633,11 +633,11 @@ export function mountApp(root, deps) {
           h('button', { class: 'icon', 'aria-label': `Borrar ${food.nombre}`, onclick: () => { state.draft = removeLine(state.draft, line.key); render(); } }, '✕')),
         line.source_text ? h('div', { class: 'muted small' }, `«${line.source_text}»`) : null,
         h('div', { class: 'row' }, gramsIn, h('span', {}, 'g'), h('span', { class: `badge ${line.confidence}` }, line.confidence)),
+        prev,
         flagsFor(line),
         line.needsReview ? h('button', { class: 'secondary review', onclick: () => { state.draft = confirmFood(state.draft, line.key); render(); } }, `Sí, es «${food.nombre}»`) : null,
         high,
-        inc ? h('div', { class: 'flag' }, `Alimento incompleto (${inc.filled}/${inc.total} nutrientes): los totales de micronutrientes no serán completos`) : null,
-        prev);
+        inc ? h('div', { class: 'flag' }, `Alimento incompleto (${inc.filled}/${inc.total} nutrientes): los totales de micronutrientes no serán completos`) : null);
       paint();
       return card;
     };
@@ -670,7 +670,7 @@ export function mountApp(root, deps) {
       mealChips(d.meal, (m) => { state.draft = setMeal(state.draft, m); render(); }),
       d.warnings.length ? h('ul', { class: 'warnlist' }, d.warnings.map((w) => h('li', {}, w))) : null,
       h('ul', { class: 'cards' }, d.lines.map(lineCard)),
-      h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
+      h('button', { class: 'secondary wide', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
       d.unmatched.length ? h('h2', {}, 'Sin resolver') : null,
       h('ul', { class: 'cards' }, d.unmatched.map(unmatchedCard)),
       editing ? h('div', { class: 'row' }, deleteControls(editing.id, editing.date, 'Borrar esta comida')) : null,
@@ -755,7 +755,7 @@ export function mountApp(root, deps) {
     const excepcional = r.superaUl; // el % y el color ya dicen el resto; el texto de estado sigue en el DOM para lectores de pantalla
     return h('li', { class: r.superaUl ? 'nut over-ul' : 'nut', 'data-clave': r.clave },
       h('div', { class: 'row between nut-head' },
-        h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), ' ', h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo)), r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null),
+        h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), ' ', h('span', { class: 'nut-tail' }, h('span', { class: 'nut-valor' }, valor, h('span', { class: 'muted' }, objetivo)), r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null)),
         h('span', { class: `nut-pct ${r.estado}` }, pct)),
       h('div', { class: `meter ${r.estado}`, role: 'img', 'aria-label': pct || 'sin dato' }, fill),
       h('div', { class: excepcional ? 'small nut-estado' : 'small nut-estado sr' },

@@ -58,7 +58,7 @@ export function bottomNav({ h, doc, active, go }) {
 export function sheet({ h, doc, title, items, close }) {
   return h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': title, onclick: (e) => { if (e.target === e.currentTarget) close(); } },
     h('div', { class: 'sheet action-sheet' },
-      h('div', { class: 'sheet-head' }, h('strong', {}, title), h('button', { type: 'button', class: 'link', onclick: close }, 'Cerrar')),
+      h('div', { class: 'sheet-head' }, h('button', { type: 'button', class: 'icon close-x', 'aria-label': 'Cerrar', onclick: close }, icon(doc, 'close')), h('strong', {}, title), h('span', { class: 'sheet-spacer' })),
       h('ul', { class: 'sheet-items' }, items.map((it) => h('li', {},
         h('button', { type: 'button', class: `sheet-item${it.danger ? ' danger' : ''}${it.primary ? ' primary-row' : ''}`, onclick: it.onclick },
           h('span', { class: 'sheet-ico' }, icon(doc, it.icon)),

@@ -138,8 +138,6 @@ button.pill { border-radius:999px; border:2px solid var(--fg); font-weight:700; 
 button.primary:disabled, button.primary:disabled:hover { background:var(--dis-bg); color:var(--dis-fg); border-color:var(--dis-bg); opacity:1; }
 .dictado { resize:none; border-radius:var(--radius); min-height:140px; }
 .dictado:focus, .dictado:focus-visible { outline:none; border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
-.dictado-screen .chips { flex-wrap:nowrap; gap:4px; background:var(--soft); border-radius:999px; padding:4px; margin:12px 0; }
-.dictado-screen .chip { flex:1; min-width:0; padding:8px 2px; border:none; background:none; font-size:.85rem; }
 .dictado-screen .chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
 .dictado-screen .quick { justify-content:flex-start; } .quick span { min-height:2.3em; display:flex; align-items:center; }
 .dictado-screen .muted.small { margin:8px 4px 0; }
@@ -206,8 +204,8 @@ button.review { border-color:var(--warn); color:var(--warn); background:var(--so
 .nut-main .tag { display:inline-block; margin-left:6px; }
 .nut-pct { flex:none; width:56px; text-align:right; margin-left:0; }
 .resumen .nut-main { font-size:.95rem; }
-.chips { flex-wrap:nowrap; gap:4px; background:var(--soft); border-radius:999px; padding:4px; margin:12px 0; display:grid; grid-template-columns:repeat(5, 1fr); }
-.chips .chip { min-width:0; padding:8px 2px; border:none; background:none; font-size:.9rem; text-align:center; }
+.chips { flex-wrap:nowrap; gap:2px; background:var(--soft); border-radius:999px; padding:4px; margin:12px 0; display:grid; grid-template-columns:repeat(5, minmax(max-content, 1fr)); }
+.chips .chip { min-width:0; min-height:44px; padding:0 8px; border:none; background:none; font-size:.875rem; text-align:center; white-space:nowrap; }
 .chips .chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
 .dictada { font-size:.95rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin:4px 0; }
 .card[data-key] { padding:12px 14px; margin:0; }
@@ -231,3 +229,35 @@ button:disabled:not(.primary) { background:var(--dis-bg); color:var(--dis-fg); b
 .pendientes-ia .card .link { border:2px solid var(--accent); border-radius:999px; min-height:44px; padding:4px 16px; font-weight:600; }
 .objetivos-lista .objetivo-hoy.k-grasas_saturadas_g, .objetivos-lista .objetivo-hoy.k-azucares_g, .objetivos-lista .objetivo-hoy.k-fibra_g { padding-left:26px; font-size:.95rem; border-left-color:var(--line); }
 .objetivos details > summary { min-height:48px; font-size:1.05rem; font-weight:600; border-top:1px solid var(--line); }
+.card-link .link.inline { display:inline; min-height:0; padding:0; position:relative; text-decoration:underline; background:none; border:none; font:inherit; font-weight:600; }
+.card-link .link.inline::before { content:""; position:absolute; inset:-14px -8px; }
+
+/* Ronda 3 */
+.dictado { field-sizing:content; min-height:140px; max-height:220px; }
+.sheet-head { align-items:center; }
+.sheet-head .close-x { color:var(--fg); margin-left:-8px; }
+.sheet-spacer { width:44px; }
+.sheet-head strong { flex:1; text-align:center; }
+.card.unmatched .row.wrap { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.card.unmatched .row.wrap > :first-child { grid-column:1 / -1; }
+.card.unmatched button.secondary, button.secondary.wide { border-radius:999px; border:2px solid var(--fg); min-height:48px; font-weight:600; }
+button.secondary.wide { width:100%; }
+.card.unmatched button.link { color:var(--ul-fg); font-weight:600; justify-content:center; }
+.card[data-key] button.name { font-size:1.05rem; font-weight:600; }
+.card[data-key] .preview { margin:4px 0 0; font-size:.9rem; }
+.daynav button:disabled { background:none; border:none; color:var(--field); opacity:.45; }
+.nut-valor::before { content:none; }
+.nut-label::after { content:" –"; font-weight:400; color:var(--muted); }
+.nut-tail { white-space:nowrap; }
+.top { border-radius:0 0 var(--radius) var(--radius); box-shadow:none; border-bottom:1px solid var(--line); }
+.nut.over-ul .nut-pct { color:var(--bar-over); }
+.informe .nut[data-clave="grasas_saturadas_g"], .informe .nut[data-clave="azucares_g"], .informe .nut[data-clave="fibra_g"] { padding-left:16px; }
+.informe .nut[data-clave="grasas_saturadas_g"] .nut-label, .informe .nut[data-clave="azucares_g"] .nut-label, .informe .nut[data-clave="fibra_g"] .nut-label { font-weight:500; }
+.recetas .receta .link { color:var(--link); }
+.recetas .receta .muted.small { white-space:nowrap; flex:none; }
+.pendientes-ia .card strong { font-size:1.05rem; font-weight:600; }
+.pendientes-ia .card .row { align-items:center; }
+.card-body p { font-size:.95rem; }
+.card-link .link.inline { white-space:nowrap; }
+.card[class*=" k-"] { border-left:none; box-shadow:inset 4px 0 0 var(--c-macro, var(--line)), var(--shadow); }
+.objetivos .row > button.primary { margin-top:16px; }
