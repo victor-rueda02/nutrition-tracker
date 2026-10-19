@@ -47,3 +47,41 @@ test('IndexedDB conserva los datos al reabrir la base', { skip }, async () => {
   assert.equal((await b.allMeals()).length, 1);
   b.close();
 });
+
+// IDBFactory que guarda las conexiones abiertas, para cerrarlas "por debajo" como hace iOS en segundo plano.
+function espiar(idb) {
+  const conexiones = [];
+  return {
+    conexiones,
+    open(...args) {
+      const r = idb.open(...args);
+      r.addEventListener('success', () => conexiones.push(r.result));
+      return r;
+    },
+  };
+}
+
+test('regresión iPhone: si el sistema cierra la conexión («The database connection is closing»), se reabre y la operación sigue', { skip }, async () => {
+  const idb = espiar(new fake.IDBFactory());
+  const store = await openIdbStore({ indexedDB: idb, name: 'ios' });
+  await store.addMeal(meal('1', '2026-10-18', '2026-10-18T08:00:00.000Z'));
+  // cierre sin aviso: transaction() lanza InvalidStateError
+  idb.conexiones.at(-1).close();
+  await store.addMeal(meal('2', '2026-10-19', '2026-10-19T08:00:00.000Z'));
+  assert.deepEqual((await store.allMeals()).map((m) => m.id), ['1', '2']);
+  assert.equal(idb.conexiones.length, 2);
+  // cierre con evento close (cierre anómalo): se reabre en la siguiente operación
+  const c = idb.conexiones.at(-1);
+  c.close();
+  c.onclose();
+  await store.setSetting('k', 1);
+  assert.equal(await store.getSetting('k'), 1);
+  assert.equal(idb.conexiones.length, 3);
+  // otros errores no se reintentan ni se esconden
+  await assert.rejects(store.addMeal({ date: '2026-10-19' }), { name: 'DataError' });
+  assert.equal(idb.conexiones.length, 3);
+  // después de close() no se reabre
+  store.close();
+  await assert.rejects(store.allMeals(), /cerrado/);
+  assert.equal(idb.conexiones.length, 3);
+});
