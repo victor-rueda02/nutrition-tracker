@@ -6,38 +6,119 @@
       "ejemplo": true,
       "peso_final_g": 400,
       "ingredientes": [
-        { "food_id": "arroz_blanco_crudo", "gramos": 150 },
-        { "food_id": "huevo", "gramos": 100 },
-        { "food_id": "aceite_oliva", "gramos": 10 }
+        {
+          "food_id": "arroz_blanco_crudo",
+          "gramos": 150
+        },
+        {
+          "food_id": "huevo",
+          "gramos": 100
+        },
+        {
+          "food_id": "aceite_oliva",
+          "gramos": 10
+        }
       ],
       "notas": "Receta inventada para los tests y como plantilla. Nunca se escribe en el catálogo."
     },
     {
       "id": "verduras_asadas_hacendado",
       "nombre": "Salteado de verduras asadas",
-      "alias": ["verduras asadas"],
+      "alias": [
+        "verduras asadas"
+      ],
       "ingredientes": [
-        { "food_id": "calabacin", "gramos": 20 },
-        { "food_id": "cebolla", "gramos": 20 },
-        { "food_id": "berenjena", "gramos": 20 },
-        { "food_id": "pimiento_rojo", "gramos": 20 },
-        { "food_id": "pimiento_amarillo", "gramos": 20 }
+        {
+          "food_id": "calabacin",
+          "gramos": 20
+        },
+        {
+          "food_id": "cebolla",
+          "gramos": 20
+        },
+        {
+          "food_id": "berenjena",
+          "gramos": 20
+        },
+        {
+          "food_id": "pimiento_rojo",
+          "gramos": 20
+        },
+        {
+          "food_id": "pimiento_amarillo",
+          "gramos": 20
+        }
       ],
       "notas": "Hacendado. Proporciones del envase; verduras en crudo sin la pérdida de agua del asado (aproximado)."
     },
     {
       "id": "parrillada_verduras_hacendado",
       "nombre": "Parrillada de verduras Hacendado",
-      "alias": ["parrillada de verduras", "parrillada"],
+      "alias": [
+        "parrillada de verduras",
+        "parrillada"
+      ],
       "ingredientes": [
-        { "food_id": "calabacin", "gramos": 25 },
-        { "food_id": "cebolla", "gramos": 25 },
-        { "food_id": "berenjena", "gramos": 25 },
-        { "food_id": "pimiento_rojo", "gramos": 25 },
-        { "food_id": "pimiento_amarillo", "gramos": 25 },
-        { "food_id": "patata_asada", "gramos": 75 }
+        {
+          "food_id": "calabacin",
+          "gramos": 25
+        },
+        {
+          "food_id": "cebolla",
+          "gramos": 25
+        },
+        {
+          "food_id": "berenjena",
+          "gramos": 25
+        },
+        {
+          "food_id": "pimiento_rojo",
+          "gramos": 25
+        },
+        {
+          "food_id": "pimiento_amarillo",
+          "gramos": 25
+        },
+        {
+          "food_id": "patata_asada",
+          "gramos": 75
+        }
       ],
       "notas": "Hacendado. Proporciones del envase; verduras en crudo sin la pérdida de agua del asado (aproximado)."
+    },
+    {
+      "id": "lentejas_caseras",
+      "nombre": "Lentejas caseras",
+      "alias": [
+        "lentejas",
+        "lentejas caseras",
+        "lentejas con chorizo",
+        "lentejas guisadas"
+      ],
+      "peso_final_g": 2800,
+      "ingredientes": [
+        {
+          "food_id": "lentejas_secas",
+          "gramos": 500
+        },
+        {
+          "food_id": "patata_cruda",
+          "gramos": 300
+        },
+        {
+          "food_id": "zanahoria",
+          "gramos": 150
+        },
+        {
+          "food_id": "morro_cerdo",
+          "gramos": 200
+        },
+        {
+          "food_id": "chorizo",
+          "gramos": 100
+        }
+      ],
+      "notas": "Proporciones estimadas; sustituir por pesos reales cuando los pese. Olla de unas 6 raciones de ~470 g. Solo estos cinco ingredientes (sin aceite, cebolla, ajo ni pimentón). Morro = oreja de cerdo de USDA."
     }
   ]
 }

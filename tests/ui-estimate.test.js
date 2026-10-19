@@ -196,7 +196,7 @@ test('Diario -> «Guardar como receta»: formulario con los ingredientes, cálcu
   await t.act(() => t.btn('Documento').click());
   await t.act(() => t.btn('Recetas').click());
   const ids = t.$$('li.receta').map((li) => li.dataset.id);
-  assert.deepEqual(ids, ['verduras_asadas_hacendado', 'parrillada_verduras_hacendado', 'arroz_blanco_con_aceite']);
+  assert.deepEqual(ids, ['verduras_asadas_hacendado', 'parrillada_verduras_hacendado', 'lentejas_caseras', 'arroz_blanco_con_aceite']);
   await t.act(() => t.btn('Exportar recetas.json').click());
   const json = parseRecetas(t.saved.at(-1).text);
   assert.deepEqual(json.errores, []);
