@@ -3,6 +3,7 @@
 import { sumLines, nutrientsForGrams } from './nutrients.js';
 import { unitOf } from './catalog.js';
 import { MEALS } from './meal-defaults.js';
+import { foodSinDatos } from './completeness.js';
 
 export const RANGO_OBJETIVO = [0.9, 1.1]; // tipo 'objetivo': entre el 90 % y el 110 % cuenta como en objetivo
 
@@ -74,7 +75,7 @@ export function diaryReport(meals, foodsById, resolved, catalog) {
   }));
   const ids = [...new Set(meals.flatMap((m) => m.lines.map((l) => l.food_id)))];
   const nombre = (id) => foodOf(foodsById, id).nombre ?? id;
-  const sinDatos = ids.filter((id) => !Object.keys(foodOf(foodsById, id).nutrients ?? {}).length).map(nombre);
+  const sinDatos = ids.filter((id) => foodSinDatos(foodOf(foodsById, id))).map(nombre);
   // kcal de un conjunto de líneas: null si ninguna tiene dato; parcial si falta alguna.
   const kcalDe = (lines) => {
     const con = lines.filter((l) => l.kcal !== null);

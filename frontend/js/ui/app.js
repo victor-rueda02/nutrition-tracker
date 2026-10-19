@@ -27,6 +27,7 @@ import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } f
 import { recetasActions, recetasScreen } from './recetas-screen.js';
 import { cleanRecetas, mergeRecetasImport } from '../core/recetas.js';
 import { objetivosScreen } from './objetivos-screen.js';
+import { foodSinDatos, detectarPlatos, tratarComoPlato, lineaAEstimar, deshacerPlato } from '../core/sin-datos.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -558,6 +559,10 @@ export function mountApp(root, deps) {
     const editing = d.editing;
     const saveBtn = h('button', { class: 'primary', onclick: save }, editing ? 'Guardar cambios' : 'Guardar');
     const hint = h('div', { class: 'muted small' });
+    const platos = detectarPlatos(d, byId());
+    // «Estimar con IA» para una línea sin datos o para un plato partido: pasan a "sin resolver" y se estima desde ahí.
+    const estimarLinea = (key) => { const r = lineaAEstimar(state.draft, key, byId()); state.draft = r.draft; if (r.index >= 0) est.start(r.index); };
+    const estimarPlato = (p) => { const r = tratarComoPlato(state.draft, p); state.draft = r.draft; if (r.index >= 0) est.start(r.index); };
     const paintFooter = () => {
       const v = validateDraft(state.draft);
       const t = previewTotals(state.draft, byId());
@@ -589,7 +594,8 @@ export function mountApp(root, deps) {
         gramsIn.setAttribute('aria-invalid', String(badGrams));
       };
       gramsIn.addEventListener('input', (e) => { state.draft = setGrams(state.draft, line.key, e.target.value); paint(); paintFooter(); });
-      const inc = incompleteInfo(food);
+      const sinDatos = foodSinDatos(food);
+      const inc = sinDatos ? null : incompleteInfo(food);
       const card = h('li', { class: 'card', 'data-key': line.key },
         h('div', { class: 'row between' },
           h('button', { class: 'name', 'aria-label': `Cambiar alimento: ${food.nombre}`, onclick: () => openPicker({ title: 'Cambiar alimento', onPick: (f) => { state.draft = changeFood(state.draft, line.key, f.id); render(); } }) }, food.nombre),
@@ -597,6 +603,10 @@ export function mountApp(root, deps) {
         line.source_text ? h('div', { class: 'muted small' }, `«${line.source_text}»`) : null,
         h('div', { class: 'row' }, gramsIn, h('span', {}, 'g'), h('span', { class: `badge ${line.confidence}` }, line.confidence)),
         flagsFor(line),
+        sinDatos ? h('div', { class: 'flag', role: 'alert' }, h('strong', {}, 'Sin datos nutricionales:'), ' este alimento no tiene ningún nutriente en tu documento. No suma nada a los totales, que quedarán incompletos.') : null,
+        sinDatos ? h('div', { class: 'row wrap' },
+          h('button', { class: 'secondary', disabled: state.busy, onclick: () => estimarLinea(line.key) }, 'Estimar con IA'),
+          h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Elegir otro alimento', onPick: (f) => { state.draft = changeFood(state.draft, line.key, f.id); render(); } }) }, 'Elegir otro alimento')) : null,
         line.needsReview ? h('button', { class: 'secondary review', onclick: () => { state.draft = confirmFood(state.draft, line.key); render(); } }, `Sí, es «${food.nombre}»`) : null,
         high,
         inc ? h('div', { class: 'flag' }, `Alimento incompleto (${inc.filled}/${inc.total} nutrientes): los totales de micronutrientes no serán completos`) : null,
@@ -617,6 +627,7 @@ export function mountApp(root, deps) {
       }
       actions.push(h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Buscar en mi documento', onPick: (f) => { state.draft = resolveUnmatched(state.draft, i, f.id, null, f); render(); } }) }, 'Buscar en mi documento'));
       if (MOTIVOS_ESTIMABLES.includes(u.motivo)) actions.push(h('button', { class: 'secondary', disabled: state.busy, onclick: () => est.start(i) }, 'Estimar con IA'));
+      if (u.origen) actions.push(h('button', { class: 'secondary', onclick: () => { state.draft = deshacerPlato(state.draft, i); render(); } }, 'Volver a los alimentos por separado'));
       actions.push(h('button', { class: 'link', onclick: () => { state.draft = dropUnmatched(state.draft, i); render(); } }, 'Descartar'));
       return h('li', { class: 'card unmatched' }, h('div', {}, `«${u.text}»`), h('div', { class: 'muted small' }, MOTIVO_TEXT[u.motivo] ?? u.motivo), h('div', { class: 'row wrap' }, actions));
     };
@@ -632,6 +643,10 @@ export function mountApp(root, deps) {
       d.text ? h('p', { class: 'muted small' }, `«${d.text}»`) : null,
       mealChips(d.meal, (m) => { state.draft = setMeal(state.draft, m); render(); }),
       d.warnings.length ? h('ul', { class: 'warnlist' }, d.warnings.map((w) => h('li', {}, w))) : null,
+      platos.length ? h('ul', { class: 'cards' }, platos.map((p) => h('li', { class: 'card plato' },
+        h('div', {}, `«${p.texto}»`),
+        h('div', { class: 'muted small' }, 'La IA lo ha separado en varios alimentos, pero suena a un solo plato.'),
+        h('div', { class: 'row wrap' }, h('button', { class: 'secondary', disabled: state.busy, onclick: () => estimarPlato(p) }, 'Tratar como un plato y estimar con IA'))))) : null,
       h('ul', { class: 'cards' }, d.lines.map(lineCard)),
       h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
       d.unmatched.length ? h('h2', {}, 'Sin resolver') : null,
@@ -737,6 +752,7 @@ export function mountApp(root, deps) {
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
         rep.avisosUl.length ? h('section', { class: 'alert-ul', role: 'alert' }, h('h2', {}, '⚠ Máximo tolerable (UL) superado'),
           h('ul', {}, rep.avisosUl.map((r) => h('li', {}, `${r.label}: ${fmtQty(r.total, r.unit)} (UL ${fmtQty(r.ul, r.unit)})`, r.notaUl ? h('div', { class: 'small muted' }, r.notaUl) : null)))) : null,
+        rep.sinDatos.length ? h('p', { class: 'warn small', role: 'alert' }, `Sin datos nutricionales: ${rep.sinDatos.join(', ')}. Los totales de este día no incluyen su aporte y no son completos.`) : null,
         rep.parciales.length ? h('p', { class: 'warn small' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
         h('section', { class: 'panel' }, h('h2', {}, 'Energía y macros'), h('ul', { class: 'nuts' }, macros.map(nutrientRow))),
         h('section', { class: 'panel' }, h('h2', {}, 'Micronutrientes'), h('ul', { class: 'nuts' }, micros.map(nutrientRow))),

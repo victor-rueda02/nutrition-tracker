@@ -2,6 +2,9 @@
 
 const hasValue = (food, key) => typeof food.nutrients?.[key] === 'number' && Number.isFinite(food.nutrients[key]);
 
+// Sin datos nutricionales: ni un solo nutriente con valor (un 0 escrito sí cuenta como valor).
+export const foodSinDatos = (food) => !Object.values(food?.nutrients ?? {}).some((v) => typeof v === 'number' && Number.isFinite(v));
+
 export function foodCompleteness(food, requiredKeys) {
   const missing = requiredKeys.filter((k) => !hasValue(food, k));
   const total = requiredKeys.length;
