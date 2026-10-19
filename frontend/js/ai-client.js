@@ -29,6 +29,10 @@ const MESSAGES = {
   token_invalido: 'El token no es correcto. Revísalo en Documento → Conexión.',
   origen: 'El servidor rechaza esta página (CORS): revisa ALLOWED_ORIGIN en el Worker.',
   limite_de_uso: 'Se ha alcanzado el límite de uso gratuito de la IA. Prueba más tarde o añade a mano.',
+  google_caido: 'Google tiene el servicio de IA sobrecargado o caído (suele ser temporal). Prueba de nuevo en un minuto o añade los alimentos a mano; tu texto se conserva.',
+  modelo_no_disponible: 'Google ha retirado o no encuentra el modelo de IA configurado (GEMINI_MODEL del Worker). Hay que cambiarlo y volver a desplegar el Worker.',
+  clave_ia: 'Google rechaza la clave de IA del Worker (secreto GEMINI_API_KEY). Revísala.',
+  error_worker: 'El Worker ha fallado antes de llegar a Google. Prueba de nuevo; si sigue, mira npm run worker:logs.',
   proveedor_ia: 'El servicio de IA ha fallado. Prueba de nuevo en un momento.',
   respuesta_invalida: 'La IA devolvió una respuesta que no se pudo entender. Prueba a reformular la frase.',
   limite_usda: 'USDA ha llegado a su límite de consultas (1000 por hora). Prueba más tarde; lo ya consultado está guardado.',
@@ -62,6 +66,7 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       if (['limite_usda', 'usda_sin_configurar', 'usda_clave', 'usda'].includes(body?.error)) throw fail(body.error, `HTTP ${res.status}`);
       if (res.status === 429) throw fail('limite_de_uso');
       if (body?.error === 'respuesta_invalida') throw fail('respuesta_invalida', body.detalle);
+      if (['google_caido', 'modelo_no_disponible', 'clave_ia', 'error_worker'].includes(body?.error)) throw fail(body.error, `HTTP ${res.status} Google ${body.status ?? '-'}`);
       throw fail('proveedor_ia', `HTTP ${res.status} ${body?.error ?? ''}`);
     }
     if (!body || !check(body)) throw fail('respuesta_invalida', 'forma inesperada');

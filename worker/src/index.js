@@ -80,6 +80,22 @@ function readTextoYAlimentos(body, cors) {
   return { texto, alimentos };
 }
 
+// Qué le pasa al proveedor, para que la app diga algo útil (el código viaja en `error`; `status` es el de Google):
+// limite_de_uso (429, cuota) · modelo_no_disponible (404, retirado o mal escrito) · clave_ia (401/403 o clave no válida) ·
+// google_caido (5xx: sobrecarga o caída, suele ser temporal) · error_worker (el Worker no llegó a Google) · proveedor_ia (otro).
+export function classifyProviderError(e, env = {}) {
+  if (!(e instanceof ProviderError)) return { error: 'error_worker', status: null, detalle: String(e?.message ?? e).slice(0, 200) };
+  const clave = env.GEMINI_API_KEY;
+  const detalle = (clave ? String(e.message).split(clave).join('***') : String(e.message)).slice(0, 300);
+  const s = e.status;
+  let error = 'proveedor_ia';
+  if (s === 429) error = 'limite_de_uso';
+  else if (s === 404) error = 'modelo_no_disponible';
+  else if (s === 401 || s === 403 || (s === 400 && /api key/i.test(detalle))) error = 'clave_ia';
+  else if (s >= 500) error = 'google_caido';
+  return { error, status: s, detalle };
+}
+
 // Una llamada al modelo y, solo si el JSON es inválido, UN reintento. validate(data) -> { ok, result?, error? }.
 async function askModel(env, callModel, args, validate, cors) {
   let lastError = 'sin intentos';
@@ -88,8 +104,9 @@ async function askModel(env, callModel, args, validate, cors) {
     try {
       rawModel = await callModel(env, args);
     } catch (e) {
-      const status = e instanceof ProviderError ? e.status : 502;
-      return json(status === 429 ? 429 : 502, { error: status === 429 ? 'limite_de_uso' : 'proveedor_ia', status }, cors);
+      const c = classifyProviderError(e, env);
+      console.error(`IA: ${c.error} (${c.status ?? 'sin respuesta'}) ${c.detalle}`); // para `npm run worker:logs`; nunca la clave
+      return json(c.error === 'limite_de_uso' ? 429 : 502, { error: c.error, status: c.status }, cors);
     }
     const parsed = parseModelJson(rawModel);
     if (!parsed.ok) { lastError = parsed.error; continue; }

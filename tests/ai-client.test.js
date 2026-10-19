@@ -25,6 +25,13 @@ test('errores traducidos a códigos con mensaje para el usuario', async () => {
   assert.equal(await call(respond(502, { error: 'respuesta_invalida', detalle: 'x' })), 'respuesta_invalida');
   assert.equal(await call(respond(502, { error: 'proveedor_ia' })), 'proveedor_ia');
   assert.equal(await call(respond(500, 'no json')), 'proveedor_ia');
+  // el Worker distingue qué le pasa a Google; cada caso, su mensaje
+  const mensajes = new Set();
+  for (const [error, status] of [['google_caido', 503], ['modelo_no_disponible', 404], ['clave_ia', 403], ['error_worker', null], ['proveedor_ia', 418]]) {
+    try { await client(respond(502, { error, status })).interpretMeal({ texto: 'x', alimentos: [] }); assert.fail('debía fallar'); } catch (e) { assert.equal(e.code, error); mensajes.add(e.userMessage); }
+  }
+  assert.equal(mensajes.size, 5); // mensajes distintos
+  assert.match([...mensajes][0], /sobrecargado o caído/);
   assert.equal(await call(respond(200, { items: [] })), 'respuesta_invalida');
   assert.equal(await call(async () => { throw new TypeError('Failed to fetch'); }), 'red');
 });

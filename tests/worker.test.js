@@ -150,3 +150,34 @@ test('callGemini: respuesta HTTP de error o vacía lanza ProviderError', async (
   const empty = async () => new Response(JSON.stringify({ candidates: [] }), { status: 200 });
   await assert.rejects(callGemini({ apiKey: 'K', model: 'm', system: '', user: '', schema: {}, fetchImpl: empty }), ProviderError);
 });
+
+test('el Worker distingue qué le pasa a Google (cuota, modelo, clave, caído, propio) y registra el detalle sin la clave', async () => {
+  const casos = [
+    [new ProviderError(429, 'cuota'), 429, 'limite_de_uso'],
+    [new ProviderError(503, '{"error":{"message":"This model is currently experiencing high demand."}}'), 502, 'google_caido'],
+    [new ProviderError(500, 'x'), 502, 'google_caido'],
+    [new ProviderError(404, 'models/viejo is not found'), 502, 'modelo_no_disponible'],
+    [new ProviderError(403, 'denied'), 502, 'clave_ia'],
+    [new ProviderError(400, 'API key not valid. Please pass a valid API key.'), 502, 'clave_ia'],
+    [new ProviderError(400, 'otra cosa'), 502, 'proveedor_ia'],
+    [new Error('red caída'), 502, 'error_worker'],
+  ];
+  const logs = [];
+  const original = console.error;
+  console.error = (...a) => logs.push(a.join(' '));
+  try {
+    for (const [err, http, codigo] of casos) {
+      const c = model(err);
+      const r = await handleRequest(req(), env, { callModel: c });
+      const body = await r.json();
+      assert.deepEqual([r.status, body.error, c.calls.length], [http, codigo, 1], codigo);
+      if (err instanceof ProviderError) assert.equal(body.status, err.status);
+    }
+    // la clave nunca llega al log
+    const secreto = { ...env, GEMINI_API_KEY: 'SECRETO-123' };
+    await handleRequest(req(), secreto, { callModel: model(new ProviderError(400, 'API key SECRETO-123 not valid')) });
+  } finally { console.error = original; }
+  assert.equal(logs.length, casos.length + 1);
+  assert.match(logs[1], /google_caido \(503\).*high demand/);
+  assert.ok(!logs.join('\n').includes('SECRETO-123'));
+});
