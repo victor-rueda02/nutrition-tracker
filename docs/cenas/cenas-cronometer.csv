@@ -1,0 +1,54 @@
+﻿fecha,alimento_cronometer,cantidad,id_catalogo,nota
+2026-09-17,"Merluza del Pacífico, cocida",230.00 g,merluza_cruda,En Cronometer cocida; ahora peso en crudo
+2026-09-17,"Arroz, Blanco, Crudo",150.00 g,arroz_blanco_crudo,
+2026-09-17,"Manzana, Cruda, con Piel",120.00 g,manzana_con_piel,
+2026-09-17,Yogur griego natural entero,125.00 g,yogur_griego_natural,
+2026-09-17,Semillas de chía,5.00 g,semillas_chia,
+2026-09-17,"Coosur, Aceite De Oliva Virgen Extra",10.00 ml,aceite_oliva,"ml en Cronometer (1 ml ≈ 0,91 g)"
+2026-09-17,"Hacendado, Tomate Frito, Con Aceite de Oliva",150.00 g,salsa_tomate_frito,
+2026-09-17,"Nuestra Alacena, Pechuga Pavo, Finas Lonchas",40.00 g,pavo_fiambre,
+2026-09-18,"Don Simon, Tinto De Verano, Limón",3.50 per,tinto_verano,"Puntual (salida), no es cena habitual"
+2026-09-18,Ron,320.00 g,ron,"Puntual (salida), no es cena habitual"
+2026-09-18,Coca-Cola Classic,400.00 g,coca_cola,"Puntual (salida), no es cena habitual"
+2026-09-19,"Carrefour, Tortilla de Patata",2.00 Serving,tortilla_patata,Receta pendiente (sin datos)
+2026-09-19,"Dia, El Molino De Dia, Pan 100% Natural, Barra De Pan",50.00 g,pan_integral,Revisar id real del pan de barra en el catálogo
+2026-09-19,"Pepino crudo, sin piel",50.00 g,pepino,
+2026-09-19,Crema de calabacín,300.00 g,crema_calabacin,Receta pendiente (sin datos)
+2026-09-19,"Pera, Cruda",70.00 g,pera_cruda,
+2026-09-19,"Yogur griego, vainilla, premium",125.00 g,yogur_griego_vainilla,Excluido del catálogo (incluir=no)
+2026-09-21,Crema de calabacín,250.00 g,crema_calabacin,Receta pendiente (sin datos)
+2026-09-21,"Arroz, Blanco, Crudo",175.00 g,arroz_blanco_crudo,
+2026-09-21,Nueces,10.00 g,nueces,
+2026-09-21,Huevo crudo,62.00 g,huevo,
+2026-09-21,"Hacendado, Tomate Frito, Con Aceite de Oliva",93.00 g,salsa_tomate_frito,
+2026-09-21,Yogur griego natural entero,125.00 g,yogur_griego_natural,
+2026-09-21,"J.D. Gross, Chocolate Negro, 85% Cacau",1.00 Portion,chocolate_negro_85,1 porción (~10 g)
+2026-09-21,Kiwi verde,"1.00 each - 2"" diameter",kiwi_verde,1 unidad
+2026-09-22,Yogur griego natural entero,125.00 g,yogur_griego_natural,
+2026-09-22,"J.D. Gross, Chocolate Negro, 85% Cacau",1.00 Portion,chocolate_negro_85,1 porción (~10 g)
+2026-09-22,Semillas de chía,3.00 g,semillas_chia,
+2026-09-22,"Coosur, Aceite De Oliva Virgen Extra",6.00 ml,aceite_oliva,"ml en Cronometer (1 ml ≈ 0,91 g)"
+2026-09-22,Nueces,10.00 g,nueces,
+2026-09-22,"Hacendado, Family White Sliced Bread",3.00 slice,pan_molde_blanco,3 rebanadas
+2026-09-22,"Fish, Salmon, Atlantic, Farmed, Raw",178.00 g,salmon_atlantico,
+2026-09-22,Zanahorias crudas,"1.00 medium - 6"" to 7"" long",zanahoria,1 mediana
+2026-09-22,Kiwi verde,"1.00 each - 2"" diameter",kiwi_verde,1 unidad
+2026-09-23,Yogur griego natural entero,125.00 g,yogur_griego_natural,
+2026-09-23,Semillas de chía,3.00 g,semillas_chia,
+2026-09-23,"Tuna, Canned, Light, Oil Pack, Not Drained",60.00 g,atun_lata_aceite,
+2026-09-23,"Pasta, Dry, Unenriched",150.00 g,pasta_seca,
+2026-09-23,"Hacendado, Fried Tomato, With Olive Oil",41.00 g,salsa_tomate_frito,
+2026-09-23,"Hacendado, Queso de Mezcla Madurado, Tierno, Lonchas",1.00 loncha,queso_tierno_loncha,1 loncha
+2026-09-24,Calabacines,25.00 g,calabacin,
+2026-09-24,Berenjena cruda,25.00 g,berenjena,
+2026-09-24,"Cebolla blanca, amarilla o roja, cruda",25.00 g,cebolla,
+2026-09-24,"Pimientos rojos, crudos",25.00 g,pimiento_rojo,
+2026-09-24,"Pimientos Amarillos Dulces, Crudos",25.00 g,pimiento_amarillo,
+2026-09-24,"Patata Asada, Sin Piel",74.00 g,patata_cruda,En Cronometer asada; ahora peso en crudo
+2026-09-24,"Fish, Sardine, Atlantic, Canned in Oil, Drained Solids with Bone",65.00 g,sardina_lata_aceite,
+2026-09-24,Olive Oil,17.00 g,aceite_oliva,
+2026-09-24,"Coosur, Aceite De Oliva Virgen Extra",6.00 ml,aceite_oliva,"ml en Cronometer (1 ml ≈ 0,91 g)"
+2026-09-24,"Bread, french or vienna, whole wheat",167.00 g,pan_integral,Revisar id real del pan de barra en el catálogo
+2026-09-24,Queso Monterey Jack natural,25.00 g,queso_monterey_jack,Excluido del catálogo (incluir=no)
+2026-09-24,Yogur griego natural entero,125.00 g,yogur_griego_natural,
+2026-09-24,Semillas de chía,3.00 g,semillas_chia,
