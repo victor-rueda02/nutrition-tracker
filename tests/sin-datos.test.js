@@ -108,11 +108,12 @@ const ESTIMACION = { plato: 'lentejas', gramos: 300, total_estimado: true, ajust
   { origen: 'catalogo', food_id: 'aceite_oliva', nombre: 'aceite', gramos: 10 },
 ] };
 
-async function setup(dictado) {
+async function setup(dictado, { meals = [] } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
   const store = createMemoryStore();
+  for (const m of meals) await store.addMeal(m);
   const calls = { estimate: [] };
   const createAiClient = () => ({
     async interpretMeal() { return dictado; },
@@ -123,6 +124,8 @@ async function setup(dictado) {
   });
   let n = 0;
   const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, recetasBase: [], initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW, idGen: () => `m${++n}`, saveFile: async () => 'compartido' });
+  await app.whenIdle();
+  root.querySelector('button[aria-label="Añadir comida"]').click(); // la app abre en el Diario; el «+» central lleva al dictado
   await app.whenIdle();
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
@@ -183,4 +186,25 @@ test('UI: un dictado normal (cantidades y alimentos con datos) no ofrece plato n
   await dictar(t, '170 g de arroz con 2 huevos');
   assert.equal(t.$$('li.plato').length, 0);
   assert.doesNotMatch(t.root.textContent, /Sin datos nutricionales/);
+});
+
+const COMIDA = { id: 'c1', date: '2026-10-18', meal: 'comida', createdAt: '2026-10-18T10:00:00.000Z', text: 'x', lines: [{ food_id: 'lentejas_caseras', grams: 200 }, { food_id: 'chorizo', grams: 30 }] };
+const aDiario = async (t) => { await t.act(() => t.$$('button').find((b) => b.textContent.includes('‹ Volver')).click()); };
+
+test('UI: el Diario avisa de los alimentos sin datos y no da el día por completo', { skip }, async () => {
+  const t = await setup(DICTADO, { meals: [COMIDA] });
+  await aDiario(t);
+  assert.match(t.$('[role=alert]').textContent, /Sin datos nutricionales: Lentejas caseras/);
+  assert.match(t.root.textContent, /Totales parciales: faltan datos de Lentejas caseras/);
+});
+
+test('UI: las etiquetas de macros son «Hidratos» y «Grasa» en el Diario, el anillo y el informe', { skip }, async () => {
+  const t = await setup(DICTADO, { meals: [COMIDA] });
+  await aDiario(t);
+  assert.match(t.root.textContent, /Hidratos/);
+  assert.match(t.root.textContent, /Grasa/);
+  t.$('button[aria-label="Más opciones del día"]').click();
+  await t.act(() => t.btn('Ver informe diario').click());
+  assert.match(t.root.textContent, /Hidratos/);
+  assert.doesNotMatch(t.root.textContent, /Carbohidratos|Hidratos de carbono|Grasa total/);
 });

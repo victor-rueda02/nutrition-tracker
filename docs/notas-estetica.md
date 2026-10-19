@@ -8,7 +8,7 @@ Todos los colores están en un único `:root` de `frontend/css/styles.css`. La v
 
 | Token | Uso | Claro | Oscuro |
 |---|---|---|---|
-| `--bg` | fondo de página | `#f1f2f6` | `#11131c` |
+| `--bg` | fondo de página (crema cálido en claro) | `#faf5ee` | `#11131c` |
 | `--surface` | tarjetas, secciones, cabecera, barra inferior | `#ffffff` | `#232634` |
 | `--fg` | texto | `#1b1d2a` | `#f3f4f8` |
 | `--muted` | texto secundario, placeholder | `#5b6072` | `#a4a9ba` |
@@ -28,7 +28,9 @@ Todos los colores están en un único `:root` de `frontend/css/styles.css`. La v
 
 Hay además tokens que no son colores de la paleta: `--scrim` (fondo del selector), `--shadow`, `--radius` (16 px) y `--header-h` (60 px).
 
-Manifest: `theme_color` y `background_color` = `#f1f2f6`. En `index.html` hay dos `<meta name="theme-color">` con `media`: `#f1f2f6` en claro y `#11131c` en oscuro.
+Manifest: `theme_color` y `background_color` = `#faf5ee`. En `index.html` hay dos `<meta name="theme-color">` con `media`: `#faf5ee` en claro y `#11131c` en oscuro.
+
+Tokens añadidos en la rama de navegación: `--fab` (botón «+» central; `#e4571f` claro, `#ff7a4d` oscuro) y `--on-fab`, `--link` (iconos y acciones en verde azulado: `#0b6b6b` / `#5fd0c8`), `--ring-obj` (anillo de objetivo) y `--soft` (fondo de iconos, buscador y selector).
 
 ### Contraste (WCAG AA), calculado
 
@@ -75,3 +77,20 @@ Ninguna clase existente se ha renombrado ni quitado.
 - **Objetivos**: bordes de color de las macros.
 - **Documento**: las tres secciones.
 - **Inicio** y el selector de alimentos («+ Añadir alimento»).
+
+## Navegación (estructura parecida a Cronometer)
+
+Barra inferior fija: **Diario · Alimentos · [+] · Más**. Solo CSS y estructura; las funciones son las mismas.
+
+| Pantalla | Dónde está ahora |
+|---|---|
+| Dictado (antes «Inicio») | «+» central (directo, comida de la hora) y «+» de cada comida del Diario (con la comida y el día elegidos) |
+| Añadir a mano, Repetir de ayer, Plantillas, Estimar con IA | accesos rápidos arriba del dictado; «Añadir a mano», «Repetir de ayer» y «Plantillas» también en la hoja del «+» de cada comida |
+| Diario | resumen de energía con anillos, macros y comidas con su «+»; aviso de UL y totales parciales arriba |
+| Informe diario | tres puntos del Diario → «Ver informe diario»: todos los nutrientes con barras, % y UL, y comidas del día |
+| Copiar día anterior | tres puntos del Diario (usa Repetir con el día anterior) |
+| Mi catálogo (lista buscable, solo lectura) | Alimentos |
+| Recetas, Plantillas, «Añadidos con IA, pendientes de revisar», aviso de documento nuevo | Alimentos |
+| Objetivos, Documento, Copia de seguridad, Conexión con la IA, Pulir el documento (Frases a revisar) | Más |
+
+Guardar una comida lleva al Diario del día en que queda, con el aviso «Guardado en …».

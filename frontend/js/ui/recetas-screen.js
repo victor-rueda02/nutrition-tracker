@@ -112,13 +112,14 @@ function listScreen(ui) {
     ui.header('Recetas', ui.back),
     state.recetasMsg ? h('p', { class: 'ok', role: 'status' }, state.recetasMsg) : null,
     h('p', { class: 'muted small' }, 'Una receta es un alimento más de tu documento: se pesa el plato terminado. Sus nutrientes se calculan con los de sus ingredientes.'),
-    h('div', { class: 'row wrap' },
+    h('div', { class: 'recetas-actions' },
       h('button', { class: 'primary', onclick: () => ui.rec.openForm() }, 'Nueva receta'),
-      h('button', { class: 'secondary', disabled: !state.recetas.length, onclick: () => ui.rec.recalcular() }, 'Recalcular todas'),
-      h('button', { class: 'secondary', onclick: () => ui.rec.exportar() }, 'Exportar recetas.json')),
+      h('div', { class: 'recetas-dos' },
+        h('button', { class: 'secondary', disabled: !state.recetas.length, onclick: () => ui.rec.recalcular() }, 'Recalcular todas'),
+        h('button', { class: 'secondary', onclick: () => ui.rec.exportar() }, 'Exportar recetas.json'))),
     state.recetas.length === 0 ? h('p', { class: 'muted' }, 'Aún no tienes recetas. En el Diario, pulsa «Guardar como receta» en una comida, o crea una nueva.')
       : h('ul', { class: 'cards' }, state.recetas.map((r) => h('li', { class: 'card receta', 'data-id': r.id },
-        h('div', { class: 'row between' }, h('strong', {}, r.nombre), h('span', { class: 'muted small' }, kcal(r) === undefined ? 'sin calcular' : `${ui.nf0.format(kcal(r))} kcal/100 g`)),
+        h('div', { class: 'row between' }, h('strong', {}, r.nombre), h('span', { class: 'muted small receta-kcal' }, kcal(r) === undefined ? 'sin calcular' : `${ui.nf0.format(kcal(r))} kcal/100 g`)),
         h('div', { class: 'muted small' }, `${r.ingredientes.length} ${r.ingredientes.length === 1 ? 'ingrediente' : 'ingredientes'} · ${r.peso_final_g ? `peso final ${fmt(r.peso_final_g)} g` : 'en proporción'}${r.alias?.length ? ` · se dicta «${r.alias.join('», «')}»` : ''}`),
         h('div', { class: 'row' }, h('button', { class: 'link', onclick: () => ui.rec.openForm({ receta: r }) }, 'Editar'))))));
 }
