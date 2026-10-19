@@ -26,7 +26,7 @@
  },
  {
   "key": "hidratos_g",
-  "label": "Hidratos de carbono",
+  "label": "Hidratos",
   "group": "hidratos y proteína"
  },
  {
@@ -46,7 +46,7 @@
  },
  {
   "key": "grasa_total_g",
-  "label": "Grasa total",
+  "label": "Grasa",
   "group": "grasas"
  },
  {

@@ -1,12 +1,13 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v12'; // + avisos de alimentos sin datos y platos partidos
+const VERSION = 'nt-v13'; // nt-v12 + navegación inferior (nav, informe, alimentos, más)
 const ASSETS = [
   './',
   'css/catalogo.css',
   'css/frases.css',
   'css/ia-recetas.css',
+  'css/navegacion.css',
   'css/objetivos.css',
   'css/plantillas.css',
   'css/repeat.css',
@@ -53,10 +54,14 @@ const ASSETS = [
   'js/ui/app.js',
   'js/ui/catalog-update-screen.js',
   'js/ui/estimate-screen.js',
+  'js/ui/foods-screen.js',
+  'js/ui/more-screen.js',
+  'js/ui/nav.js',
   'js/ui/objetivos-screen.js',
   'js/ui/phrase-log-screen.js',
   'js/ui/recetas-screen.js',
   'js/ui/repeat-screen.js',
+  'js/ui/report-screen.js',
   'js/ui/templates-screen.js',
   'manifest.webmanifest',
   '../data/nutrients.json',

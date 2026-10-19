@@ -17,3 +17,8 @@ usda/cache/
 .vscode/
 # Propuesta regenerable de "usda.mjs filas" (se copia a data/foods.csv solo con OK)
 usda/foods.propuesto.csv
+
+# Estética: capturas por ronda y capturas de referencia (repo público)
+docs/revision-estetica/ronda-*/
+docs/referencia-cronometer/**/*.png
+docs/referencia-cronometer/**/*.PNG

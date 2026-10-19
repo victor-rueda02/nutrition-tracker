@@ -14,7 +14,7 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st, publicado, ajustes = {} } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st, publicado, ajustes = {}, enDiario = false } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
@@ -36,14 +36,23 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
   const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; },
     fetchPublished: publicado === undefined ? undefined : async () => { if (publicado instanceof Error) throw publicado; return publicado; } });
   await app.whenIdle();
+  if (!enDiario) root.querySelector('button[aria-label="Añadir comida"]').click(); // la app abre en el Diario; el "+" central lleva directo al dictado
+  await app.whenIdle();
   const $ = (s) => root.querySelector(s);
   const $$ = (s) => [...root.querySelectorAll(s)];
-  const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
+  const buscar = (text) => $$('button').find((b) => b.textContent.includes(text));
+  // El dictado ocupa toda la pantalla (sin barra inferior): para ir a una pestaña se cierra primero con la X.
+  const btn = (text) => { let b = buscar(text); if (!b && ['Diario', 'Alimentos', 'Más'].includes(text)) { buscar('‹ Volver')?.click(); b = buscar(text); } return b; };
   const type = (el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); };
   const act = async (fn) => { fn(); await app.whenIdle(); };
   const attach = async (inputEl, file) => { Object.defineProperty(inputEl, 'files', { value: [file] }); inputEl.dispatchEvent(new Event('change', { bubbles: true })); await app.whenIdle(); };
   return { app, root, store, calls, saved, document, $, $$, btn, type, act, attach };
 }
+
+const comidaCon = (t) => t.$$('section.meal').find((x) => x.querySelector('.registro')); // la primera comida con registros (el Diario muestra también las vacías)
+const verInforme = (t) => { t.$('button[aria-label="Más opciones del día"]').click(); t.btn('Ver informe diario').click(); };
+const abrirDictado = (t) => t.$('button[aria-label="Añadir comida"]').click(); // el "+" central
+const masA = (t, etiqueta) => { t.btn('Más').click(); t.btn(etiqueta).click(); }; // pestaña Más -> su fila
 
 const RESULT = { items: [ITEM('avena_copos', 80, '80 g de avena'), ITEM('huevo', 100, '2 huevos', { confidence: 'media', flags: ['variante_por_defecto'] })], unmatched: [{ text: 'un plátano', motivo: 'no_en_catalogo' }], warnings: [], model: 'm' };
 
@@ -86,7 +95,8 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   await t.act(() => t.btn('Guardar').click());
   const meals = await t.store.allMeals();
   assert.deepEqual(meals, [{ id: 'm1', date: '2026-10-16', meal: 'desayuno', createdAt: NOW.toISOString(), text: 'para desayunar 80 g de avena, 2 huevos y un plátano', lines: [{ food_id: 'avena_copos', grams: 90.5, source_text: '80 g de avena' }] }]);
-  assert.match(t.$('[role=status]').textContent, /Guardado en desayuno: 1 alimento/);
+  assert.match(t.$('[role=status]').textContent, /Guardado en desayuno: 1 alimento/); // vuelve al Diario con el aviso
+  await t.act(() => abrirDictado(t));
   assert.equal(t.$('textarea').value, '');
 });
 
@@ -160,7 +170,7 @@ test('error de la IA: mensaje claro, el texto dictado se conserva y se puede añ
 
 test('importar documento: guarda directamente si no hay errores y muestra el informe', { skip }, async () => {
   const t = await setup({ responses: [RESULT] });
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   const csv = 'id,nombre,marca,proteina_g\na,Alimento A,X,10\nb,Alimento B,Y,\n';
   await t.attach(t.$('input[type=file]'), { name: 'mis_alimentos.csv', text: async () => csv });
   assert.match(t.$('.report').textContent, /Importado «mis_alimentos.csv»: 2 alimentos/);
@@ -171,7 +181,7 @@ test('importar documento: guarda directamente si no hay errores y muestra el inf
 
 test('importar con errores: pide confirmación y solo importa las filas válidas', { skip }, async () => {
   const t = await setup({ responses: [RESULT] });
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   await t.attach(t.$('input[type=file]'), { name: 'x.csv', text: async () => 'id,nombre\na,A\na,Repetido\n' });
   assert.match(t.$('.report').textContent, /1 alimentos válidos, 1 filas con error/);
   assert.match(t.$('.report').textContent, /id duplicado/);
@@ -182,7 +192,7 @@ test('importar con errores: pide confirmación y solo importa las filas válidas
 
 test('documento inservible (falta nombre): no se puede importar y no se toca el actual', { skip }, async () => {
   const t = await setup({ responses: [RESULT] });
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   await t.attach(t.$('input[type=file]'), { name: 'mal.csv', text: async () => 'id,alias\na,x\n' });
   assert.match(t.$('.report').textContent, /No se puede importar «mal.csv»/);
   assert.match(t.$('.report').textContent, /falta la columna obligatoria "nombre"/);
@@ -191,9 +201,9 @@ test('documento inservible (falta nombre): no se puede importar y no se toca el 
 
 test('seguridad: el texto de un documento nunca se interpreta como HTML', { skip }, async () => {
   const t = await setup({ responses: [RESULT] });
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   await t.attach(t.$('input[type=file]'), { name: 'x.csv', text: async () => 'id,nombre\na,"<img src=x onerror=alert(1)><b>negrita</b>"\n' });
-  await t.act(() => t.btn('Volver').click());
+  await t.act(() => abrirDictado(t));
   await t.act(() => t.btn('Añadir a mano').click());
   await t.act(() => t.btn('+ Añadir alimento').click());
   assert.equal(t.$('.overlay img'), null);
@@ -203,7 +213,7 @@ test('seguridad: el texto de un documento nunca se interpreta como HTML', { skip
 
 test('conexión: se guarda el Worker y el token (no van en el repositorio)', { skip }, async () => {
   const t = await setup({ responses: [RESULT], conn: {} });
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Conexión con la IA'));
   t.$('input[type=url]').value = 'https://w.example';
   t.$('input[type=password]').value = 'secreto';
   await t.act(() => t.btn('Guardar').click());
@@ -215,7 +225,7 @@ test('conexión: se guarda el Worker y el token (no van en el repositorio)', { s
 test('Probar: token incorrecto o secretos que faltan, con un mensaje para cada caso', { skip }, async () => {
   for (const [health, re] of [[{ ok: true, configurado: true, token: 'incorrecto' }, /el token no es correcto/], [{ ok: true, configurado: false, token: 'ok' }, /le faltan secretos/], [{ ok: false }, /no responde bien/]]) {
     const t = await setup({ health });
-    await t.act(() => t.btn('Documento').click());
+    await t.act(() => masA(t, 'Conexión con la IA'));
     await t.act(() => t.btn('Probar').click());
     assert.match(t.root.textContent, re);
   }
@@ -233,18 +243,21 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
   await t.act(() => t.btn('Diario').click());
   assert.equal(t.$('.daylabel').textContent, 'Hoy');
   assert.equal(t.$('button[aria-label="Día siguiente"]').disabled, true);
-  // 80 g de avena (379 kcal) + 100 g de huevo (143 kcal) = 446 kcal; objetivo de referencia 2000 kcal
+  assert.match(comidaCon(t).textContent, /Desayuno.*446 kcal/);
+  assert.match(comidaCon(t).textContent, /Avena \(copos\/molida\) · 80 g · 303 kcal/);
+  assert.equal(t.$('.alert-ul'), null);
+  // Informe diario (tres puntos): 80 g de avena (379 kcal) + 100 g de huevo (143 kcal) = 446 kcal; objetivo de referencia 2000 kcal
+  await t.act(() => verInforme(t));
+  assert.match(t.$('header').textContent, /Informe diario/);
   assert.match(fila(t, 'energia_kcal').textContent, /446 kcal \/ 2000 kcal/);
   assert.match(fila(t, 'energia_kcal').textContent, /Por debajo · 22 %/);
   assert.match(fila(t, 'vitamina_b12_ug').textContent, /µg/);
   assert.ok(fila(t, 'epa_dha'));
-  assert.match(t.$('section.meal').textContent, /Desayuno.*446 kcal/);
-  assert.match(t.$('section.meal').textContent, /Avena \(copos\/molida\) · 80 g · 303 kcal/);
-  assert.equal(t.$('.alert-ul'), null);
+  await t.act(() => t.btn('‹ Volver').click());
   await t.act(() => t.$('button[aria-label="Día anterior"]').click());
   assert.equal(t.$('.daylabel').textContent, 'Ayer');
   assert.match(t.root.textContent, /Sin registros este día/);
-  await t.act(() => t.btn('Ir a hoy').click());
+  await t.act(() => { t.$('button[aria-label="Más opciones del día"]').click(); t.btn('Ir a hoy').click(); });
   assert.equal(t.$('.daylabel').textContent, 'Hoy');
 });
 
@@ -252,10 +265,11 @@ test('Diario: superar un UL es un aviso distinto de "objetivo cumplido"', { skip
   // Copia congelada del documento: sus corn flakes traen la fortificación de EE. UU. (981 µg de vitamina A por 100 g).
   const t = await setup({ foods: rulesFoods, meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] });
   await t.act(() => t.btn('Diario').click());
-  assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado/);
-  assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\): 3924 µg \(UL 3000 µg\)/);
-  assert.match(t.$('.alert-ul').textContent, /retinol preformado/);
+  assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado: Vitamina A \(RAE\)/); // el Diario: una línea con el aviso
+  await t.act(() => verInforme(t));
+  assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\) 3924 µg \(UL 3000 µg\)/);
   const a = fila(t, 'vitamina_a_ug');
+  assert.match(a.textContent, /retinol preformado/); // la nota del UL va en la fila del nutriente
   assert.ok(a.classList.contains('over-ul'));
   assert.match(a.textContent, /Objetivo cumplido/);
   assert.match(a.textContent, /⚠ Supera el máximo tolerable \(UL 3000 µg\)/);
@@ -266,16 +280,18 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
   const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['coca_cola', 330]])] });
   await t.act(() => t.btn('Diario').click());
   assert.match(t.root.textContent, /Totales parciales: faltan datos de Coca-Cola Classic/);
+  assert.match(comidaCon(t).textContent, /Coca-Cola Classic · 330 g · sin dato/);
+  await t.act(() => verInforme(t));
   assert.match(fila(t, 'energia_kcal').textContent, /parcial/);
-  assert.match(t.$('section.meal').textContent, /Coca-Cola Classic · 330 g · sin dato/);
 });
 
 test('Objetivos: sin plan, editar kcal y macros crea «Mis objetivos» desde hoy; el diario de hoy los usa y el de ayer no; perfil mujer', { skip }, async () => {
   const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['arroz_blanco_crudo', 100]]), MEAL('a', '2026-10-15', 'comida', [['arroz_blanco_crudo', 100]])] });
   await t.act(() => t.btn('Diario').click());
+  await t.act(() => verInforme(t));
   assert.match(t.$('.objetivos-dia').textContent, /Objetivos: referencias EFSA/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 11 mg/);
-  await t.act(() => t.btn('Objetivos').click());
+  await t.act(() => masA(t, 'Objetivos'));
   assert.match(t.root.textContent, /Ningún periodo de tu plan cubre hoy/);
   assert.match(t.root.textContent, /Sin plan: se usan las referencias EFSA/);
   assert.equal(t.btn('Exportar plan').disabled, true);
@@ -285,17 +301,21 @@ test('Objetivos: sin plan, editar kcal y macros crea «Mis objetivos» desde hoy
   assert.match(t.$('[role=status]').textContent, /Guardado/);
   const plan = await t.store.getSetting('plan_objetivos');
   assert.deepEqual(plan.periodos, [{ id: 'objetivos_20261016', nombre: 'Mis objetivos', inicio: '2026-10-16', valores: { energia_kcal: { objetivo: 2500 }, proteina_g: { min: 150.5 } } }]);
-  t.$('input[aria-label="Hidratos de carbono: mínimo"]').value = 'mucho';
+  t.$('input[aria-label="Hidratos: mínimo"]').value = 'mucho';
   await t.act(() => t.btn('Guardar').click());
-  assert.match(t.$('[role=alert]').textContent, /Valor no válido en Hidratos de carbono \(mínimo\)/);
+  assert.match(t.$('[role=alert]').textContent, /Valor no válido en Hidratos \(mínimo\)/);
   await t.act(() => { const s = t.$('select[aria-label="Perfil de referencia"]'); s.value = 'mujer'; s.dispatchEvent(new t.document.defaultView.Event('change')); });
   assert.equal((await t.store.getSetting('plan_objetivos')).perfil, 'mujer');
   await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => verInforme(t));
   assert.match(t.$('.objetivos-dia').textContent, /Objetivos: Mis objetivos/);
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2500 kcal/);
   assert.match(fila(t, 'proteina_g').textContent, /\/ 151 g|\/ 150,5 g/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/);
+  await t.act(() => t.btn('‹ Volver').click());
   await t.act(() => t.$('button[aria-label="Día anterior"]').click()); // ayer: antes del periodo
+  await t.act(() => verInforme(t));
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2000 kcal/);
   assert.match(fila(t, 'hierro_mg').textContent, /\/ 16 mg/); // el perfil es del plan entero
 });
@@ -321,7 +341,7 @@ const toAyer = async (t) => { await t.act(() => t.btn('Diario').click()); await 
 test('editar una comida pasada: gramos, quitar línea, cambiar comida y fecha; mismo id y createdAt', { skip }, async () => {
   const t = await setup({ meals: [AYER] });
   await toAyer(t);
-  assert.match(t.$('section.meal').textContent, /Arroz blanco crudo · 150 g/);
+  assert.match(comidaCon(t).textContent, /Arroz blanco crudo · 150 g/);
   await t.act(() => t.btn('Editar').click());
   assert.match(t.$('header').textContent, /Editar comida/);
   assert.equal(t.$('input[aria-label="Fecha"]').value, '2026-10-15');
@@ -336,7 +356,7 @@ test('editar una comida pasada: gramos, quitar línea, cambiar comida y fecha; m
   // vuelve al diario del día en que queda la comida
   assert.equal(t.$('.daylabel').textContent, 'Hoy');
   assert.match(t.$('[role=status]').textContent, /Cambios guardados. La comida está ahora en este día/);
-  assert.match(t.$('section.meal').textContent, /Cena/);
+  assert.match(comidaCon(t).textContent, /Cena/);
   const meals = await t.store.allMeals();
   assert.deepEqual(meals, [{ ...AYER, date: '2026-10-16', meal: 'cena', updatedAt: NOW.toISOString(),
     lines: [{ food_id: 'arroz_blanco_crudo', grams: 120, source_text: '' }, { food_id: 'aceite_oliva', grams: 10, source_text: '' }] }]);
@@ -386,7 +406,7 @@ test('borrar desde la pantalla de edición', { skip }, async () => {
 test('editar una comida con un alimento que ya no está en el documento: queda en "Sin resolver" con sus gramos', { skip }, async () => {
   const t = await setup({ meals: [MEAL('r3', '2026-10-15', 'comida', [['ya_no_existe', 35], ['kiwi_verde', 69]])] });
   await toAyer(t);
-  assert.match(t.$('section.meal').textContent, /ya_no_existe · 35 g · sin dato/);
+  assert.match(comidaCon(t).textContent, /ya_no_existe · 35 g · sin dato/);
   await t.act(() => t.btn('Editar').click());
   assert.match(t.root.textContent, /«ya_no_existe · 35 g»/);
   await t.act(() => t.btn('Buscar en mi documento').click());
@@ -397,7 +417,7 @@ test('editar una comida con un alimento que ya no está en el documento: queda e
 
 // ---------- Hito 4, paso 3: copia de seguridad ----------
 const fichero = (name, data) => ({ name, text: async () => (typeof data === 'string' ? data : JSON.stringify(data)) });
-const abrirDoc = (t) => t.act(() => t.btn('Documento').click());
+const abrirDoc = (t, seccion = 'Copia de seguridad') => t.act(() => masA(t, seccion));
 
 test('exportar el diario: copia JSON con todas las comidas y sin el token', { skip }, async () => {
   const t = await setup({ meals: [AYER, MEAL('r2', '2026-10-16', 'cena', [['huevo', 100]])], conn: { endpoint: 'https://w', token: 'TOKEN-SECRETO' } });
@@ -422,7 +442,7 @@ test('exportar: si cancelas el menú Compartir, se dice', { skip }, async () => 
 
 test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }, async () => {
   const t = await setup();
-  await abrirDoc(t);
+  await abrirDoc(t, 'Documento');
   await t.act(() => t.btn('Exportar documento (Excel)').click());
   await t.act(() => t.btn('Exportar documento (CSV con comas)').click());
   assert.deepEqual(t.saved.map((f) => [f.name, f.type]), [['nutritiontracker-alimentos-excel-2026-10-16.csv', 'text/csv'], ['nutritiontracker-alimentos-2026-10-16.csv', 'text/csv']]);
@@ -550,8 +570,9 @@ test('Repetir esta comida (desde el Diario): solo esa comida, destino la comida 
   const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
   await t.act(() => t.btn('Diario').click());
   await t.act(() => t.$('button[aria-label="Día anterior"]').click());
-  const repetir = () => t.$('.registro[data-id="r1"]').querySelector('button').click(); // primer botón: "Repetir esta comida"
-  assert.equal(t.$('.registro[data-id="r1"]').querySelector('button').textContent, 'Repetir esta comida');
+  const botonRepetir = () => [...t.$('.registro[data-id="r1"]').querySelectorAll('button')].find((b) => b.textContent === 'Repetir esta comida');
+  const repetir = () => botonRepetir().click();
+  assert.ok(botonRepetir());
   await t.act(repetir);
   assert.deepEqual(t.$$('.repeat-group h2').map((x) => x.textContent), ['Comida']);
   assert.match(t.root.textContent, /Solo la comida que elegiste en el Diario/);
@@ -619,9 +640,9 @@ test('plantillas: guardar una comida del Diario, verla en Plantillas y usarla co
   await t.act(() => t.btn('Guardar plantilla').click());
   assert.match(t.$('[role=alert]').textContent, /Ya tienes una plantilla/);
   await t.act(() => t.btn('Cancelar').click());
-  // usarla desde Inicio -> Plantillas
-  await t.act(() => t.btn('‹ Volver').click());
-  await t.act(() => t.btn('Plantillas').click());
+  // usarla desde Alimentos -> Plantillas
+  await t.act(() => t.btn('Alimentos').click());
+  await t.act(() => t.btn('Ver plantillas').click());
   assert.match(t.$('.plantilla').textContent, /Arroz con kiwi/);
   assert.match(t.$('.plantilla').textContent, /Comida · \d+ kcal/);
   await t.act(() => t.btn('Usar').click());
@@ -658,7 +679,7 @@ test('copia de seguridad con plantillas: se exportan y al importar se añaden la
   const P = { id: 'p1', nombre: 'Desayuno', meal: 'desayuno', createdAt: '', lines: [{ food_id: 'avena_copos', grams: 80 }] };
   const t = await setup();
   await t.store.setSetting('plantillas', [P]);
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Copia de seguridad'));
   await t.act(() => t.btn('Exportar diario').click());
   assert.deepEqual(JSON.parse(t.saved[0].text).plantillas, [P]);
   const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: null, plantillas: [P, { ...P, id: 'p2', nombre: 'Cena' }] };
@@ -686,7 +707,7 @@ test('registro: un dictado con problemas se anota (solo local) y al guardar se a
   assert.deepEqual(log[0].problemas.map((p) => [p.texto, p.resolucion]), [['un plátano', 'descartado'], ['150 g de pechuga', 'pechuga_pavo_cruda']]);
   assert.equal((await t.store.allMeals())[0].id, 'm1'); // el registro no consume ids de comidas
   // verlo en Documento -> Frases a revisar
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Pulir el documento'));
   await t.act(() => t.btn('Frases a revisar (1)').click());
   const card = t.$('.frase').textContent;
   assert.match(card, /«un plátano» · No reconocido \(No está en tu documento\) · descartado/);
@@ -707,7 +728,7 @@ test('registro: un dictado sin problemas no se anota; «Vaciar» pide confirmaci
   assert.equal(await t.store.getSetting('registro_frases'), undefined);
   await t.store.setSetting('registro_frases', [{ id: 'e1', fecha: '2026-10-16T08:00:00Z', texto: 'x', problemas: [{ texto: 'x', tipo: 'confianza_baja', motivo: null, food_id: 'kiwi_verde', resolucion: null }] }]);
   await t.act(() => t.btn('‹ Volver').click());
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Pulir el documento'));
   await t.act(() => t.btn('Frases a revisar (1)').click());
   assert.match(t.$('.frase').textContent, /Confianza baja · la IA: Kiwi verde · sin guardar/);
   await t.act(() => t.btn('Vaciar').click());
@@ -772,7 +793,7 @@ test('copia de seguridad con el registro de frases: se exporta y al importar se 
   const F = { id: 'f1', fecha: '2026-10-15T08:00:00Z', texto: '150 g de pechuga', problemas: [{ texto: '150 g de pechuga', tipo: 'sin_alias', motivo: null, food_id: 'pechuga_pollo_cruda', resolucion: 'pechuga_pavo_cruda' }] };
   const t = await setup();
   await t.store.setSetting('registro_frases', [F]);
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Copia de seguridad'));
   await t.act(() => t.btn('Exportar diario').click());
   assert.deepEqual(JSON.parse(t.saved[0].text).registro_frases, [F]);
   const copia = { tipo: 'nutrition-tracker/diario', formatVersion: 1, comidas: [], objetivos: null, plantillas: [], registro_frases: [F, { ...F, id: 'f2', fecha: '2026-10-16T08:00:00Z', texto: 'un plátano' }] };
@@ -781,6 +802,8 @@ test('copia de seguridad con el registro de frases: se exporta y al importar se 
   await t.act(() => t.btn('Importar 1 frase').click());
   assert.deepEqual((await t.store.getSetting('registro_frases')).map((x) => x.id), ['f2', 'f1']);
   assert.match(t.$('p.ok[role=status]').textContent, /1 frase a revisar/);
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Pulir el documento').click());
   assert.match(t.root.textContent, /Frases a revisar \(2\)/);
 });
 
@@ -792,7 +815,7 @@ const docDe = (text) => parseFoodsCSV(text, { catalog }).foods;
 test('documento publicado nuevo (sin base): aviso en el inicio, revisar y actualizar conservando lo activado', { skip }, async () => {
   const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'mayonesa,Mayonesa,mayonesa,680,no', 'merluza_cocida,Merluza cocida,merluza,116,si'));
   const publicado = csvDoc('arroz,Arroz,arroz|arroz largo,360,si', 'mayonesa,Mayonesa,mayonesa|mahonesa,680,si', 'merluza_cocida,Merluza cocida,merluza,116,no', 'brocoli,Brócoli,brócoli,34,si');
-  const t = await setup({ foods: mio, publicado });
+  const t = await setup({ foods: mio, publicado, enDiario: true });
   const aviso = t.$('section[aria-label="Documento nuevo"]');
   assert.match(aviso.textContent, /Hay una versión nueva de tu documento de alimentos: 1 nuevos, 2 actualizados, 1 con conflicto/);
   await t.act(() => t.btn('Revisar').click());
@@ -812,7 +835,7 @@ test('conflicto con base: eliges "Publicado" y se aplica; nada cambia hasta puls
   const base = csvDoc('arroz,Arroz,arroz,365,si');
   const mio = docDe(csvDoc('arroz,Arroz,arroz|arroz blanco,365,si'));
   const publicado = csvDoc('arroz,Arroz,arroz|arroz largo,365,si');
-  const t = await setup({ foods: mio, publicado, ajustes: { catalogo_base: { hash: 'x', text: base } } });
+  const t = await setup({ foods: mio, publicado, enDiario: true, ajustes: { catalogo_base: { hash: 'x', text: base } } });
   await t.act(() => t.btn('Revisar').click());
   assert.match(t.$('.conflicto').textContent, /Arroz · alias/);
   await t.act(() => t.btn('Publicado: arroz | arroz largo').click());
@@ -824,11 +847,11 @@ test('conflicto con base: eliges "Publicado" y se aplica; nada cambia hasta puls
 test('«Ahora no» no vuelve a avisar de esa versión; desde Documento se puede revisar o buscar de nuevo', { skip }, async () => {
   const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si'));
   const publicado = csvDoc('arroz,Arroz,arroz,360,si');
-  const t = await setup({ foods: mio, publicado });
+  const t = await setup({ foods: mio, publicado, enDiario: true });
   await t.act(() => t.btn('Ahora no').click());
   assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
   assert.equal(typeof (await t.store.getSetting('catalogo_ignorado')), 'string');
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   await t.act(() => t.btn('Revisar la versión nueva').click());
   assert.match(t.$('header').textContent, /Actualizar documento/);
   await t.act(() => t.btn('‹ Volver').click());
@@ -840,12 +863,12 @@ test('al día o sin conexión: no hay aviso ni error; desde Documento se dice el
   const t = await setup({ foods: docDe(text), publicado: text });
   assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
   assert.equal((await t.store.getSetting('catalogo_base')).text, text); // sin cambios: se adopta como base
-  await t.act(() => t.btn('Documento').click());
+  await t.act(() => masA(t, 'Documento'));
   await t.act(() => t.btn('Buscar actualización del documento').click());
   assert.match(t.root.textContent, /Tu documento está al día con el publicado/);
   const off = await setup({ publicado: new Error('Failed to fetch') });
   assert.equal(off.$('[role=alert]'), null);
-  await off.act(() => off.btn('Documento').click());
+  await off.act(() => masA(off, 'Documento'));
   await off.act(() => off.btn('Buscar actualización del documento').click());
   assert.match(off.root.textContent, /No se pudo consultar el documento publicado/);
 });
