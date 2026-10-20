@@ -54,3 +54,26 @@ Revisado sobre `6ef8ec4` (diff `578a81e..6ef8ec4`). `npm test`: 460/460 (0 omiti
 2. **MENOR — `notas.md`**: añade las constantes nuevas (`CENA_MAX_FRAC`, `VERDURA_COMPLETAR_G`, `crudas`) y lo de esta ronda a la propuesta de CLAUDE.md, si cambia algo.
 
 **Siguiente ronda**: la corrección 1 (a, b y c) con sus tests. Sin llamadas reales a Gemini.
+
+## Ronda 3 — CAMBIOS (solo un MENOR)
+
+Revisado sobre `230a650` (diff `081ef09..230a650`). `npm test`: 466/466, 0 omitidos.
+
+**Comprobado por el revisor**
+- Corrección 1 (a, b, c) y 2 hechas y con test. En el día del criterio 21 (R = 485) salen 3 propuestas, todas dentro del límite:
+  - lentejas, 485,85 kcal;
+  - 22-sep con sardina y sin chocolate, 515,43 kcal;
+  - 21-sep con pan de molde, huevo 50 g y tomate frito escalado a 60 g, 490,94 kcal.
+- Verificación a mano con `data/foods.csv` en 5 días (típico, vacío, 380 kcal registradas, ligero y pasado): las 13 propuestas coinciden exactamente en kcal y proteína.
+- **Gemini real** (revisor, 2 llamadas de las 15). Prueba de `POST /cenas` con el código del Worker y el día del criterio 21:
+  - viajaron solo `alimentos` (57, con id, nombre, alias, porciones, estado, grupo y defecto, sin nutrientes) y `deficits` (8 nombres sin cifras: «Vitamina D», «EPA y DHA», «Vitamina A», «Cobalamina», «Ácido alfa-linolénico», «Calcio», «Potasio», «Cobre»);
+  - la 1.ª llamada recibió un 503 de Google y el Worker devolvió `google_caido` (mi script inyectaba `callGemini` sin el envoltorio de reintento, como hace `dev-server.mjs`); la 2.ª, por el camino de producción (`defaultCallModel`), devolvió 5 cenas, todas con ids del catálogo y yogur griego de postre;
+  - el motor las reescaló y enseñó 2 que caben («Sardinas con arroz y pimiento» 510,6 kcal; «Merluza con calabacín y patata» 509,0 kcal); las 3 propuestas de siempre no cambian.
+- Capturas a 375 px en claro y oscuro: sin scroll horizontal, 3 tarjetas, etiquetas y avisos «Sin … para que quepa» legibles, barra inferior con Diario activo.
+- Acepto que `seQuedaCorta` se compare con `min(R, tope) × 0,9` y que las cenas ligeras de relleno no lleven yogur (el criterio 9 es para las normales).
+
+**Correcciones**
+
+1. **MENOR — Quitar para que quepa y luego añadir extras es incoherente** (`core/cenas.js`, `conExtras`). La cena del 17-sep sale con «Sin manzana cruda con piel para que quepa» (62 kcal) y, a la vez, con chocolate 10 g y nueces 10 g añadidos por el motor (125 kcal). Esperado: si `ajustar` tuvo que quitar algo del candidato (`quitados` no vacío), `conExtras` no prueba extras de postre para ese candidato. Test de regresión con esa cena (la del 17-sep en el día de 1.337 kcal de las capturas, o uno sintético equivalente): con `quitados` no hay ninguna línea `extra`.
+
+**Siguiente ronda**: solo la corrección 1 con su test. Sin llamadas reales a Gemini.
