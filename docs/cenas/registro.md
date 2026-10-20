@@ -74,6 +74,6 @@ Revisado sobre `230a650` (diff `081ef09..230a650`). `npm test`: 466/466, 0 omiti
 
 **Correcciones**
 
-1. **MENOR — Quitar para que quepa y luego añadir extras es incoherente** (`core/cenas.js`, `conExtras`). La cena del 17-sep sale con «Sin manzana cruda con piel para que quepa» (62 kcal) y, a la vez, con chocolate 10 g y nueces 10 g añadidos por el motor (125 kcal). Esperado: si `ajustar` tuvo que quitar algo del candidato (`quitados` no vacío), `conExtras` no prueba extras de postre para ese candidato. Test de regresión con esa cena (la del 17-sep en el día de 1.337 kcal de las capturas, o uno sintético equivalente): con `quitados` no hay ninguna línea `extra`.
+1. **MENOR — Quitar para que quepa y luego añadir extras es incoherente** (`core/cenas.js`, `conExtras`). La cena del 17-sep sale con «Sin manzana cruda con piel para que quepa» (62 kcal) y, a la vez, con chocolate 10 g y nueces 10 g añadidos por el motor (125 kcal). Esperado: si `ajustar` tuvo que quitar algo del candidato (`quitados` no vacío), `conExtras` no prueba extras de postre para ese candidato. Test de regresión con esa cena (la del 17-sep en el día de las capturas, 1.337 kcal: desayuno avena 50 g + leche entera 200 g; comida arroz 90 g + pechuga de pollo 160 g + aceite 15 g + brócoli 120 g; merienda yogur griego 125 g + manzana 150 g + pan de barra 60 g; referencias de 2.000 kcal, sin historial): con `quitados` no hay ninguna línea `extra`.
 
 **Siguiente ronda**: solo la corrección 1 con su test. Sin llamadas reales a Gemini.
