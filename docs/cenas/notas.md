@@ -58,6 +58,7 @@ Cómo lo cumple el código: `core/cenas.js` (`deficitsParaIA`, `nombreParaIA`: l
 
 ## 4. Pendiente / limitaciones
 
+- Ronda 4: `conExtras` no prueba extras de postre si `ajustar` ya quitó algo del candidato, y descarta cualquier extra cuya prueba obligue a quitar algo (la cena del 17-sep salía «Sin manzana…» y con chocolate y nueces añadidos). Test `(22b)`.
 - Sin llamadas reales a Gemini en esta ronda: el prompt de `/cenas` solo está probado con el modelo simulado. Probar con `node --env-file=.env scripts/dev-server.mjs` (1 llamada por pulsación) antes de desplegar.
 - `POST /cenas` no está desplegado: hasta `npm run worker:deploy`, «Más ideas» en producción dará error (el resto de la pantalla funciona sin red).
 - Pesos de la semilla en crudo aproximados (merluza 230 g, patata 74 g): el motor reescala entre 0,6 y 1,5 × de todos modos.

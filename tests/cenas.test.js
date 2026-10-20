@@ -614,3 +614,19 @@ test('(21c) si tras elegir quedan menos de 3 propuestas normales, se completa co
   // sin ninguna cena habitual no hay nada que completar
   assert.equal(proponer({ semilla: sinCenasSemilla }).estado, 'sin_candidatos');
 });
+
+test('(22b) regresión ronda 4: una cena a la que se quitó algo para que quepa no recibe extras de postre', () => {
+  const objetivos = kcalMeta(2000, DIA_TIPICO);
+  const r = proponer({ objetivos });
+  const R = r.resumen.kcal.restantes;
+  assert.ok(R > 600 && R < 700, `R ${R}`); // 1.337 kcal registradas
+  const del17 = r.propuestas.filter((p) => /17-sep/.test(p.origen));
+  assert.ok(del17.length > 0, r.propuestas.map((p) => p.origen).join(' | '));
+  for (const p of del17) assert.ok(!(p.quitados?.length && p.lineas.some((l) => l.extra)), `${p.origen}: quitados ${p.quitados} y extras`);
+  // en general: ninguna propuesta mezcla `quitados` con extras
+  for (const p of r.propuestas) if (p.quitados) assert.ok(p.lineas.every((l) => !l.extra), p.origen);
+  for (const R2 of [450, 500, 600, 700]) {
+    const rr = proponer({ objetivos: conR(R2) });
+    for (const p of rr.propuestas) if (p.quitados) assert.ok(p.lineas.every((l) => !l.extra), `${R2} ${p.origen}`);
+  }
+});

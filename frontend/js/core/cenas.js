@@ -347,15 +347,17 @@ function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0, quitados = 
 }
 
 // Prueba los extras de postre de uno en uno (orden fijo): se quedan si suben la puntuación y caben en las kcal.
+// Quitar para que quepa y añadir extras es incoherente: si con el extra hay que quitar algo, ese extra se descarta (ronda 4).
 function conExtras(cand, ctx, extras, opts) {
   let actual = ajustar(cand, ctx, opts);
   if (!actual) return null;
+  if (actual.queda?.quitados?.length) return actual; // si hubo que quitar algo para que quepa, no se añaden extras (ronda 4)
   let base = cand;
   for (const ex of extras) {
     if (base.lineas.some((l) => l.food_id === ex.food_id)) continue;
     const probada = { ...base, lineas: [...base.lineas, ex] };
     const r = ajustar(probada, ctx, opts);
-    if (r && r.puntuacion > actual.puntuacion + 1e-9) { actual = r; base = probada; }
+    if (r && !r.queda?.quitados?.length && r.puntuacion > actual.puntuacion + 1e-9) { actual = r; base = probada; }
   }
   return actual;
 }
