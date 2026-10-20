@@ -42,6 +42,19 @@ export function createDraft({ text = '', meal, result = { items: [], unmatched: 
   return d;
 }
 
+// Borrador nuevo a partir de líneas ya calculadas (¿Qué ceno?): sin IA ni editing; las líneas son 'manual' y nada se
+// guarda hasta pulsar «Guardar» en la confirmación. lines: [{ food_id, gramos }].
+export function draftFromLines({ lines, meal, text = '', sourceText = '', foodsById }) {
+  let d = { text, meal, lines: [], unmatched: [], warnings: [], nextKey: 1 };
+  for (const l of lines) {
+    if (!foodsById.has(l.food_id)) { d.unmatched.push({ text: `${l.food_id} · ${l.gramos} g`, motivo: 'no_en_catalogo' }); continue; }
+    let line;
+    [d, line] = newLine(d, l.food_id, positive(l.gramos) ? l.gramos : null, sourceText);
+    d.lines.push(line);
+  }
+  return d;
+}
+
 export const setMeal = (d, meal) => ({ ...d, meal });
 
 // Acepta "80", "80,5" o "80.5". Vacío o inválido -> null (la línea queda sin gramos y no se puede guardar).

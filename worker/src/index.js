@@ -1,18 +1,22 @@
 // Cloudflare Worker:
 //   POST /parse { texto, alimentos } -> { items, unmatched, warnings }
 //   POST /estimate { texto, alimentos } -> { plato, gramos, total_estimado, ingredientes, warnings }   («Estimar con IA»)
+//   POST /cenas { alimentos, deficits } -> { cenas, warnings }   (¿Qué ceno? «Más ideas»: ids del catálogo y gramos típicos)
 //   POST /usda/search { terminos } -> { resultados }        POST /usda/foods { fdcIds } -> { fichas }
 //   GET /health
-// A Gemini solo viajan la frase dictada y la lista compacta (id, nombre, alias, porciones, variante); a USDA, solo
+// A Gemini solo viajan la frase dictada (o, en /cenas, los NOMBRES de los nutrientes con déficit) y la lista compacta
+// (id, nombre, alias, porciones, variante); a USDA, solo
 // términos de búsqueda y fdcId. Nunca nutrientes ni diario. USDA solo se consulta tras una acción del usuario.
-import { SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserPrompt, ESTIMATE_SYSTEM_PROMPT, ESTIMATE_SCHEMA, buildEstimatePrompt } from './prompt.js';
+import { SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserPrompt, ESTIMATE_SYSTEM_PROMPT, ESTIMATE_SCHEMA, buildEstimatePrompt, CENAS_SYSTEM_PROMPT, CENAS_SCHEMA, buildCenasPrompt } from './prompt.js';
 import { parseModelJson, checkStructure, normalizeAiResponse } from '../../frontend/js/core/ai-validate.js';
 import { checkEstimateStructure, normalizeEstimate, MAX_TERMINO, MAX_INGREDIENTES } from '../../frontend/js/core/estimate-validate.js';
+import { checkCenasStructure, normalizeCenas, checkDeficits } from '../../frontend/js/core/cenas-validate.js';
 import { findCandidates, fichaUsda, fortificacion, UsdaError } from '../../frontend/js/core/usda-core.js';
 import { callGemini, ProviderError } from './providers/gemini.js';
 import { createUsda } from './providers/usda.js';
 import usdaMap from '../../data/usda-map.json' with { type: 'json' };
 import settingsData from '../../data/settings.json' with { type: 'json' };
+import cenasSemilla from '../../data/cenas-semilla.json' with { type: 'json' };
 
 const MAX_BODY = 200_000;
 const MAX_TEXT = 1000;
@@ -164,6 +168,15 @@ const estimateValidate = (alimentos, texto) => (data) => {
   return { ok: true, result };
 };
 
+const cenasValidate = (alimentos) => (data) => {
+  const structure = checkCenasStructure(data);
+  if (!structure.ok) return structure;
+  const r = normalizeCenas(data, alimentos, { roles: cenasSemilla.roles });
+  if (!r.ok) return r;
+  const { ok, ...result } = r;
+  return { ok: true, result };
+};
+
 // ---------- USDA ----------
 const required = settingsData.requiredNutrients;
 const threshold = settingsData.completenessThreshold;
@@ -219,7 +232,7 @@ async function usdaFoods(body, client, cors) {
   return json(200, { fichas, faltan, llamadas: client.calls }, cors);
 }
 
-const RUTAS = ['/parse', '/estimate', '/usda/search', '/usda/foods'];
+const RUTAS = ['/parse', '/estimate', '/cenas', '/usda/search', '/usda/foods'];
 
 export async function handleRequest(request, env, { callModel = defaultCallModel, usdaClient = (e) => createUsda(e) } = {}) {
   const url = new URL(request.url);
@@ -249,6 +262,15 @@ export async function handleRequest(request, env, { callModel = defaultCallModel
   if (!env.GEMINI_MODEL || !env.GEMINI_API_KEY) return json(500, { error: 'configuracion_incompleta' }, cors);
   const { body, error } = await readJson(request, cors);
   if (error) return error;
+  if (url.pathname === '/cenas') {
+    // Solo la lista compacta y los NOMBRES de los nutrientes con déficit (sin cantidades): cualquier otro campo se ignora.
+    const alimentos = sanitizeFoods(body?.alimentos);
+    if (!alimentos) return json(400, { error: 'alimentos_invalidos' }, cors);
+    const deficits = checkDeficits(body?.deficits ?? []);
+    if (!deficits) return json(400, { error: 'deficits_invalidos', detalle: 'una lista de hasta 8 nombres cortos, sin números' }, cors);
+    const args = { system: CENAS_SYSTEM_PROMPT, user: buildCenasPrompt(alimentos, deficits), schema: CENAS_SCHEMA };
+    return askModel(env, callModel, args, cenasValidate(alimentos), cors);
+  }
   const entrada = readTextoYAlimentos(body, cors);
   if (entrada.error) return entrada.error;
   const { texto, alimentos } = entrada;

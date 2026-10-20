@@ -1,10 +1,11 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v13'; // nt-v12 + navegación inferior (nav, informe, alimentos, más)
+const VERSION = 'nt-v14'; // nt-v13 + ¿Qué ceno? (cenas.js, cenas-validate.js, cenas-screen.js, cenas.css, cenas-semilla.json)
 const ASSETS = [
   './',
   'css/catalogo.css',
+  'css/cenas.css',
   'css/frases.css',
   'css/ia-recetas.css',
   'css/navegacion.css',
@@ -23,6 +24,8 @@ const ASSETS = [
   'js/core/backup.js',
   'js/core/catalog-update.js',
   'js/core/catalog.js',
+  'js/core/cenas-validate.js',
+  'js/core/cenas.js',
   'js/core/completeness.js',
   'js/core/sin-datos.js',
   'js/core/csv.js',
@@ -53,6 +56,7 @@ const ASSETS = [
   'js/storage/store.js',
   'js/ui/app.js',
   'js/ui/catalog-update-screen.js',
+  'js/ui/cenas-screen.js',
   'js/ui/estimate-screen.js',
   'js/ui/foods-screen.js',
   'js/ui/more-screen.js',
@@ -68,7 +72,8 @@ const ASSETS = [
   '../data/settings.json',
   '../data/targets.json',
   '../data/foods.csv',
-  '../data/recetas.json'
+  '../data/recetas.json',
+  '../data/cenas-semilla.json'
 ];
 
 self.addEventListener('install', (event) => {

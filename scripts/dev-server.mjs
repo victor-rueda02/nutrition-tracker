@@ -1,7 +1,7 @@
 // Servidor local para probar la app en tu PC con datos reales, sin desplegar nada:
 //   node --env-file=.env scripts/dev-server.mjs [--port 8080] [--lan]
 // - Sirve la app como GitHub Pages (la raíz del repo): http://localhost:8080/ -> /frontend/.
-// - Atiende /parse, /estimate, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
+// - Atiende /parse, /estimate, /cenas, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
 //   y tus GEMINI_API_KEY y USDA_API_KEY de .env. Cada dictado o «Estimar» es una llamada real a Gemini y cada búsqueda
 //   nueva, una a USDA (se cuentan en la consola; USDA se guarda en usda/cache/, como el script).
 // - Solo sirve frontend/ y data/: nunca .env, ficheros ocultos ni nada más del proyecto.
@@ -41,7 +41,7 @@ const readBody = (req) => new Promise((ok, ko) => {
   req.on('data', (c) => chunks.push(c)).on('end', () => ok(Buffer.concat(chunks))).on('error', ko);
 });
 
-export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/usda/search', '/usda/foods'];
+export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/cenas', '/usda/search', '/usda/foods'];
 
 export function createDevServer({ env, callModel, usdaClient, base = root }) {
   return createServer(async (req, res) => {

@@ -1,0 +1,232 @@
+// ¿Qué ceno? en la interfaz (jsdom): las dos entradas del Diario, la pantalla, «Añadir a la cena» (confirmación editable,
+// nada se guarda hasta «Guardar») y «Más ideas» (una llamada, cuerpo mínimo, errores). IA simulada: nunca hay llamadas reales.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mountApp } from '../frontend/js/ui/app.js';
+import { createMemoryStore } from '../frontend/js/storage/store.js';
+import { createAiClient } from '../frontend/js/ai-client.js';
+import { realFoods, catalog, settings, readFile } from './helpers.js';
+import { foodSinDatos } from '../frontend/js/core/completeness.js';
+
+const TARGETS = JSON.parse(readFile('../data/targets.json'));
+const SEMILLA = JSON.parse(readFile('../data/cenas-semilla.json'));
+const jsdom = await import('jsdom').catch(() => null);
+const skip = jsdom ? false : 'falta jsdom (npm install)';
+const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
+const AYER = '2026-10-15';
+const MEAL = (id, date, meal, lines) => ({ id, date, meal, createdAt: `${date}T08:00:00Z`, text: '', lines: lines.map(([food_id, grams]) => ({ food_id, grams, source_text: '' })) });
+const DIA_AYER = [
+  MEAL('a1', AYER, 'desayuno', [['avena_copos', 50], ['leche_entera', 200]]),
+  MEAL('a2', AYER, 'comida', [['arroz_blanco_crudo', 90], ['pechuga_pollo_cruda', 160], ['aceite_oliva', 15], ['brocoli', 120]]),
+  MEAL('a3', AYER, 'merienda', [['yogur_griego_natural', 125], ['manzana_con_piel', 150], ['pan_blanco_barra', 60]]),
+];
+const IDEAS = { cenas: [
+  { nombre: 'Pollo con arroz y brócoli', lineas: [{ food_id: 'pechuga_pollo_cruda', gramos: 180 }, { food_id: 'arroz_blanco_crudo', gramos: 90 }, { food_id: 'brocoli', gramos: 150 }] },
+  { nombre: 'Inventada', lineas: [{ food_id: 'nada_de_nada', gramos: 100 }] },
+], warnings: [] };
+
+async function setup({ meals = DIA_AYER, createAiClient: crear = () => ({}), semilla = SEMILLA } = {}) {
+  const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
+  const { document, Event } = dom.window;
+  const root = document.getElementById('app');
+  const store = createMemoryStore();
+  for (const m of meals) await store.addMeal(m);
+  const app = mountApp(root, {
+    store, createAiClient: crear, catalog, settings, targets: TARGETS, objetivos: {}, semilla, recetasBase: [],
+    initial: { foods: realFoods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW,
+    idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text(), saveFile: async () => 'compartido',
+  });
+  await app.whenIdle();
+  const $ = (s) => root.querySelector(s);
+  const $$ = (s) => [...root.querySelectorAll(s)];
+  const btn = (text) => $$('button').find((b) => b.textContent.includes(text));
+  const act = async (fn) => { fn(); await app.whenIdle(); };
+  const type = (el, value) => { el.value = value; el.dispatchEvent(new Event('input', { bubbles: true })); };
+  const ayer = () => act(() => $('button[aria-label="Día anterior"]').click());
+  return { app, root, store, $, $$, btn, act, type, ayer };
+}
+
+test('la tarjeta de Cena del Diario tiene «¿Qué ceno?»; ninguna otra tarjeta de comida lo tiene', { skip }, async () => {
+  const t = await setup();
+  const botones = t.$$('.que-ceno');
+  assert.equal(botones.length, 1);
+  assert.equal(botones[0].closest('section.meal').dataset.meal, 'cena');
+  for (const meal of ['desayuno', 'comida', 'merienda']) assert.equal(t.$(`section.meal[data-meal="${meal}"] .que-ceno`), null, meal);
+  assert.equal(botones[0].textContent, '¿Qué ceno?');
+  assert.ok(botones[0].querySelector('svg.ico-spark')); // icono spark
+  assert.equal(t.$('nav.tabbar button.tab.active').textContent, 'Diario');
+});
+
+test('«¿Qué ceno?» de la tarjeta abre la pantalla para el día mostrado (otro distinto de hoy); «‹ Volver» vuelve a ese día', { skip }, async () => {
+  const t = await setup();
+  await t.ayer();
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  await t.act(() => t.$('.que-ceno').click());
+  assert.ok(t.$('main.cenas'));
+  assert.match(t.$('header.top').textContent, /¿Qué ceno\?/);
+  assert.match(t.$('header.top').textContent, /Ayer/);
+  assert.equal(t.app.state.cenas.fecha, AYER);
+  assert.equal(t.$$('.cena-prop').length, 3);
+  assert.ok(t.$('.cenas-falta'));
+  // bloque «Te falta» con kcal y los tres macros (con data-clave: el color fijo de cada macro)
+  assert.deepEqual(t.$$('.falta-macro').map((x) => x.dataset.clave), ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']);
+  // la barra inferior se ve con Diario activo
+  assert.equal(t.$('nav.tabbar button.tab.active').textContent, 'Diario');
+  // cada tarjeta: líneas con nombre, gramos y kcal; macros; «Completa»; botón
+  const primera = t.$$('.cena-prop')[0];
+  assert.ok(primera.querySelectorAll('.lines .line .line-name').length >= 3);
+  assert.ok(primera.querySelector('.line-grams') && primera.querySelector('.line-kcal') && primera.querySelector('.sep'));
+  assert.match(primera.textContent, /kcal · .* g proteína/);
+  assert.match(primera.textContent, /Completa: /);
+  assert.equal(primera.querySelector('button.primary').textContent, 'Añadir a la cena');
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  assert.equal(t.$('main.cenas'), null);
+  assert.equal((await t.store.allMeals()).length, DIA_AYER.length); // ver las propuestas no guarda nada
+});
+
+test('«¿Qué ceno?» de los tres puntos abre la pantalla para el día mostrado', { skip }, async () => {
+  const t = await setup();
+  await t.ayer();
+  await t.act(() => t.$('button[aria-label="Más opciones del día"]').click());
+  assert.deepEqual(t.$$('.popmenu button').map((b) => b.textContent), ['Ver informe diario', 'Copiar día anterior', '¿Qué ceno?', 'Ir a hoy']);
+  await t.act(() => t.$$('.popmenu button').find((b) => b.textContent === '¿Qué ceno?').click());
+  assert.ok(t.$('main.cenas'));
+  assert.equal(t.app.state.cenas.fecha, AYER);
+  assert.equal(t.$('.popmenu'), null);
+  // en el día de hoy también (y avisa de que no hay nada registrado)
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.$('button[aria-label="Día siguiente"]').click());
+  await t.act(() => t.$('.que-ceno').click());
+  assert.equal(t.app.state.cenas.fecha, '2026-10-16');
+  assert.match(t.$('header.top').textContent, /Hoy/);
+  assert.ok(t.$$('.cenas-avisos li').some((li) => li.dataset.aviso === 'dia_vacio'));
+});
+
+test('el código nuevo no menciona Inicio ni la pantalla home', () => {
+  for (const f of ['js/ui/cenas-screen.js', 'js/core/cenas.js', 'js/core/cenas-validate.js', 'css/cenas.css']) {
+    const src = readFile(`../frontend/${f}`).replace(/^\s*(\/\/|\/\*).*$/gm, '');
+    assert.doesNotMatch(src, /\bhome\b|Inicio/, f);
+  }
+  const app = readFile('../frontend/js/ui/app.js');
+  const nuevas = app.split('\n').filter((l) => /cenas|¿Qué ceno/.test(l)).join('\n');
+  assert.doesNotMatch(nuevas, /'home'|Inicio/);
+});
+
+test('«Añadir a la cena» abre la confirmación con meal=cena, la fecha del día y los gramos; no guarda hasta «Guardar»', { skip }, async () => {
+  const t = await setup();
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  const p = t.app.state.cenas.resultado.propuestas[0];
+  await t.act(() => t.$$('.cena-prop')[0].querySelector('button.primary').click());
+  assert.ok(!t.$('main.cenas'));
+  assert.equal(t.$('nav.tabbar'), null); // la confirmación lleva su propia barra
+  assert.equal(t.$('.chip[aria-pressed="true"]').textContent, 'Cena');
+  const gramos = t.$$('input.grams').map((i) => Number(i.value.replace(',', '.')));
+  assert.deepEqual(gramos, p.lineas.map((l) => l.gramos));
+  assert.deepEqual(t.$$('.card .name').map((b) => b.textContent), p.lineas.map((l) => l.nombre));
+  assert.match(t.$('.dictada').textContent, /¿Qué ceno\?/);
+  assert.equal((await t.store.allMeals()).length, DIA_AYER.length); // todavía nada guardado
+  // «‹ Volver» regresa a las propuestas, sin guardar
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.ok(t.$('main.cenas'));
+  assert.equal(t.$$('.cena-prop').length, 3);
+  assert.equal((await t.store.allMeals()).length, DIA_AYER.length);
+  // otra vez: se puede editar (gramos) y guardar; queda en el diario del día mostrado
+  await t.act(() => t.$$('.cena-prop')[0].querySelector('button.primary').click());
+  t.type(t.$$('input.grams')[0], '111');
+  await t.act(() => t.btn('Guardar').click());
+  const nuevas = (await t.store.allMeals()).filter((m) => !DIA_AYER.some((x) => x.id === m.id));
+  assert.equal(nuevas.length, 1);
+  assert.deepEqual([nuevas[0].date, nuevas[0].meal, nuevas[0].text], [AYER, 'cena', '¿Qué ceno?']);
+  assert.deepEqual(nuevas[0].lines.map((l) => [l.food_id, l.grams]), p.lineas.map((l, i) => [l.food_id, i === 0 ? 111 : l.gramos]));
+  assert.ok(nuevas[0].lines.every((l) => l.source_text.startsWith('¿Qué ceno?: ')));
+  assert.equal(t.$('.daylabel').textContent, 'Ayer');
+  assert.ok(t.$('section.meal[data-meal="cena"] .registro'));
+});
+
+test('«Más ideas»: una sola llamada por pulsación, botón desactivado después; ideas marcadas; ids inventados descartados', { skip }, async () => {
+  const llamadas = [];
+  const t = await setup({ createAiClient: () => ({ ideasCena: async (a) => { llamadas.push(a); return IDEAS; } }) });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  assert.equal(llamadas.length, 0); // abrir la pantalla no llama a la IA
+  const btn = () => t.$('.ideas-btn');
+  assert.equal(btn().disabled, false);
+  await t.act(() => btn().click());
+  assert.equal(llamadas.length, 1);
+  assert.equal(btn().disabled, true);
+  await t.act(() => btn().click());
+  assert.equal(llamadas.length, 1);
+  const ideas = t.$$('.cena-ia');
+  assert.equal(ideas.length, 1);
+  assert.match(ideas[0].textContent, /Idea de la IA/);
+  assert.match(ideas[0].textContent, /Pollo con arroz y brócoli/);
+  assert.equal(t.$$('.cena-prop').length, 4); // las 3 de siempre + 1 idea
+  // la idea también se añade con la confirmación de siempre
+  await t.act(() => ideas[0].querySelector('button.primary').click());
+  assert.equal(t.$('.chip[aria-pressed="true"]').textContent, 'Cena');
+  await t.act(() => t.btn('‹ Volver').click());
+  // al volver a abrir la pantalla, el botón vuelve a estar disponible
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.$('.que-ceno').click());
+  assert.equal(t.$('.ideas-btn').disabled, false);
+  assert.equal(t.$$('.cena-ia').length, 0);
+});
+
+test('«Más ideas» envía solo alimentos (lista compacta) y deficits (nombres sin dígitos, ≤ 8); un 429 muestra el mensaje y conserva las propuestas', { skip }, async () => {
+  const cuerpos = [];
+  let status = 200;
+  const fetchImpl = async (url, init) => {
+    cuerpos.push({ url, body: JSON.parse(init.body), headers: init.headers });
+    if (status === 429) return { ok: false, status, json: async () => ({ error: 'limite_de_uso' }) };
+    return { ok: true, status, json: async () => ({ ...IDEAS, model: 'm' }) };
+  };
+  const crear = (conn) => createAiClient({ ...conn, fetchImpl, isOnline: () => true });
+  const t = await setup({ createAiClient: crear });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.equal(cuerpos.length, 1);
+  const { url, body } = cuerpos[0];
+  assert.equal(url, 'https://w/cenas');
+  assert.deepEqual(Object.keys(body).sort(), ['alimentos', 'deficits']);
+  const ids = body.alimentos.map((a) => a.id);
+  const porId = new Map(realFoods.map((f) => [f.id, f]));
+  assert.ok(ids.length > 30);
+  for (const id of ids) { const f = porId.get(id); assert.ok(f.extra.incluir !== 'no' && !foodSinDatos(f), id); }
+  for (const id of ['tortilla_patata', 'crema_calabacin', 'yogur_griego_vainilla', 'merluza_cocida']) assert.ok(!ids.includes(id), id);
+  for (const a of body.alimentos) assert.ok(Object.keys(a).every((k) => ['id', 'nombre', 'alias', 'porciones', 'estado', 'grupo', 'defecto', 'peso_en_crudo'].includes(k)), JSON.stringify(Object.keys(a)));
+  assert.ok(!JSON.stringify(body).includes('nutrients') && !JSON.stringify(body).includes('densidad'));
+  assert.ok(body.deficits.length > 0 && body.deficits.length <= 8);
+  assert.ok(body.deficits.every((d) => typeof d === 'string' && d.length <= 40 && !/\d/.test(d)), JSON.stringify(body.deficits));
+  assert.equal(cuerpos[0].headers['X-App-Token'], 't');
+  // 429 en otra visita: mensaje de siempre, las propuestas se conservan
+  status = 429;
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.equal(cuerpos.length, 2);
+  assert.match(t.$('[role=alert]').textContent, /límite de uso gratuito/);
+  assert.equal(t.$$('.cena-prop').length, 3);
+  assert.equal(t.$('.ideas-btn').disabled, true);
+});
+
+test('«Más ideas» con una respuesta sin ninguna cena válida: lo dice y no inventa nada', { skip }, async () => {
+  const t = await setup({ createAiClient: () => ({ ideasCena: async () => ({ cenas: [{ nombre: 'x', lineas: [{ food_id: 'inventado', gramos: 100 }] }], warnings: [] }) }) });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.match(t.$('[role=alert]').textContent, /ninguna idea válida/);
+  assert.equal(t.$$('.cena-ia').length, 0);
+  assert.equal(t.$$('.cena-prop').length, 3);
+});
+
+test('sin cenas que usar: la pantalla funciona sin IA; si no hay nada que proponer, lo dice y «Más ideas» sigue disponible', { skip }, async () => {
+  const t = await setup({ semilla: { ...SEMILLA, cenas: [] } });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  assert.equal(t.$$('.cena-prop').length, 0);
+  assert.match(t.$('[data-aviso="sin_candidatos"]').textContent, /No tengo cenas habituales/);
+  assert.equal(t.$('.ideas-btn').disabled, false);
+});

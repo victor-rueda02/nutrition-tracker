@@ -109,3 +109,49 @@ export const ESTIMATE_SCHEMA = {
   required: ['plato', 'gramos_total', 'ingredientes'],
   propertyOrdering: ['plato', 'gramos_total', 'ingredientes'],
 };
+
+// ---------- ¿Qué ceno? «Más ideas» (POST /cenas) ----------
+// Solo viajan la lista compacta del catálogo (sin nutrientes) y los NOMBRES de los nutrientes con déficit (sin cantidades).
+// La IA propone combinaciones de ids con gramos típicos; el código las valida (frontend/js/core/cenas-validate.js), ajusta
+// los gramos y calcula los nutrientes desde el documento del usuario.
+export const CENAS_SYSTEM_PROMPT = `Eres un asistente que propone cenas españolas típicas usando SOLO alimentos de un CATÁLOGO CERRADO.
+
+REGLAS
+1. Propón 5 cenas distintas entre sí (con proteína principal distinta cuando sea posible). Cada una es una cena española típica de proteína + hidrato + verdura (+ postre de yogur griego), con gramos típicos en CRUDO (el peso que se pesa antes de cocinar y sin hueso).
+2. Usa SOLO "id" que existan en el catálogo. No inventes ids ni alimentos. Un alimento solo una vez por cena y como mucho 8 líneas por cena.
+3. NO calcules calorías ni nutrientes: eso lo hace el código con los datos del usuario. Solo eliges alimentos y gramos.
+4. Da preferencia a los alimentos ricos en los nutrientes que se indican como déficit, sin dejar de ser una cena normal.
+5. "nombre": nombre corto de la cena en español ("Salmón con arroz y calabacín").
+6. Responde únicamente con el JSON del esquema.`;
+
+export function buildCenasPrompt(compactList, deficits = []) {
+  return `CATÁLOGO (JSON):\n${JSON.stringify(compactList)}\n\nPropón 5 cenas españolas típicas de proteína + hidrato + verdura (+ postre de yogur griego) usando solo ids del catálogo, con gramos típicos en crudo; da preferencia a alimentos ricos en estos nutrientes: ${deficits.length ? deficits.join(', ') : '(ninguno en especial)'}.`;
+}
+
+export const CENAS_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    cenas: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          nombre: { type: 'STRING' },
+          lineas: {
+            type: 'ARRAY',
+            items: {
+              type: 'OBJECT',
+              properties: { id: { type: 'STRING' }, gramos: { type: 'NUMBER' } },
+              required: ['id', 'gramos'],
+              propertyOrdering: ['id', 'gramos'],
+            },
+          },
+        },
+        required: ['nombre', 'lineas'],
+        propertyOrdering: ['nombre', 'lineas'],
+      },
+    },
+  },
+  required: ['cenas'],
+  propertyOrdering: ['cenas'],
+};

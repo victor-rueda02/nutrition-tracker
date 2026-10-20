@@ -33,6 +33,7 @@ import { bottomNav, sheet, popMenu, icon } from './nav.js';
 import { reportScreen, energySummary } from './report-screen.js';
 import { alimentosScreen, catalogoListScreen } from './foods-screen.js';
 import { masScreen } from './more-screen.js';
+import { cenasActions, cenasScreen } from './cenas-screen.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -91,7 +92,7 @@ export function mountApp(root, deps) {
     screen: 'diary', sheet: null, menu: false, docSection: 'documento', catQuery: '', catFilter: 'todos', catFocus: false, addDate: null, plantillasBack: 'alimentos', recetasBack: 'alimentos', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
     day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'diary',
-    estimate: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
+    estimate: null, cenas: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   // Plan de objetivos (docs/OBJETIVOS-FORMATO.md): cada día se evalúa con los objetivos vigentes ESE día.
@@ -526,7 +527,7 @@ export function mountApp(root, deps) {
     if (id === 'mas') { state.screen = 'mas'; state.pendingDelete = null; render(); return undefined; }
     return openAdd();
   }
-  const TAB_OF = { diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas' };
+  const TAB_OF = { diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas', cenas: 'diary' };
   const SIN_BARRA = ['home', 'confirm', 'repeat', 'estimar']; // llevan su propia barra de acciones
 
   function openPicker({ title, onPick }) {
@@ -672,7 +673,7 @@ export function mountApp(root, deps) {
     footer.append(totalsEl, hint, h('div', { class: 'row' }, saveBtn));
     const dateIn = editing ? h('input', { type: 'date', 'aria-label': 'Fecha', value: d.date, max: today(), onchange: (e) => { state.draft = setDate(state.draft, e.target.value); paintFooter(); } }) : null;
     const screen = h('main', {},
-      editing ? header('Editar comida', () => { state.draft = null; openDay(editing.date); }) : header('Confirmar', () => { state.screen = 'home'; render(); }),
+      editing ? header('Editar comida', () => { state.draft = null; openDay(editing.date); }) : header('Confirmar', () => { if (d.volver) { state.screen = d.volver; state.draft = null; } else state.screen = 'home'; render(); }),
       editing ? h('p', { class: 'muted small' }, 'Los cambios no se guardan hasta pulsar «Guardar cambios».') : null,
       editing ? h('label', {}, 'Fecha', dateIn) : null,
       state.error ? h('p', { class: 'error', role: 'alert' }, state.error) : null,
@@ -820,7 +821,8 @@ export function mountApp(root, deps) {
                 h('button', { class: 'link', onclick: () => openRepeat({ sourceDate: state.day, recordId: r.id, targetMeal: defaultMeal(now()), back: 'diary' }) }, 'Repetir esta comida'),
                 h('button', { class: 'link', onclick: () => { state.templateForm = { recordId: r.id, nombre: '', error: '' }; render(); } }, 'Guardar como plantilla'),
                 h('button', { class: 'link', onclick: () => rec.openForm({ lines: r.record.lines, back: 'diary' }) }, 'Guardar como receta'))))),
-        state.templateForm?.recordId === r.id ? templateForm(r.record) : null)));
+        state.templateForm?.recordId === r.id ? templateForm(r.record) : null)),
+      meal === 'cena' ? h('button', { type: 'button', class: 'link que-ceno', onclick: () => cenas.open(state.day) }, icon(doc, 'spark'), h('span', {}, '¿Qué ceno?')) : null);
     return h('main', { class: 'diario' },
       dayHeader(),
       state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
@@ -869,6 +871,7 @@ export function mountApp(root, deps) {
   const ctx = { state, deps, track, render, byId, persistFoods, now, saveFile, openDay };
   const rec = recetasActions(ctx);
   const est = estimateActions({ ...ctx, guardarReceta: rec.guardarReceta });
+  const cenas = cenasActions({ ...ctx, targetsFor, today, loadTemplates, recetasTodas: () => rec.todas() });
   const labels = new Map(deps.catalog.keys.map((k) => [k, deps.catalog.byKey.get(k)?.label ?? k]));
 
   // ---------- render ----------
@@ -922,8 +925,9 @@ export function mountApp(root, deps) {
         { icon: 'edit', label: 'Pulir el documento', onclick: abrirSeccion('pulir') },
       ],
     });
+    const cenasPantalla = () => cenasScreen({ h, state, byId, header, nf0, nf1, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), actions: cenas, back: () => openDay(state.cenas.fecha) });
     const informe = informeScreen;
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas, cenas: cenasPantalla };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
@@ -937,6 +941,7 @@ export function mountApp(root, deps) {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },
         { label: 'Copiar día anterior', icon: 'copy', onclick: () => { state.menu = false; openRepeat({ sourceDate: shiftDate(state.day, -1), targetDate: state.day, back: 'diaryTarget' }); } },
+        { label: '¿Qué ceno?', icon: 'spark', onclick: () => { state.menu = false; cenas.open(state.day); } },
         ...(state.day !== today() ? [{ label: 'Ir a hoy', icon: 'diario', onclick: () => { state.menu = false; openDay(today()); } }] : []),
       ] }));
     }

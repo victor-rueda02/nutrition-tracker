@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "descripcion": "Semilla de ¿Qué ceno?: las cenas habituales de Cronometer (17-24 sep 2026) con los ids actuales de data/foods.csv (docs/cenas/ESPEC.md §3), y el rol de cada alimento en una cena. Se usa solo mientras el diario de la app tenga menos de 21 días con cena. Los alimentos con incluir=no o sin datos se conservan aquí y el motor los filtra al ejecutar. gramos null = sin porción en el catálogo (se filtra). supuesto = gramos aceptados por Victor sin porción en el catálogo.",
+  "cenas": [
+    {
+      "fecha": "2026-09-17",
+      "lineas": [
+        { "food_id": "merluza_cruda", "gramos": 230 },
+        { "food_id": "arroz_blanco_crudo", "gramos": 150 },
+        { "food_id": "salsa_tomate_frito", "gramos": 150 },
+        { "food_id": "aceite_oliva", "gramos": 9.1 },
+        { "food_id": "pavo_fiambre", "gramos": 40 },
+        { "food_id": "manzana_con_piel", "gramos": 120 },
+        { "food_id": "yogur_griego_natural", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 5 }
+      ]
+    },
+    {
+      "fecha": "2026-09-19",
+      "lineas": [
+        { "food_id": "tortilla_patata", "gramos": null },
+        { "food_id": "pan_blanco_barra", "gramos": 50 },
+        { "food_id": "pepino", "gramos": 50 },
+        { "food_id": "crema_calabacin", "gramos": 300 },
+        { "food_id": "pera_cruda", "gramos": 70 },
+        { "food_id": "yogur_griego_vainilla", "gramos": 125 }
+      ]
+    },
+    {
+      "fecha": "2026-09-21",
+      "lineas": [
+        { "food_id": "crema_calabacin", "gramos": 250 },
+        { "food_id": "arroz_blanco_crudo", "gramos": 175 },
+        { "food_id": "nueces", "gramos": 10 },
+        { "food_id": "huevo", "gramos": 62 },
+        { "food_id": "salsa_tomate_frito", "gramos": 93 },
+        { "food_id": "yogur_griego_natural", "gramos": 125 },
+        { "food_id": "chocolate_negro_85", "gramos": 10 },
+        { "food_id": "kiwi_verde", "gramos": 69 }
+      ]
+    },
+    {
+      "fecha": "2026-09-22",
+      "lineas": [
+        { "food_id": "yogur_griego_natural", "gramos": 125 },
+        { "food_id": "chocolate_negro_85", "gramos": 10 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "aceite_oliva", "gramos": 5.46 },
+        { "food_id": "nueces", "gramos": 10 },
+        { "food_id": "pan_molde_blanco", "gramos": 75, "supuesto": true },
+        { "food_id": "salmon_atlantico", "gramos": 178 },
+        { "food_id": "zanahoria", "gramos": 61 },
+        { "food_id": "kiwi_verde", "gramos": 69 }
+      ]
+    },
+    {
+      "fecha": "2026-09-23",
+      "lineas": [
+        { "food_id": "yogur_griego_natural", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "atun_lata_aceite", "gramos": 60 },
+        { "food_id": "pasta_seca", "gramos": 150 },
+        { "food_id": "salsa_tomate_frito", "gramos": 41 },
+        { "food_id": "queso_tierno_loncha", "gramos": 20, "supuesto": true }
+      ]
+    },
+    {
+      "fecha": "2026-09-24",
+      "lineas": [
+        { "food_id": "calabacin", "gramos": 25 },
+        { "food_id": "berenjena", "gramos": 25 },
+        { "food_id": "cebolla", "gramos": 25 },
+        { "food_id": "pimiento_rojo", "gramos": 25 },
+        { "food_id": "pimiento_amarillo", "gramos": 25 },
+        { "food_id": "patata_cruda", "gramos": 74 },
+        { "food_id": "sardina_lata_aceite", "gramos": 65 },
+        { "food_id": "aceite_oliva", "gramos": 22.46 },
+        { "food_id": "pan_blanco_barra", "gramos": 167 },
+        { "food_id": "queso_monterey_jack", "gramos": 25 },
+        { "food_id": "yogur_griego_natural", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 }
+      ]
+    }
+  ],
+  "roles": {
+    "merluza_cruda": "proteina",
+    "salmon_atlantico": "proteina",
+    "atun_lata_aceite": "proteina",
+    "sardina_lata_aceite": "proteina",
+    "huevo": "proteina",
+    "pavo_fiambre": "proteina",
+    "pechuga_pollo_cruda": "proteina",
+    "pechuga_pavo_cruda": "proteina",
+    "solomillo_ternera": "proteina",
+    "arroz_blanco_crudo": "hidrato",
+    "pasta_seca": "hidrato",
+    "pan_blanco_barra": "hidrato",
+    "pan_molde_blanco": "hidrato",
+    "patata_cruda": "hidrato",
+    "calabacin": "verdura",
+    "berenjena": "verdura",
+    "cebolla": "verdura",
+    "pimiento_rojo": "verdura",
+    "pimiento_amarillo": "verdura",
+    "pepino": "verdura",
+    "zanahoria": "verdura",
+    "judias_verdes": "verdura",
+    "brocoli": "verdura",
+    "champinon": "verdura",
+    "verduras_asadas_hacendado": "verdura",
+    "parrillada_verduras_hacendado": "verdura",
+    "crema_calabacin": "verdura",
+    "lentejas_caseras": "plato",
+    "tortilla_patata": "plato",
+    "aceite_oliva": "grasa",
+    "salsa_tomate_frito": "salsa",
+    "yogur_griego_natural": "postre_base",
+    "yogur_griego_vainilla": "postre_base",
+    "semillas_chia": "postre_extra",
+    "chocolate_negro_85": "postre_extra",
+    "nueces": "postre_extra",
+    "kiwi_verde": "fruta",
+    "manzana_con_piel": "fruta",
+    "pera_cruda": "fruta",
+    "ciruela_fresca": "fruta",
+    "sandia": "fruta",
+    "queso_tierno_loncha": "otro",
+    "queso_monterey_jack": "otro"
+  }
+}

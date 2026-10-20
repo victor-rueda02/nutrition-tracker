@@ -9,6 +9,9 @@
 //   await ai.estimateDish({ texto, alimentos })  -> { plato, gramos, total_estimado, ajustado, ingredientes, warnings }
 //   await ai.usdaSearch({ terminos })            -> { resultados: [{ termino, sugerido, candidatos, estado, motivo }] }
 //   await ai.usdaFoods({ fdcIds })               -> { fichas: [{ fdcId, values, fuente, enriquecibles, ... }], faltan }
+// ¿Qué ceno? «Más ideas» (solo tras pulsar el botón):
+//   await ai.ideasCena({ alimentos, deficits })  -> { cenas: [{ nombre, lineas: [{ food_id, gramos }] }], warnings }
+//   alimentos = lista compacta (sin nutrientes); deficits = solo los NOMBRES de los nutrientes con déficit (sin cantidades).
 // A USDA solo viajan términos y fdcId; la clave de USDA es un secreto del Worker.
 //
 // El prompt, el esquema de Gemini y la validación viven en el Worker (worker/src/prompt.js): para ajustar el
@@ -83,6 +86,11 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
     async estimateDish({ texto, alimentos }) {
       const b = await post('/estimate', { texto, alimentos }, (x) => Array.isArray(x.ingredientes) && x.gramos > 0);
       return { plato: b.plato, gramos: b.gramos, total_estimado: b.total_estimado === true, ajustado: b.ajustado === true, ingredientes: b.ingredientes, warnings: Array.isArray(b.warnings) ? b.warnings : [], model: b.model };
+    },
+    // Una llamada a la IA: cenas (ids del catálogo y gramos típicos). Nunca nutrientes ni nada del diario.
+    async ideasCena({ alimentos, deficits }) {
+      const b = await post('/cenas', { alimentos, deficits }, (x) => Array.isArray(x.cenas));
+      return { cenas: b.cenas, warnings: Array.isArray(b.warnings) ? b.warnings : [], model: b.model };
     },
     async usdaSearch({ terminos }) {
       const b = await post('/usda/search', { terminos }, (x) => Array.isArray(x.resultados));
