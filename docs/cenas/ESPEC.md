@@ -104,7 +104,7 @@ Limpieza de cada candidato, en este orden:
 - Extras de postre (chocolate 10 g, nueces 10 g, fruta habitual con sus gramos habituales): se prueban de uno en uno, en orden fijo, y se añaden si suben la puntuación y la cena sigue dentro de kcal.
 - **Límite de kcal**: una propuesta nunca pasa de `T + max(50, 5 % de T)`, con `T = min(R, 0,45 × meta_kcal)` en modo normal y `T = R` en ligero; si no se puede bajar a eso con los factores mínimos, se descarta.
 - `salsa` (tomate frito) escala con `fh`, como el hidrato al que acompaña (ronda 3).
-- **Si no cabe** con los factores mínimos, antes de descartarlo se le quitan, uno a uno y en este orden, el chocolate, las nueces y la fruta que traiga la cena de origen (nunca el yogur ni la chía), hasta que quepa. La tarjeta lo dice: «Sin chocolate y nueces para que quepa» (campo `quitados`) (ronda 3).
+- **Si no cabe** con los factores mínimos, antes de descartarlo se le quitan, uno a uno y en este orden, el chocolate, las nueces y la fruta que traiga la cena de origen (nunca el yogur ni la chía), hasta que quepa. La tarjeta lo dice: «Sin chocolate y nueces para que quepa» (campo `quitados`) (ronda 3). Una cena con `quitados` no recibe extras de postre, y un extra que obligue a quitar algo se descarta (ronda 4).
 - **Siempre 3 si se puede** (ronda 3): si tras elegir quedan menos de 3 propuestas normales, se completan con candidatos del modo ligero (§6.6: proteína habitual + verdura de `crudas` + aceite) ajustados con el escalado normal y `E*`, etiquetados «Cena ligera: …». Si se queda por debajo de `E* − 10 %` por los topes, se avisa en la tarjeta («se queda en X kcal»).
 
 ### 6.4 Puntuación

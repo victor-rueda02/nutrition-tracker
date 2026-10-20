@@ -77,3 +77,12 @@ Revisado sobre `230a650` (diff `081ef09..230a650`). `npm test`: 466/466, 0 omiti
 1. **MENOR — Quitar para que quepa y luego añadir extras es incoherente** (`core/cenas.js`, `conExtras`). La cena del 17-sep sale con «Sin manzana cruda con piel para que quepa» (62 kcal) y, a la vez, con chocolate 10 g y nueces 10 g añadidos por el motor (125 kcal). Esperado: si `ajustar` tuvo que quitar algo del candidato (`quitados` no vacío), `conExtras` no prueba extras de postre para ese candidato. Test de regresión con esa cena (la del 17-sep en el día de las capturas, 1.337 kcal: desayuno avena 50 g + leche entera 200 g; comida arroz 90 g + pechuga de pollo 160 g + aceite 15 g + brócoli 120 g; merienda yogur griego 125 g + manzana 150 g + pan de barra 60 g; referencias de 2.000 kcal, sin historial): con `quitados` no hay ninguna línea `extra`.
 
 **Siguiente ronda**: solo la corrección 1 con su test. Sin llamadas reales a Gemini.
+
+## Ronda 4 — APROBADO
+
+Revisado sobre `56966f6` (diff `af578db..56966f6`). `npm test`: 467/467, 0 omitidos.
+
+- Corrección 1 de la ronda 3 hecha con su test de regresión (22b, que falla sin la corrección). El ejecutor encontró la causa real: no era el candidato de origen el que traía `quitados`, sino que probar un extra obligaba a quitar la manzana. Ahora, si hay que quitar algo, no se prueban extras, y un extra que obligue a quitar algo se descarta. Queda recogido en la ESPEC §6.3.
+- Comprobado con el catálogo real en el día de las capturas (1.337 kcal, R = 663) y en el típico (R = 485): 3 propuestas en cada uno, dentro del límite, y kcal y proteína iguales a mano desde `data/foods.csv`. La cena del 17-sep conserva la manzana sin quitar nada; la del 22-sep sale «Sin chocolate negro 85% para que quepa» y sin extras.
+- Capturas a 375 px en claro y oscuro: sin scroll horizontal, 3 tarjetas, barra inferior con Diario activo.
+- Sin BLOQUEANTES; los criterios 1-22 se cumplen; tests en verde. Llamadas reales a Gemini en total: 2 (las del revisor en la ronda 3).
