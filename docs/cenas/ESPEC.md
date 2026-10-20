@@ -78,6 +78,8 @@ Kcal restantes `R = meta_kcal − consumido_kcal`.
 - `R ≥ 400` → **normal**.
 - `150 ≤ R < 400` → **ligero**: candidatos de §6.6.
 - `R < 150` (incluye pasarse) → **cubierto**: sin propuestas normales; mensaje honesto («Ya llevas X kcal de Y: te faltan solo Z» o «Te has pasado Z kcal»). Si `R > 0`, hasta 3 opciones «muy ligeras» ≤ `R` (yogur griego, fruta habitual, verdura cruda habitual); si `R ≤ 0`, la recomendación es no cenar y, como mucho, una verdura cruda habitual ≤ 50 kcal, marcada «por encima de tu objetivo».
+- **Verdura cruda** (ronda 2): solo las que se comen crudas, listadas en `crudas` de la semilla (`["pepino", "zanahoria"]`, ampliable por Victor); nunca berenjena, calabacín, cebolla ni pimiento como «verdura cruda». Si ninguna de `crudas` es válida, no se ofrece verdura cruda.
+- **«Más ideas» solo cuando se puede usar** (ronda 2): visible y activo solo en modo normal o `sin_candidatos` con `R ≥ 400`. En modo ligero y cubierto no se muestra (una llamada cuyo resultado el motor no usa gasta cuota, regla 10).
 
 ### 6.2 Candidatos (normal)
 1. **Historial real**: cada fecha con cena del `historial` (los registros de cena del mismo día se juntan) es un candidato. Si se repite el mismo conjunto de alimentos, se queda el más reciente y se cuenta cuántas veces (`veces`).
@@ -89,12 +91,13 @@ Kcal restantes `R = meta_kcal − consumido_kcal`.
 Limpieza de cada candidato, en este orden:
 - Se quitan las líneas con `incluir=no`, sin datos, fuera del documento o con `gramos: null` (y se anota en `descartados` con el motivo, para mostrarlo una vez: «No propongo tortilla de patata ni crema de calabacín: no tienen datos»).
 - Un candidato sin `proteina` ni `plato` se descarta.
-- Si le falta `verdura` (o `hidrato`), se completa con la más habitual de ese rol, marcada «añadida para completar».
+- Si le falta `verdura` (o `hidrato`), se completa con la más habitual de ese rol, marcada «añadida para completar». Orden de «más habitual»: más cenas en las que aparece; empate, más gramos habituales (mediana); empate, id. Una verdura añadida lleva `max(sus gramos habituales, VERDURA_COMPLETAR_G = 100)` g (ronda 2).
 - Si no tiene `postre_base`, se añade el postre habitual: yogur griego natural 125 g + chía (mediana habitual, 3 g si no hay).
 
 ### 6.3 Escalado de gramos
 - Escalables: `proteina` (factor `fp`), `hidrato` y `plato` (factor `fh`). Fijos: `verdura` (al menos sus gramos habituales), `grasa`, `salsa`, `postre_*`, `fruta`, `otro`.
-- Meta de la cena `E* = min(R, kcal del candidato con fp = fh = 1,5)`.
+- Meta de la cena `E* = min(R, CENA_MAX_FRAC × meta_kcal, kcal del candidato con fp = fh = 1,5)`, con `CENA_MAX_FRAC = 0,45` (ronda 2): una cena no intenta cubrir el día entero. Si `R` supera ese tope, aviso `cena_tope`: «Te faltan X kcal: una cena no debería cubrirlo todo; propongo como mucho Y kcal.» (con el día vacío basta el aviso `dia_vacio`, que ya da Y).
+- Proteínas con porción en el catálogo (p. ej. huevo, «huevo grande» 50 g): sus gramos se redondean a un número entero de esa porción (la primera), con un mínimo de 1, en vez de a 5 g (ronda 2).
 - Si queda déficit de proteína `P* > 0`: se resuelven `fp` y `fh` para acercarse a la vez a `E*` y a `P*` (mínimos cuadrados con dos incógnitas, kcal con peso doble); si no, `fp = 1` y `fh` se despeja para `E*`.
 - Cada factor se limita a `[0,6 ; 1,5]` de los gramos base; si uno se topa, se vuelve a despejar el otro para las kcal.
 - Redondeo: proteína, hidrato y plato a 5 g; el resto a 1 g. **Después de redondear se recalcula todo con `sumLines`**: lo que se muestra es siempre el cálculo sobre los gramos finales.
@@ -159,7 +162,8 @@ La app ya no tiene Inicio: abre en el Diario, con la barra inferior **Diario · 
 
 | Caso | Comportamiento |
 |---|---|
-| Día vacío | Modo normal con `E*` limitado por los factores (≤ 1,5 × la cena habitual) y aviso `dia_vacio`. |
+| Día vacío | Modo normal con `E*` ≤ 0,45 × meta de kcal (y ≤ 1,5 × la cena habitual) y aviso `dia_vacio`. |
+| R mayor que el tope de cena | `E*` = 0,45 × meta de kcal; aviso `cena_tope`. |
 | Sin historial en la app | Semilla + plantillas + recetas; aviso `semilla`. |
 | ≥ 21 días con cena | Solo historial, plantillas, recetas (y sus variantes); sin aviso `semilla`. |
 | Sin plan de objetivos | `targetsForDate` con referencias; aviso `sin_plan`. |
@@ -191,3 +195,6 @@ La app ya no tiene Inicio: abre en el Diario, con la barra inferior **Diario · 
 15. `cenas.css` enlazado en `index.html` tras `navegacion.css` y en la caché del service worker, `VERSION` subido; capturas a 375 px en claro y oscuro (Diario con la tarjeta de Cena, menú de los tres puntos y la pantalla «¿Qué ceno?») sin scroll horizontal, sin colores sueltos y sin contenido tapado por la barra inferior.
 16. `npm test` en verde (410 tests previos + los nuevos), en Windows.
 17. `docs/cenas/notas.md` contiene la propuesta de nueva regla 6 con la redacción de Victor y el resto de cambios propuestos a `CLAUDE.md`, sin aplicarlos.
+18. (Ronda 2) Con el día vacío y meta de 2.000 kcal, ninguna propuesta pasa de 900 kcal + margen; con `R` mayor que el tope sale `cena_tope`.
+19. (Ronda 2) Ninguna verdura «añadida para completar» lleva menos de 100 g; la «verdura cruda» de los modos cubierto y ligero sale solo de `crudas`; con la semilla real y sin historial, la verdura añadida es la zanahoria (empate a 1 cena, la de más gramos habituales: 61 g → 100 g).
+20. (Ronda 2) «Más ideas» no aparece en modo ligero ni cubierto (test de UI: cero llamadas posibles).
