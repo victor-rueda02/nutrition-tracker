@@ -28,3 +28,29 @@ Revisado sobre `dc7d583` (diff `d24a028..dc7d583`). `npm test`: 452/452 en verde
    - En la confirmación, `source_text` sale con comillas anidadas («¿Qué ceno?: Tu receta «Lentejas caseras»»). Usa `¿Qué ceno? · <origen>` y pasa los tests que lo comprueben.
 
 **Siguiente ronda**: corregir 1-6 con sus tests y actualizar `notas.md` (y el comentario de `ESPEC` §6 si cambia alguna constante). Sin llamadas reales a Gemini en esta ronda: la prueba real de `/cenas` la hace el revisor al final.
+
+## Ronda 2 — CAMBIOS
+
+Revisado sobre `6ef8ec4` (diff `578a81e..6ef8ec4`). `npm test`: 460/460 (0 omitidos; los de UI corren con jsdom). `npm run worker:check`: correcto.
+
+**Comprobado por el revisor**
+- Las 6 correcciones de la ronda 1 están hechas y con test:
+  - tope de cena: con el día vacío salen 903, 760 y 885 kcal; con 380 kcal registradas sale `cena_tope` «propongo como mucho 900 kcal»;
+  - zanahoria 100 g como verdura añadida y `crudas` en la semilla; con el día pasado, «zanahoria 61 g»;
+  - «Más ideas» oculto y bloqueado en los modos ligero y cubierto;
+  - huevo en porciones enteras de 50 g;
+  - redacción literal de Victor en `notas.md`;
+  - textos y etiquetas.
+- Verificación a mano con `data/foods.csv` (columnas del CSV, sin `sumLines`) en 5 días (típico, vacío, 380 kcal registradas, ligero y pasado): las 12 propuestas coinciden exactamente en kcal y proteína. Por ejemplo, en el modo ligero (R = 172), «Cena ligera: merluza con zanahoria» = merluza 105 g + zanahoria 100 g + aceite 5 g = 171,30 kcal y 19,83 g de proteína.
+- Acepto la interpretación del límite (`T + margen`, con T el tope de cena) y el `source_text` nuevo: la ESPEC (§6.3 y §9) ya lo recoge.
+
+**Correcciones**
+
+1. **BLOQUEANTE — Menos de 3 propuestas en un día normal** (`core/cenas.js`). En el día típico (R = 485, criterio 21) solo salen 2: lentejas y la variante del 23-sep. Las cenas de la semilla se descartan porque su parte fija ya no cabe. Por ejemplo, la del 22-sep: yogur, chía, chocolate, nueces, kiwi, aceite y zanahoria suman 372 kcal fijas, y con salmón y pan al mínimo pasa de 710 kcal. Esperado (ESPEC §6.3, actualizada):
+   - **a.** `salsa` escala con `fh`.
+   - **b.** Si no cabe, se quitan uno a uno el chocolate, las nueces y la fruta que traiga la cena de origen (nunca el yogur ni la chía), hasta que quepa. Se anota en `quitados` y la tarjeta muestra «Sin … para que quepa».
+   - **c.** Si aun así quedan menos de 3, se completa con candidatos del modo ligero ajustados con el escalado normal y `E*`.
+   Tests: criterios 21 y 22 (el día del criterio 21 es exactamente el de arriba).
+2. **MENOR — `notas.md`**: añade las constantes nuevas (`CENA_MAX_FRAC`, `VERDURA_COMPLETAR_G`, `crudas`) y lo de esta ronda a la propuesta de CLAUDE.md, si cambia algo.
+
+**Siguiente ronda**: la corrección 1 (a, b y c) con sus tests. Sin llamadas reales a Gemini.
