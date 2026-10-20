@@ -256,3 +256,28 @@ test('(20) «Más ideas» no aparece en modo ligero ni cubierto: sin botón y si
   }
   assert.equal(llamadas.length, 0);
 });
+
+test('(22) la tarjeta dice «Sin … para que quepa» cuando se quitaron extras, y solo entonces', { skip }, async () => {
+  const dia = [
+    MEAL('b1', AYER, 'desayuno', [['avena_copos', 60], ['leche_entera', 250], ['kiwi_verde', 69], ['almendras_crudas', 20]]),
+    MEAL('b2', AYER, 'comida', [['pechuga_pollo_cruda', 180], ['arroz_blanco_crudo', 100], ['aceite_oliva', 10], ['brocoli', 150]]),
+    MEAL('b3', AYER, 'merienda', [['pan_blanco_barra', 60], ['jamon_curado', 40]]),
+  ];
+  const t = await setup({ meals: dia });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  const r = t.app.state.cenas.resultado;
+  assert.equal(r.propuestas.length, 3);
+  const tarjetas = t.$$('section.cena-prop');
+  assert.equal(tarjetas.length, 3);
+  let con = 0;
+  r.propuestas.forEach((p, i) => {
+    const flag = tarjetas[i].querySelector('[data-quitados]');
+    if (p.quitados?.length) {
+      con++;
+      assert.match(flag.textContent, /^Sin .+ para que quepa\.$/);
+      for (const n of p.quitados) assert.ok(flag.textContent.toLowerCase().includes(n.toLowerCase()), n);
+    } else assert.equal(flag, null);
+  });
+  assert.ok(con > 0, 'en este día alguna cena necesita quitar extras');
+});

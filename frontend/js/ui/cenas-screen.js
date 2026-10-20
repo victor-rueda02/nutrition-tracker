@@ -85,6 +85,7 @@ export function cenasScreen(ui) {
       r.recomendacion === 'no_cenar' ? h('p', { class: 'warn' }, 'Lo mejor es no cenar. Si te apetece algo, verdura cruda.') : null);
   };
 
+  const lista_y = (xs) => (xs.length > 1 ? `${xs.slice(0, -1).join(', ')} y ${xs.at(-1)}` : xs[0]);
   const lista = (titulo, items) => (items.length ? h('p', { class: 'small cena-nota' }, h('strong', {}, `${titulo}: `), items.join(', ')) : null);
 
   const tarjeta = (p, i, { ia = false } = {}) => h('section', { class: `card meal cena-prop${ia ? ' cena-ia' : ''}`, 'data-idx': String(i), 'data-origen': p.tipo },
@@ -102,6 +103,7 @@ export function cenasScreen(ui) {
         h('span', { class: kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, kcal === null ? 'sin dato' : `${nf(kcal)} kcal`));
     })),
     h('p', { class: 'cena-macros small' }, `${nf(p.kcal)} kcal · ${nf(p.proteina, 1)} g proteína · ${nf(p.hidratos, 1)} g hidratos · ${nf(p.grasa, 1)} g grasa`),
+    p.quitados?.length ? h('p', { class: 'flag', 'data-quitados': '1' }, `Sin ${lista_y(p.quitados.map((n) => n.charAt(0).toLowerCase() + n.slice(1)))} para que quepa.`) : null,
     p.seQuedaCorta ? h('p', { class: 'flag' }, `Se queda en ${nf(p.seQuedaCorta)} kcal.`) : null,
     p.porEncimaObjetivo ? h('p', { class: 'flag' }, 'Por encima de tu objetivo de hoy.') : null,
     lista('Completa', p.completa.map((x) => x.label)),

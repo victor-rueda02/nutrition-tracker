@@ -47,6 +47,15 @@ Cómo lo cumple el código: `core/cenas.js` (`deficitsParaIA`, `nombreParaIA`: l
 - Textos: sin cenas en la app, «Aún no tienes cenas en la app: uso tus cenas de Cronometer.»; el yogur y la chía añadidos llevan la etiqueta «postre habitual» (`postre: true` en la línea) y «añadida para completar» queda para la verdura y el hidrato; `source_text` = `¿Qué ceno? · <origen>`.
 - Pendiente de ESPEC (no la he tocado): §9 todavía dice `source_text = '¿Qué ceno?: <origen>'`; ahora es `¿Qué ceno? · <origen>` según la revisión. El límite de kcal de §6.3 usa el tope de cena (no R) cuando este es menor, para cumplir el criterio 18.
 
+## 3 ter. Ronda 3 (siempre 3 propuestas si se puede)
+
+- `salsa` escala con el factor del hidrato (`ESCALA.salsa = 'h'`, mismo redondeo a 5 g y límites 0,6-1,5).
+- Si una cena no cabe ni con los factores mínimos, `ajustar` le quita, uno a uno, el chocolate, las nueces y la fruta de la cena de origen (nunca el yogur ni la chía; tampoco los extras que prueba el propio motor) y vuelve a ajustar. Los nombres quedan en `quitados` y la tarjeta dice «Sin chocolate negro 85 % y nueces para que quepa.».
+- Si tras elegir quedan menos de 3 propuestas normales, se completan con las cenas ligeras (proteína habitual + verdura de `crudas` + aceite 5 g, sin postre ni hidrato) ajustadas con el escalado normal y el mismo tope de cena (`origen` «Cena ligera: …», `tipo: 'ligera'`); se prefieren proteínas distintas de las ya elegidas. Si no hay ninguna cena habitual, sigue siendo `sin_candidatos`.
+- `seQuedaCorta` ahora se compara con lo que hace falta (`min(R, tope de cena)` - 10 %), no con lo máximo alcanzable con los factores: una cena ligera de 133 kcal para 485 dice «Se queda en 133 kcal.». Es la lectura de «se queda por debajo de E* − 10 % por los topes» (§6.3). Afecta también a las propuestas normales que se queden cortas por los topes.
+- Las ligeras de relleno no llevan yogur (criterio 9 es de propuestas normales).
+- Service worker `nt-v16`.
+
 ## 4. Pendiente / limitaciones
 
 - Sin llamadas reales a Gemini en esta ronda: el prompt de `/cenas` solo está probado con el modelo simulado. Probar con `node --env-file=.env scripts/dev-server.mjs` (1 llamada por pulsación) antes de desplegar.

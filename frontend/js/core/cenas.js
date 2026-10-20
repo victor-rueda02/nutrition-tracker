@@ -30,7 +30,8 @@ const CHIA_G = 3;
 const EXTRAS_POSTRE = [['chocolate_negro_85', 10], ['nueces', 10]];
 const ACEITE_LIGERO_G = 5;
 const MACROS = ['energia_kcal', 'proteina_g', 'fibra_g', 'hidratos_g', 'grasa_total_g'];
-const ESCALA = { proteina: 'p', hidrato: 'h', plato: 'h' }; // qué factor escala a cada rol; el resto es fijo
+const ESCALA = { proteina: 'p', hidrato: 'h', plato: 'h', salsa: 'h' }; // qué factor escala a cada rol (la salsa va con el hidrato al que acompaña); el resto es fijo
+const QUITABLES = [['chocolate_negro_85'], ['nueces'], ['fruta']]; // extras de la cena de origen que se quitan, en este orden, si no cabe (nunca el yogur ni la chía)
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
 export const ROLES = ['proteina', 'hidrato', 'verdura', 'plato', 'grasa', 'salsa', 'postre_base', 'postre_extra', 'fruta', 'otro'];
@@ -251,7 +252,7 @@ function gramosEscalados(base, f, fmin, porcion = null) {
   return Math.max(5, g);
 }
 
-function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0 } = {}) {
+function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0, quitados = [] } = {}) {
   const R = ctx.R;
   const fmin = ligero ? FACTOR_MIN_LIGERO : FACTOR_MIN;
   const lineas = cand.lineas;
@@ -331,10 +332,17 @@ function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0 } = {}) {
     calc = calcular(finales, ctx);
     fp = f; fh = f;
   }
-  if (calc.kcal > limite) return null;
+  if (calc.kcal > limite) { // aun con los mínimos: se quita, uno a uno, el chocolate, las nueces y la fruta de la cena de origen
+    for (const [id] of QUITABLES) {
+      const i = lineas.findIndex((l) => !l.extra && (id === 'fruta' ? l.rol === 'fruta' : l.food_id === id));
+      if (i < 0) continue;
+      return ajustar({ ...cand, lineas: lineas.filter((_, j) => j !== i) }, ctx, { ligero, sHab, quitados: [...quitados, ctx.nombre(lineas[i].food_id)] });
+    }
+    return null;
+  }
   const puntuacion = puntuar(calc, ctx, { E, sHab });
   if (puntuacion === null) return null;
-  const queda = calc.kcal < E * 0.9 ? { seQuedaCorta: Math.round(calc.kcal) } : {};
+  const queda = { ...(calc.kcal < Rtope * 0.9 ? { seQuedaCorta: Math.round(calc.kcal) } : {}), ...(quitados.length ? { quitados } : {}) };
   return { cand: { ...cand, lineas: finales }, calc, puntuacion, E, factores: { fp, fh }, queda };
 }
 
@@ -456,10 +464,10 @@ function extrasPostre(ctx) {
 
 // ---------- elección de las 3 (ESPEC §6.5) ----------
 
-function elegir(props, n = N_PROPUESTAS) {
+function elegir(props, n = N_PROPUESTAS, previas = []) {
   const orden = [...props].sort((a, b) => b.puntuacion - a.puntuacion || porId(a.clave, b.clave));
   const elegidas = [];
-  const proteinas = new Set();
+  const proteinas = new Set(previas.map((p) => p.principal).filter(Boolean));
   const variantesDe = new Map();
   const cabe = (p) => !p.variante || (variantesDe.get(p.origenClave) ?? 0) < 1;
   const toma = (p) => { elegidas.push(p); if (p.principal) proteinas.add(p.principal); if (p.variante) variantesDe.set(p.origenClave, 1); };
@@ -623,6 +631,11 @@ export function proponerCenas(entrada) {
     const extras = extrasPostre(ctx);
     const todas = evaluarTodos([...bases, ...variantes], ctx, extras);
     propuestas = elegir(todas);
+    if (propuestas.length < N_PROPUESTAS) { // siempre 3 si se puede: se completa con cenas ligeras (proteína + verdura cruda + aceite) con el escalado normal
+      const ligeras = evaluarTodos(candidatosLigeros(ctx).filter((c) => c.lineas.some((l) => l.rol === 'proteina')), ctx, null)
+        .filter((p) => !propuestas.some((q) => q.clave === p.clave));
+      propuestas = [...propuestas, ...elegir(ligeras, N_PROPUESTAS - propuestas.length, propuestas)];
+    }
     if (ia.length) {
       const claves = new Set(propuestas.map((p) => p.clave));
       ideas = elegir(evaluarTodos(ia, ctx, extras).filter((p) => !claves.has(p.clave)));

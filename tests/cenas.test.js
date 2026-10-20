@@ -535,3 +535,82 @@ test('etiquetas: el postre habitual es «postre habitual»; «añadida para comp
   for (const l of lineas.filter((x) => x.añadida)) assert.ok(['verdura', 'hidrato'].includes(l.rol), `${l.food_id} ${l.rol}`);
   assert.ok(r.ideas[0].lineas.some((l) => l.añadida && l.rol === 'hidrato'));
 });
+
+// ---------- ronda 3: siempre 3 propuestas si se puede (criterios 21 y 22) ----------
+const DIA_21 = [
+  meal('d21', 'desayuno', [['avena_copos', 60], ['leche_entera', 250], ['kiwi_verde', 69], ['almendras_crudas', 20]]),
+  meal('c21', 'comida', [['pechuga_pollo_cruda', 180], ['arroz_blanco_crudo', 100], ['aceite_oliva', 10], ['brocoli', 150]]),
+  meal('m21', 'merienda', [['pan_blanco_barra', 60], ['jamon_curado', 40]]),
+];
+
+test('(21) día con R ≈ 485 (referencias de 2.000 kcal): 3 propuestas normales dentro del límite de kcal', () => {
+  const objetivos = kcalMeta(2000, DIA_21);
+  const r = proponer({ comidasDelDia: DIA_21, objetivos });
+  const R = r.resumen.kcal.restantes;
+  assert.ok(R > 450 && R < 520, `R ${R}`);
+  assert.equal(r.modo, 'normal');
+  assert.equal(r.propuestas.length, 3, r.propuestas.map((p) => `${p.origen} ${Math.round(p.kcal)}`).join(' | '));
+  for (const p of r.propuestas) assert.ok(p.kcal <= R + Math.max(50, 0.05 * R) + 1e-6, `${p.origen}: ${p.kcal} > límite`);
+  assert.equal(new Set(r.propuestas.map((p) => p.clave)).size, 3);
+});
+
+test('(21) también con el día de prueba de R ≈ 1.000 salen 3 dentro del límite', () => {
+  const r = proponer();
+  assert.equal(r.propuestas.length, 3);
+  const R = r.resumen.kcal.restantes;
+  for (const p of r.propuestas) assert.ok(p.kcal <= Math.min(R, 0.45 * (R + consumidoTipico)) + Math.max(50, 0.05 * R) + 1e-6);
+});
+
+test('(21a) la salsa escala con el hidrato al que acompaña: sale entre 0,6 y 1,5 × la base y a múltiplos de 5 g', () => {
+  const r = proponer({ comidasDelDia: DIA_21, objetivos: kcalMeta(2000, DIA_21) });
+  const salsas = r.propuestas.flatMap((p) => p.lineas.filter((l) => l.rol === 'salsa'));
+  assert.ok(salsas.length > 0);
+  for (const l of salsas) {
+    assert.equal(l.gramos % 5, 0, `${l.food_id} ${l.gramos}`);
+    assert.ok(l.gramos >= 0.6 * l.base - 1e-9 && l.gramos <= 1.5 * l.base + 1e-9, `${l.gramos} vs ${l.base}`);
+  }
+  assert.ok(salsas.some((l) => l.gramos !== l.base), 'la salsa se escala, no es fija');
+});
+
+test('(22) si una cena solo cabe quitando extras, sale sin ellos y con `quitados`; el yogur y la chía no se quitan nunca', () => {
+  const r = proponer({ comidasDelDia: DIA_21, objetivos: kcalMeta(2000, DIA_21) });
+  const R = r.resumen.kcal.restantes;
+  const conQuitados = r.propuestas.filter((p) => p.quitados);
+  assert.ok(conQuitados.length > 0, 'alguna propuesta necesita quitar extras');
+  for (const p of conQuitados) {
+    assert.ok(p.kcal <= R + Math.max(50, 0.05 * R) + 1e-6, `${p.origen}: ${p.kcal}`);
+    const ids = p.lineas.map((l) => l.food_id);
+    for (const nombre of p.quitados) {
+      const id = ['chocolate_negro_85', 'nueces', 'kiwi_verde', 'manzana_con_piel', 'pera_cruda', 'ciruela_fresca', 'sandia'].find((x) => foodsById.get(x).nombre === nombre);
+      assert.ok(id && !ids.includes(id), `${nombre} sigue en la cena`);
+    }
+    assert.ok(ids.includes('yogur_griego_natural'), p.origen);
+  }
+  // sin quitados donde cabe todo: no hay campo
+  assert.ok(proponer().propuestas.every((p) => !p.quitados));
+  // la cena del 22-sep (con chía) nunca pierde la chía
+  const del22 = r.propuestas.find((p) => /22-sep/.test(p.origen));
+  if (del22) assert.ok(del22.lineas.some((l) => l.food_id === 'semillas_chia'));
+});
+
+test('(21c) si tras elegir quedan menos de 3 propuestas normales, se completa con «Cena ligera: …» ajustadas con el escalado normal', () => {
+  const unica = [cena('2026-10-18', [['merluza_cruda', 100], ['huevo', 50], ['arroz_blanco_crudo', 60], ['calabacin', 100]])];
+  const objetivos = kcalMeta(2000, DIA_21);
+  const r = proponer({ comidasDelDia: DIA_21, objetivos, historial: unica, semilla: sinCenasSemilla });
+  assert.equal(r.modo, 'normal');
+  assert.equal(r.propuestas.length, 3, r.propuestas.map((p) => p.origen).join(' | '));
+  const ligeras = r.propuestas.filter((p) => p.tipo === 'ligera');
+  assert.equal(ligeras.length, 2);
+  for (const p of ligeras) {
+    assert.match(p.origen, /^Cena ligera: /);
+    assert.ok(p.lineas.some((l) => l.rol === 'verdura' && ['pepino', 'zanahoria'].includes(l.food_id)));
+    const R = r.resumen.kcal.restantes;
+    assert.ok(p.kcal <= Math.min(R, 0.45 * 2000) + Math.max(50, 0.05 * R) + 1e-6);
+    const E = Math.min(R, 0.45 * 2000); // lo que haría falta; la ligera no llega por los topes de los factores
+    if (p.kcal < E * 0.9) assert.equal(p.seQuedaCorta, Math.round(p.kcal)); // se avisa si se queda corta por los topes
+  }
+  assert.ok(ligeras.some((p) => p.seQuedaCorta), 'alguna ligera se queda corta y lo dice');
+  assert.equal(r.propuestas.filter((p) => p.tipo !== 'ligera').length, 1);
+  // sin ninguna cena habitual no hay nada que completar
+  assert.equal(proponer({ semilla: sinCenasSemilla }).estado, 'sin_candidatos');
+});
