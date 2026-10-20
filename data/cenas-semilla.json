@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "descripcion": "Semilla de ¿Qué ceno?: las cenas habituales de Cronometer (17-24 sep 2026) con los ids actuales de data/foods.csv (docs/cenas/ESPEC.md §3), y el rol de cada alimento en una cena. Se usa solo mientras el diario de la app tenga menos de 21 días con cena. Los alimentos con incluir=no o sin datos se conservan aquí y el motor los filtra al ejecutar. gramos null = sin porción en el catálogo (se filtra). supuesto = gramos aceptados por Victor sin porción en el catálogo.",
+  "descripcion": "Semilla de ¿Qué ceno?: las cenas habituales de Cronometer (17-24 sep 2026) con los ids actuales de data/foods.csv (docs/cenas/ESPEC.md §3), y el rol de cada alimento en una cena. Se usa solo mientras el diario de la app tenga menos de 21 días con cena. Los alimentos con incluir=no o sin datos se conservan aquí y el motor los filtra al ejecutar. crudas = verduras que se comen crudas (las únicas que se ofrecen como «verdura cruda»). gramos null = sin porción en el catálogo (se filtra). supuesto = gramos aceptados por Victor sin porción en el catálogo.",
   "cenas": [
     {
       "fecha": "2026-09-17",
@@ -82,6 +82,7 @@
       ]
     }
   ],
+  "crudas": ["pepino", "zanahoria"],
   "roles": {
     "merluza_cruda": "proteina",
     "salmon_atlantico": "proteina",

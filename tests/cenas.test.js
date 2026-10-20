@@ -183,7 +183,9 @@ test('hasta 3 propuestas; con al menos 3 proteínas habituales distintas, las 3 
 test('menos de 21 días con cena: se usa la semilla (aviso); con 21 o más, no', () => {
   const pocos = proponer();
   assert.ok(pocos.avisos.some((a) => a.codigo === 'semilla'));
-  assert.match(pocos.avisos.find((a) => a.codigo === 'semilla').texto, /Aún tienes 0 días con cena en la app: uso también tus cenas de Cronometer\./);
+  assert.match(pocos.avisos.find((a) => a.codigo === 'semilla').texto, /^Aún no tienes cenas en la app: uso tus cenas de Cronometer\.$/);
+  const tres = ['2026-10-12', '2026-10-14', '2026-10-17'].map((d) => cena(d, [['salmon_atlantico', 150], ['arroz_blanco_crudo', 100], ['calabacin', 80]]));
+  assert.match(proponer({ historial: tres }).avisos.find((a) => a.codigo === 'semilla').texto, /^Aún tienes 3 días con cena en la app: uso también tus cenas de Cronometer\.$/);
   assert.ok(pocos.propuestas.some((p) => p.tipo === 'semilla'));
   const proteinas = ['merluza_cruda', 'salmon_atlantico', 'huevo', 'pechuga_pollo_cruda', 'atun_lata_aceite', 'sardina_lata_aceite', 'pechuga_pavo_cruda'];
   const mucho = Array.from({ length: DIAS_PARA_HISTORIAL }, (_, i) => cena(shiftDate(FECHA, -(i + 1)), [[proteinas[i % proteinas.length], 150 + (i % 3) * 10], [i % 2 ? 'arroz_blanco_crudo' : 'pasta_seca', 100], ['calabacin', 100], ['yogur_griego_natural', 125]]));
@@ -265,7 +267,8 @@ test('avisos: cada uno aparece exactamente en su caso', () => {
   const vacio = proponer({ comidasDelDia: [], objetivos: ref });
   assert.ok(codigos(vacio).includes('dia_vacio'));
   assert.match(vacio.avisos.find((a) => a.codigo === 'dia_vacio').texto, /^No has registrado nada hoy: la propuesta cubre solo la cena \(como mucho \d+ kcal\), no el día entero\.$/);
-  assert.ok(vacio.propuestas.every((p) => p.kcal <= 1.5 * 2000)); // limitada por los factores
+  assert.ok(vacio.propuestas.length > 0 && vacio.propuestas.every((p) => p.kcal <= 0.45 * 2000 + 50)); // una cena no cubre el día entero
+  assert.ok(!codigos(vacio).includes('cena_tope')); // con el día vacío basta dia_vacio
   assert.ok(!codigos(proponer()).includes('dia_vacio'));
   // sin_plan
   assert.ok(codigos(proponer({ objetivos: conR(1000, ref) })).includes('sin_plan'));
@@ -397,13 +400,138 @@ test('checkDeficits: solo nombres cortos, sin dígitos, hasta 8', () => {
 test('draftFromLines: borrador nuevo (sin editing) con líneas manuales, cena y origen en source_text; no guarda nada por sí solo', () => {
   const r = proponer();
   const p = r.propuestas[0];
-  const d = draftFromLines({ lines: p.lineas, meal: 'cena', text: '¿Qué ceno?', sourceText: `¿Qué ceno?: ${p.origen}`, foodsById });
+  const d = draftFromLines({ lines: p.lineas, meal: 'cena', text: '¿Qué ceno?', sourceText: `¿Qué ceno? · ${p.origen}`, foodsById });
   assert.equal(d.editing, undefined);
   assert.equal(d.meal, 'cena');
-  assert.deepEqual(d.lines.map((l) => [l.food_id, l.grams, l.confidence, l.source_text]), p.lineas.map((l) => [l.food_id, l.gramos, 'manual', `¿Qué ceno?: ${p.origen}`]));
+  assert.deepEqual(d.lines.map((l) => [l.food_id, l.grams, l.confidence, l.source_text]), p.lineas.map((l) => [l.food_id, l.gramos, 'manual', `¿Qué ceno? · ${p.origen}`]));
   assert.equal(validateDraft(d).ok, true);
   const rec = toMealRecord(d, { now: new Date('2026-10-20T18:00:00Z'), idGen: () => 'x' });
   assert.deepEqual([rec.meal, rec.text, rec.lines.length], ['cena', '¿Qué ceno?', p.lineas.length]);
   // un alimento que ya no está queda sin resolver
   assert.equal(draftFromLines({ lines: [{ food_id: 'nada', gramos: 5 }], meal: 'cena', foodsById }).unmatched.length, 1);
+});
+
+// ---------- ronda 2 ----------
+const kcalMeta = (meta, comidas) => { const c = comidas.reduce((a, m) => a + kcalDe(m.lines), 0); return conR(meta - c, ref, c); };
+
+test('(18) la cena no intenta cubrir el día entero: con el día vacío y meta de 2.000 kcal, ninguna pasa de 900 + margen', () => {
+  const objetivos = conR(2000, ref, 0);
+  const r = proponer({ comidasDelDia: [], objetivos });
+  assert.equal(r.resumen.kcal.restantes, 2000);
+  assert.equal(r.modo, 'normal');
+  assert.ok(r.propuestas.length > 0);
+  for (const p of r.propuestas) assert.ok(p.kcal <= 0.45 * 2000 + 50, `${p.origen}: ${p.kcal}`);
+  // lo mismo con las ideas de la IA
+  const ideas = [{ nombre: 'Pollo', lineas: [{ food_id: 'pechuga_pollo_cruda', gramos: 400 }, { food_id: 'arroz_blanco_crudo', gramos: 200 }] }];
+  for (const p of proponer({ comidasDelDia: [], objetivos, ideasIA: ideas }).ideas) assert.ok(p.kcal <= 950, p.origen);
+});
+
+test('(18) cena_tope: si R supera el tope de cena y el día no está vacío, avisa con el texto de la ESPEC; si no, no sale', () => {
+  const desayuno = [meal('x', 'desayuno', [['avena_copos', 100], ['leche_entera', 300]])];
+  const objetivos = kcalMeta(2000, desayuno);
+  const r = proponer({ comidasDelDia: desayuno, objetivos });
+  const R = r.resumen.kcal.restantes;
+  assert.ok(R > 900 && R < 1700, `R ${R}`);
+  const av = r.avisos.filter((a) => a.codigo === 'cena_tope');
+  assert.equal(av.length, 1);
+  assert.equal(av[0].texto, `Te faltan ${Math.round(R)} kcal: una cena no debería cubrirlo todo; propongo como mucho 900 kcal.`);
+  for (const p of r.propuestas) assert.ok(p.kcal <= 950, `${p.origen}: ${p.kcal}`);
+  assert.ok(!r.avisos.some((a) => a.codigo === 'dia_vacio'));
+  // con R dentro del tope, o en modo ligero, no hay aviso
+  assert.ok(!proponer().avisos.some((a) => a.codigo === 'cena_tope'));
+  assert.ok(!proponer({ objetivos: conR(300) }).avisos.some((a) => a.codigo === 'cena_tope'));
+});
+
+test('(19) verdura añadida para completar: nunca menos de 100 g y, con la semilla real, la zanahoria (empate a 1 cena, más gramos habituales)', () => {
+  const sinVerdura = { nombre: 'Merluza con arroz', lineas: [{ food_id: 'merluza_cruda', gramos: 200 }, { food_id: 'arroz_blanco_crudo', gramos: 100 }] };
+  const plantillas = [{ id: 'p1', nombre: 'Pollo con arroz', meal: 'cena', lines: [{ food_id: 'pechuga_pollo_cruda', grams: 150 }, { food_id: 'arroz_blanco_crudo', grams: 100 }] }];
+  let vistas = 0;
+  for (const objetivos of [conR(1000), conR(700), conR(1400)]) {
+    const r = proponer({ objetivos, ideasIA: [sinVerdura], plantillas });
+    for (const p of [...r.propuestas, ...r.ideas]) {
+      for (const l of p.lineas.filter((x) => x.añadida && x.rol === 'verdura')) {
+        vistas++;
+        assert.ok(l.gramos >= 100, `${l.food_id} ${l.gramos}`);
+        assert.equal(l.food_id, 'zanahoria');
+        assert.equal(l.gramos, 100); // 61 g habituales -> 100 g
+      }
+    }
+  }
+  assert.ok(vistas > 0);
+  const idea = proponer({ ideasIA: [sinVerdura] }).ideas[0];
+  assert.deepEqual(idea.lineas.filter((l) => l.añadida).map((l) => [l.food_id, l.gramos]), [['zanahoria', 100]]);
+  // una verdura con más cenas gana aunque tenga menos gramos; con pocos gramos habituales se añade con 100 g
+  const hist = ['2026-10-12', '2026-10-14'].map((d) => cena(d, [['merluza_cruda', 150], ['arroz_blanco_crudo', 100], ['calabacin', 30]]));
+  const r = proponer({ historial: hist, ideasIA: [sinVerdura] });
+  assert.deepEqual(r.ideas[0].lineas.filter((l) => l.añadida).map((l) => [l.food_id, l.gramos]), [['calabacin', 100]]);
+});
+
+test('(19) la «verdura cruda» de los modos cubierto y ligero sale solo de `crudas`; sin ninguna válida, no se ofrece', () => {
+  const crudas = new Set(semilla.crudas);
+  assert.deepEqual(semilla.crudas, ['pepino', 'zanahoria']);
+  const cubierto = proponer({ objetivos: conR(-80) });
+  assert.deepEqual(cubierto.propuestas.map((p) => p.lineas[0].food_id), ['zanahoria']);
+  const muyLigeras = proponer({ objetivos: conR(100) });
+  const cruda = muyLigeras.propuestas.find((p) => p.origen === 'Tu verdura cruda habitual');
+  assert.ok(cruda && crudas.has(cruda.lineas[0].food_id));
+  for (const R of [200, 300, 399]) {
+    const r = proponer({ objetivos: conR(R) });
+    assert.equal(r.modo, 'ligero');
+    for (const p of r.propuestas) for (const l of p.lineas.filter((x) => x.rol === 'verdura')) { assert.ok(crudas.has(l.food_id), l.food_id); assert.ok(l.gramos >= 100); }
+  }
+  // ninguna de `crudas` válida (sin datos, inexistente, lista vacía o ausente): no se ofrece verdura cruda
+  for (const lista of [['tortilla_patata', 'no_existe'], [], undefined]) {
+    const sem = { ...semilla, crudas: lista };
+    const pasado = proponer({ semilla: sem, objetivos: conR(-80) });
+    assert.equal(pasado.recomendacion, 'no_cenar');
+    assert.deepEqual(pasado.propuestas, []);
+    assert.ok(!proponer({ semilla: sem, objetivos: conR(100) }).propuestas.some((p) => p.origen === 'Tu verdura cruda habitual'));
+    for (const p of proponer({ semilla: sem, objetivos: conR(300) }).propuestas) assert.ok(!p.lineas.some((l) => l.rol === 'verdura'));
+  }
+  // nunca berenjena, calabacín, cebolla ni pimiento como verdura cruda
+  const todas = [-80, 50, 100, 200, 300].flatMap((R) => proponer({ objetivos: conR(R) }).propuestas.flatMap((p) => p.lineas.map((l) => l.food_id)));
+  for (const id of ['berenjena', 'calabacin', 'cebolla', 'pimiento_rojo', 'pimiento_amarillo']) assert.ok(!todas.includes(id), id);
+});
+
+test('«más habitual»: más cenas; empate, más gramos habituales; empate, id', () => {
+  const hist = [
+    cena('2026-10-10', [['merluza_cruda', 150], ['arroz_blanco_crudo', 100], ['brocoli', 200], ['pepino', 120]]),
+    cena('2026-10-12', [['merluza_cruda', 150], ['arroz_blanco_crudo', 100], ['brocoli', 200]]),
+    cena('2026-10-14', [['salmon_atlantico', 150], ['pasta_seca', 100], ['judias_verdes', 200], ['pepino', 150]]),
+  ];
+  const sinVerdura = { nombre: 'Huevo con arroz', lineas: [{ food_id: 'huevo', gramos: 100 }, { food_id: 'arroz_blanco_crudo', gramos: 100 }] };
+  const r = proponer({ semilla: sinCenasSemilla, historial: hist, ideasIA: [sinVerdura] });
+  // brócoli y pepino aparecen en 2 cenas; brócoli tiene más gramos habituales (200 frente a 135)
+  assert.deepEqual(r.ideas[0].lineas.filter((l) => l.añadida).map((l) => l.food_id), ['brocoli']);
+});
+
+test('huevo: una proteína con porción en el catálogo se redondea a un número entero de su primera porción (mínimo 1)', () => {
+  const huevo = foodsById.get('huevo').porciones[0].gramos;
+  assert.equal(huevo, 50);
+  const ideas = [100, 150, 40, 200].map((g, i) => ({ nombre: `Huevos ${i}`, lineas: [{ food_id: 'huevo', gramos: g }, { food_id: 'arroz_blanco_crudo', gramos: 80 }, { food_id: 'calabacin', gramos: 100 }] }));
+  let vistos = 0;
+  for (const R of [450, 600, 800, 1000, 1400]) {
+    const r = proponer({ objetivos: conR(R), ideasIA: ideas });
+    for (const p of [...r.propuestas, ...r.ideas]) for (const l of p.lineas.filter((x) => x.food_id === 'huevo')) {
+      vistos++;
+      assert.equal(l.gramos % huevo, 0, `R=${R} huevo ${l.gramos}`);
+      assert.ok(l.gramos >= huevo);
+    }
+  }
+  assert.ok(vistos > 0);
+  // una cena de 62 g de huevo sale con 50 g (1 huevo), no con 40 ni 45
+  const huevos = proponer({ historial: [cena('2026-10-18', [['huevo', 62], ['arroz_blanco_crudo', 100], ['calabacin', 80]])], semilla: sinCenasSemilla }).propuestas.flatMap((p) => p.lineas).filter((l) => l.food_id === 'huevo');
+  assert.ok(huevos.length > 0 && huevos.every((l) => l.gramos === 50));
+});
+
+test('etiquetas: el postre habitual es «postre habitual»; «añadida para completar» solo es de la verdura y el hidrato', () => {
+  const r = proponer({ ideasIA: [{ nombre: 'Merluza sola', lineas: [{ food_id: 'merluza_cruda', gramos: 200 }] }] });
+  const lineas = [...r.propuestas, ...r.ideas].flatMap((p) => p.lineas);
+  const postre = lineas.filter((l) => l.postre);
+  assert.ok(postre.length > 0);
+  for (const l of postre) assert.equal(l.añadida, undefined, l.food_id);
+  assert.ok(r.ideas[0].lineas.filter((l) => l.rol === 'postre_base').every((l) => l.postre)); // la idea sin postre lo recibe
+  assert.deepEqual(postre.map((l) => l.food_id).filter((id) => !['yogur_griego_natural', 'semillas_chia'].includes(id)), []);
+  for (const l of lineas.filter((x) => x.añadida)) assert.ok(['verdura', 'hidrato'].includes(l.rol), `${l.food_id} ${l.rol}`);
+  assert.ok(r.ideas[0].lineas.some((l) => l.añadida && l.rol === 'hidrato'));
 });

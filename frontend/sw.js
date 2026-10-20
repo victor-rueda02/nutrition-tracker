@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v14'; // nt-v13 + ¿Qué ceno? (cenas.js, cenas-validate.js, cenas-screen.js, cenas.css, cenas-semilla.json)
+const VERSION = 'nt-v15'; // nt-v14 (ronda 2: tope de cena, verduras crudas, huevo entero) = nt-v13 + ¿Qué ceno? (cenas.js, cenas-validate.js, cenas-screen.js, cenas.css, cenas-semilla.json)
 const ASSETS = [
   './',
   'css/catalogo.css',

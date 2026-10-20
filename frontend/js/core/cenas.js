@@ -19,6 +19,8 @@ export const FACTOR_MIN_LIGERO = 0.3;
 export const FACTOR_MAX = 1.5;
 export const MARGEN_KCAL = (R) => Math.max(50, 0.05 * R); // una propuesta nunca pasa de R + margen
 export const KCAL_VERDURA_CRUDA = 50;
+export const CENA_MAX_FRAC = 0.45; // una cena no intenta cubrir el día entero: como mucho este tanto de la meta de kcal
+export const VERDURA_COMPLETAR_G = 100; // gramos mínimos de una verdura añadida para completar
 const TOPE_BLANDO_SOBRE_OBJETIVO = 1.1; // como RANGO_OBJETIVO del Diario
 const DESVIO_KCAL_MAX = 0.05; // si el ajuste por mínimos cuadrados se aleja más de E* se corrige hacia E*
 const POSTRE_BASE_ID = 'yogur_griego_natural';
@@ -57,6 +59,8 @@ function mediana(xs) {
   const m = s.length >> 1;
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 }
+
+const mediana0 = (xs) => (xs.length ? mediana(xs) : 0);
 
 // ---------- contexto: lo que se sabe del día y del catálogo ----------
 
@@ -149,12 +153,16 @@ function contexto({ fecha, comidasDelDia, historial, plantillas, recetas, semill
   // Alimentos válidos y habituales de un rol, de más a menos habituales (empate por id).
   const habitualesDe = (rol, filtro = () => true) => [...habitual.entries()]
     .filter(([id]) => rolDe(id) === rol && motivo(id) === null && filtro(foodsById.get(id)))
-    .sort((a, b) => b[1].n - a[1].n || porId(a[0], b[0])).map(([id]) => id);
+    .sort((a, b) => b[1].n - a[1].n || mediana0(b[1].gramos) - mediana0(a[1].gramos) || porId(a[0], b[0])).map(([id]) => id);
   const nombre = (id) => foodsById.get(id)?.nombre ?? id;
+  // Verduras que se comen crudas (lista de la semilla), válidas hoy: las más habituales primero.
+  const crudasValidas = () => (Array.isArray(semilla?.crudas) ? [...new Set(semilla.crudas)] : []).filter((id) => motivo(id) === null)
+    .sort((a, b) => (habitual.get(b)?.n ?? 0) - (habitual.get(a)?.n ?? 0) || mediana0(habitual.get(b)?.gramos ?? []) - mediana0(habitual.get(a)?.gramos ?? []) || porId(a, b));
 
   return {
     fecha, hoy, comidasDelDia, foodsById, objetivos, catalog, settings, keys, totals, especs, metaKcal, consumidoKcal,
     R: metaKcal === null ? null : metaKcal - consumidoKcal,
+    topeCena: metaKcal === null ? null : CENA_MAX_FRAC * metaKcal, crudasValidas,
     rolDe, motivo, nombre, fuentes, habitual, gramosHabituales, habitualesDe, diasConCena, usarSemilla, recetaIds,
     descartados: new Map(),
   };
@@ -208,7 +216,7 @@ function propuestaDe(cand, lineas, calc, puntuacion, ctx, extra = {}) {
     : [];
   return {
     origen: cand.origen, tipo: cand.tipo, veces: cand.veces ?? null, variante: Boolean(cand.variante), origenClave: cand.origenClave,
-    lineas: lineas.map((l) => ({ food_id: l.food_id, nombre: ctx.nombre(l.food_id), gramos: l.gramos, base: l.base ?? l.gramos, rol: l.rol, ...(l.añadida ? { añadida: true } : {}), ...(l.extra ? { extra: true } : {}) })),
+    lineas: lineas.map((l) => ({ food_id: l.food_id, nombre: ctx.nombre(l.food_id), gramos: l.gramos, base: l.base ?? l.gramos, rol: l.rol, ...(l.añadida ? { añadida: true } : {}), ...(l.postre ? { postre: true } : {}), ...(l.extra ? { extra: true } : {}) })),
     kcal: calc.kcal, proteina: calc.proteina, hidratos: calc.hidratos, grasa: calc.grasa,
     completa: completa.map((a) => ({ clave: a.e.clave, label: a.e.label })),
     mitad: mitad.map((a) => ({ clave: a.e.clave, label: a.e.label })),
@@ -228,7 +236,14 @@ function principalDe(lineas) {
 // ---------- escalado de gramos (ESPEC §6.3) ----------
 
 const r5 = (g) => Math.round(g / 5) * 5;
-function gramosEscalados(base, f, fmin) {
+function gramosEscalados(base, f, fmin, porcion = null) {
+  if (positivo(porcion)) { // proteína con porción en el catálogo (huevo): número entero de esa porción, al menos 1
+    const nlo = Math.max(1, Math.ceil((fmin * base) / porcion - 1e-9));
+    const nhi = Math.floor((FACTOR_MAX * base) / porcion + 1e-9);
+    let n = Math.max(1, Math.round((base * f) / porcion));
+    if (nhi >= nlo) n = Math.min(nhi, Math.max(nlo, n));
+    return n * porcion;
+  }
   const lo = Math.ceil((fmin * base) / 5 - 1e-9) * 5;
   const hi = Math.floor((FACTOR_MAX * base) / 5 + 1e-9) * 5;
   let g = r5(base * f);
@@ -250,7 +265,8 @@ function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0 } = {}) {
   const H = vec((l) => grupo(l) === 'h');
   const tieneP = lineas.some((l) => grupo(l) === 'p');
   const tieneH = lineas.some((l) => grupo(l) === 'h');
-  const E = Math.min(R, fijo.k + FACTOR_MAX * (P.k + H.k)); // meta de la cena
+  const Rtope = ligero ? R : Math.min(R, ctx.topeCena ?? R); // una cena normal no cubre el día entero (CENA_MAX_FRAC)
+  const E = Math.min(Rtope, fijo.k + FACTOR_MAX * (P.k + H.k)); // meta de la cena
   const Pn = ctx.especs.find((e) => e.clave === 'proteina_g')?.falta ?? 0;
   const cl = (x) => Math.min(FACTOR_MAX, Math.max(fmin, x));
   const wk = 2 / (E * E);
@@ -304,9 +320,9 @@ function ajustar(cand, ctx, { ligero = false, sHab = cand.sHab ?? 0 } = {}) {
   const redondear = (a, b) => lineas.map((l) => {
     const gr = grupo(l);
     const base = l.gramos;
-    return { ...l, base, gramos: gr === 'p' ? gramosEscalados(base, a, fmin) : gr === 'h' ? gramosEscalados(base, b, fmin) : Math.max(1, Math.round(base)) };
+    return { ...l, base, gramos: gr === 'p' ? gramosEscalados(base, a, fmin, ctx.foodsById.get(l.food_id)?.porciones?.[0]?.gramos ?? null) : gr === 'h' ? gramosEscalados(base, b, fmin) : Math.max(1, Math.round(base)) };
   });
-  const limite = R + MARGEN_KCAL(R);
+  const limite = Rtope + MARGEN_KCAL(Rtope);
   let finales = redondear(fp, fh);
   let calc = calcular(finales, ctx);
   if (calc.kcal > limite && (P.k + H.k) > 0) { // no cabe: una sola proporción hacia E*, con los mínimos como suelo
@@ -359,14 +375,17 @@ function completar(cand, ctx) {
     for (const rol of ['verdura', 'hidrato']) {
       if (roles.has(rol)) continue;
       const id = masHabitual(ctx, rol);
-      if (id) lineas.push(lineaHabitual(ctx, id, { añadida: true }));
+      if (!id) continue;
+      const l = lineaHabitual(ctx, id, { añadida: true });
+      if (rol === 'verdura') l.gramos = Math.max(l.gramos, VERDURA_COMPLETAR_G);
+      lineas.push(l);
     }
   }
   if (!lineas.some((l) => l.rol === 'postre_base')) {
     const base = masHabitual(ctx, 'postre_base') ?? (ctx.motivo(POSTRE_BASE_ID) === null ? POSTRE_BASE_ID : null);
     if (base) {
-      lineas.push({ food_id: base, gramos: ctx.gramosHabituales(base, YOGUR_G), rol: 'postre_base', añadida: true });
-      if (ctx.motivo(CHIA_ID) === null && !lineas.some((l) => l.food_id === CHIA_ID)) lineas.push({ food_id: CHIA_ID, gramos: ctx.gramosHabituales(CHIA_ID, CHIA_G), rol: ctx.rolDe(CHIA_ID), añadida: true });
+      lineas.push({ food_id: base, gramos: ctx.gramosHabituales(base, YOGUR_G), rol: 'postre_base', postre: true });
+      if (ctx.motivo(CHIA_ID) === null && !lineas.some((l) => l.food_id === CHIA_ID)) lineas.push({ food_id: CHIA_ID, gramos: ctx.gramosHabituales(CHIA_ID, CHIA_G), rol: ctx.rolDe(CHIA_ID), postre: true });
     }
   }
   return { ...cand, lineas };
@@ -467,12 +486,12 @@ function evaluarTodos(cands, ctx, extras, opts = {}) {
 
 function candidatosLigeros(ctx) {
   const out = [];
-  const verdura = ctx.habitualesDe('verdura')[0];
+  const verdura = ctx.crudasValidas()[0]; // verdura que se come cruda (semilla.crudas)
   const aceite = ctx.habitualesDe('grasa')[0];
   const base = ctx.habitualesDe('postre_base')[0] ?? (ctx.motivo(POSTRE_BASE_ID) === null ? POSTRE_BASE_ID : null);
   for (const p of ctx.habitualesDe('proteina').slice(0, 4)) {
     const lineas = [lineaHabitual(ctx, p)];
-    if (verdura) lineas.push(lineaHabitual(ctx, verdura));
+    if (verdura) lineas.push({ ...lineaHabitual(ctx, verdura), gramos: Math.max(ctx.gramosHabituales(verdura, VERDURA_COMPLETAR_G), VERDURA_COMPLETAR_G) });
     if (aceite) lineas.push({ food_id: aceite, gramos: ACEITE_LIGERO_G, rol: 'grasa' });
     out.push({ tipo: 'ligera', origen: `Cena ligera: ${minuscula(ctx.nombre(p))}${verdura ? ` con ${minuscula(ctx.nombre(verdura))}` : ''}`, origenClave: `l:${p}`, sHab: 0.5, lineas });
   }
@@ -505,7 +524,7 @@ function opcionesMuyLigeras(ctx) {
     if (puntuacion === null) return;
     out.push({ ...propuestaDe({ tipo: 'ligera', origen, origenClave: `m:${id}` }, lineas, calc, puntuacion, ctx, extra), clave: id });
   };
-  const verdura = ctx.habitualesDe('verdura', (f) => f.estado === 'crudo')[0];
+  const verdura = ctx.crudasValidas()[0];
   if (R > 0) {
     una(ctx.habitualesDe('postre_base')[0] ?? (ctx.motivo(POSTRE_BASE_ID) === null ? POSTRE_BASE_ID : null), 'Yogur griego');
     for (const f of ctx.habitualesDe('fruta').slice(0, 1)) una(f, 'Tu fruta habitual');
@@ -566,7 +585,14 @@ export function proponerCenas(entrada) {
   const sinKcal = ctx.totals.energia_kcal?.missing ?? [];
   if (sinKcal.length) avisos.push(AVISO('consumido_parcial', `Lo que llevas ${ctx.hoy && fecha !== ctx.hoy ? 'ese día' : 'hoy'} no es completo: ${sinKcal.map((id) => ctx.nombre(id)).join(', ')} no ${sinKcal.length > 1 ? 'tienen' : 'tiene'} datos; puede que te falte menos.`, { alimentos: sinKcal }));
   for (const e of ctx.especs) if (e.ul !== null && e.consumido > e.ul) avisos.push(AVISO('ul_superado', `Ya has superado el UL de ${e.label} ${ctx.hoy && fecha !== ctx.hoy ? 'ese día' : 'hoy'}.`, { nutriente: e.clave }));
-  if (ctx.usarSemilla) avisos.push(AVISO('semilla', `Aún tienes ${ctx.diasConCena} días con cena en la app: uso también tus cenas de Cronometer.`, { dias: ctx.diasConCena }));
+  if (ctx.usarSemilla) {
+    avisos.push(AVISO('semilla', ctx.diasConCena === 0
+      ? 'Aún no tienes cenas en la app: uso tus cenas de Cronometer.'
+      : `Aún tienes ${ctx.diasConCena} días con cena en la app: uso también tus cenas de Cronometer.`, { dias: ctx.diasConCena }));
+  }
+  if (comidasDelDia.length && ctx.R >= R_NORMAL && ctx.R > ctx.topeCena) {
+    avisos.push(AVISO('cena_tope', `Te faltan ${nf(ctx.R)} kcal: una cena no debería cubrirlo todo; propongo como mucho ${nf(ctx.topeCena)} kcal.`, { kcal: nf(ctx.topeCena) }));
+  }
   const cierra = (r) => {
     const i = avisos.findIndex((a) => a.codigo === 'dia_vacio');
     if (i >= 0) {

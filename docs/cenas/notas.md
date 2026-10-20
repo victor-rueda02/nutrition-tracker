@@ -4,7 +4,11 @@ Nada de esto está aplicado a `CLAUDE.md`: es una propuesta para que Victor la r
 
 ## 1. Regla 6 (qué viaja a internet), nueva redacción propuesta
 
-Decisión de Victor (20-10-2026): a Gemini viajan también los **nombres** de los nutrientes con déficit, solo para «Más ideas». Redacción propuesta (la regla actual más lo nuevo):
+Decisión de Victor (20-10-2026): a Gemini viajan también los **nombres** de los nutrientes con déficit, solo para «Más ideas». Redacción de Victor, literal:
+
+> A Gemini viajan mi frase o la lista compacta del catálogo y, en '¿Qué ceno?', solo los nombres de los nutrientes con déficit; nunca cantidades, nutrientes por alimento ni el diario
+
+Versión ampliada como nota técnica (la regla actual más lo nuevo; ≤ 8 nombres, sin cifras, alimentos sin datos fuera de la lista):
 
 > 6. **Qué viaja a internet.** A Gemini, solo mi frase (o el fragmento que estimo) y la lista compacta del catálogo (id, nombre, alias, porciones, estado, grupo, defecto y `peso_en_crudo` cuando está marcado); en «¿Qué ceno?» → «Más ideas», además, **los nombres (la etiqueta, sin cantidades, porcentajes ni cifras) de los nutrientes con déficit del día, como mucho 8**, y la lista compacta sin los alimentos sin datos. A USDA, solo términos de búsqueda y fdcId. Nunca nutrientes por alimento, densidad, cantidades consumidas, objetivos, fechas ni el diario.
 
@@ -32,6 +36,16 @@ Cómo lo cumple el código: `core/cenas.js` (`deficitsParaIA`, `nombreParaIA`: l
 - Los roles viven en la semilla (`roles`) y los usan también el Worker (una cena de la IA sin `proteina` ni `plato` se descarta) y la app. Una receta sin rol en la semilla se trata como `plato`; un alimento sin rol, como `otro` (fijo).
 - Si una cena de la IA usa una proteína que no está en `roles`, el Worker la descarta («sin proteína»). Si algún día se añade una proteína nueva al catálogo, hay que darle rol en la semilla.
 - `confirmScreen`: el borrador de «Añadir a la cena» lleva `volver: 'cenas'` para que «‹ Volver» regrese a las propuestas (sin guardar) en vez de a la pantalla `home`.
+
+## 3 bis. Ronda 2 (correcciones de la revisión de la ronda 1)
+
+- `CENA_MAX_FRAC = 0.45` y `VERDURA_COMPLETAR_G = 100` (constantes en `core/cenas.js`). `E* = min(R, 0,45 × meta, kcal con factores 1,5)`; el límite de kcal de una propuesta normal pasa a ser `min(R, 0,45 × meta) + max(50, 5 %)` (con el día vacío y meta de 2.000: 950 kcal). El modo ligero no usa el tope. Aviso `cena_tope` solo con el día no vacío y R mayor que el tope.
+- «Más habitual» (`habitualesDe`): más cenas, luego más gramos habituales (mediana), luego id; vale para todos los roles. La verdura añadida lleva `max(habituales, 100)` g. Con la semilla real y sin historial, la zanahoria.
+- `crudas` en `data/cenas-semilla.json` (`["pepino", "zanahoria"]`): única fuente de la «verdura cruda» de los modos ligero (con al menos 100 g) y cubierto. No depende de que esté en las cenas habituales; si ninguna es válida (sin datos, `incluir=no`, fuera del documento) no se ofrece.
+- «Más ideas» solo se pinta en modo normal (incluido `sin_candidatos` con R ≥ 400); `masIdeas` también lo comprueba, así que en ligero y cubierto no hay llamada posible.
+- Proteína con porción en el catálogo (hoy solo el huevo, 50 g): número entero de porciones dentro de [0,6 ; 1,5] × la base si cabe, mínimo 1.
+- Textos: sin cenas en la app, «Aún no tienes cenas en la app: uso tus cenas de Cronometer.»; el yogur y la chía añadidos llevan la etiqueta «postre habitual» (`postre: true` en la línea) y «añadida para completar» queda para la verdura y el hidrato; `source_text` = `¿Qué ceno? · <origen>`.
+- Pendiente de ESPEC (no la he tocado): §9 todavía dice `source_text = '¿Qué ceno?: <origen>'`; ahora es `¿Qué ceno? · <origen>` según la revisión. El límite de kcal de §6.3 usa el tope de cena (no R) cuando este es menor, para cumplir el criterio 18.
 
 ## 4. Pendiente / limitaciones
 

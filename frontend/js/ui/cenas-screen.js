@@ -33,7 +33,7 @@ export function cenasActions(ctx) {
   // «Añadir a la cena»: borrador nuevo con la cena del día mostrado; nada se guarda hasta «Guardar» en la confirmación.
   function anadir(p) {
     const c = state.cenas;
-    const d = draftFromLines({ lines: p.lineas, meal: 'cena', text: '¿Qué ceno?', sourceText: `¿Qué ceno?: ${p.origen}`, foodsById: ctx.byId() });
+    const d = draftFromLines({ lines: p.lineas, meal: 'cena', text: '¿Qué ceno?', sourceText: `¿Qué ceno? · ${p.origen}`, foodsById: ctx.byId() });
     state.draft = { ...d, addDate: c.fecha, volver: 'cenas' };
     state.error = ''; state.screen = 'confirm'; ctx.render();
   }
@@ -41,7 +41,7 @@ export function cenasActions(ctx) {
   // «Más ideas»: UNA llamada a la IA por pulsación; el botón queda desactivado hasta volver a abrir la pantalla.
   function masIdeas() {
     const c = state.cenas;
-    if (!c || c.ideasUsadas || c.busy) return undefined;
+    if (!c || c.ideasUsadas || c.busy || c.resultado?.modo !== 'normal') return undefined; // solo se usa en modo normal (regla 10)
     c.ideasUsadas = true; c.busy = true; c.error = ''; c.aviso = ''; ctx.render();
     return ctx.track((async () => {
       try {
@@ -95,7 +95,7 @@ export function cenasScreen(ui) {
       const food = ui.byId().get(l.food_id);
       const kcal = food ? nutrientsForGrams(food, l.gramos, ['energia_kcal']).energia_kcal : null;
       return h('li', { class: 'line' },
-        h('span', { class: 'line-name' }, l.nombre, l.añadida ? h('span', { class: 'tag' }, 'añadida para completar') : null),
+        h('span', { class: 'line-name' }, l.nombre, l.añadida ? h('span', { class: 'tag' }, 'añadida para completar') : l.postre ? h('span', { class: 'tag' }, 'postre habitual') : null),
         h('span', { class: 'sep' }, ' · '),
         h('span', { class: 'line-grams' }, `${nf(l.gramos, l.gramos % 1 ? 1 : 0)} g`),
         h('span', { class: 'sep' }, ' · '),
@@ -122,10 +122,10 @@ export function cenasScreen(ui) {
     descartados.length ? h('ul', { class: 'muted small cenas-descartados' }, descartados.map((t) => h('li', {}, t))) : null,
     sinCandidatos ? h('p', { class: 'warn', 'data-aviso': 'sin_candidatos', role: 'status' }, sinCandidatos.texto) : null,
     r.propuestas.map((p, i) => tarjeta(p, i)),
-    h('section', { class: 'cenas-ideas' },
-      h('div', { class: 'row' }, h('button', { type: 'button', class: 'secondary wide ideas-btn', disabled: c.ideasUsadas || c.busy || r.estado === 'sin_objetivos', onclick: () => ui.actions.masIdeas() }, c.busy ? 'Pensando…' : 'Más ideas')),
+    r.modo === 'normal' ? h('section', { class: 'cenas-ideas' }, // solo en modo normal (o sin_candidatos con R ≥ 400): en ligero y cubierto el motor no usaría la respuesta
+      h('div', { class: 'row' }, h('button', { type: 'button', class: 'secondary wide ideas-btn', disabled: c.ideasUsadas || c.busy, onclick: () => ui.actions.masIdeas() }, c.busy ? 'Pensando…' : 'Más ideas')),
       h('p', { class: 'muted small' }, c.ideasUsadas ? 'Una llamada a la IA por visita a esta pantalla.' : 'Pide a la IA hasta 3 ideas más (una llamada). Los gramos y nutrientes los calcula la app con tu documento.'),
       c.error ? h('p', { class: 'error', role: 'alert' }, c.error) : null,
       c.aviso ? h('p', { class: 'muted small', role: 'status' }, c.aviso) : null,
-      r.ideas.map((p, i) => tarjeta(p, i, { ia: true }))));
+      r.ideas.map((p, i) => tarjeta(p, i, { ia: true }))) : null);
 }

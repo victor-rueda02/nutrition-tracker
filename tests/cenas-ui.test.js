@@ -140,7 +140,7 @@ test('«Añadir a la cena» abre la confirmación con meal=cena, la fecha del d�
   assert.equal(nuevas.length, 1);
   assert.deepEqual([nuevas[0].date, nuevas[0].meal, nuevas[0].text], [AYER, 'cena', '¿Qué ceno?']);
   assert.deepEqual(nuevas[0].lines.map((l) => [l.food_id, l.grams]), p.lineas.map((l, i) => [l.food_id, i === 0 ? 111 : l.gramos]));
-  assert.ok(nuevas[0].lines.every((l) => l.source_text.startsWith('¿Qué ceno?: ')));
+  assert.ok(nuevas[0].lines.every((l) => l.source_text.startsWith('¿Qué ceno? · ') && !/«.*«/.test(l.source_text)));
   assert.equal(t.$('.daylabel').textContent, 'Ayer');
   assert.ok(t.$('section.meal[data-meal="cena"] .registro'));
 });
@@ -229,4 +229,30 @@ test('sin cenas que usar: la pantalla funciona sin IA; si no hay nada que propon
   assert.equal(t.$$('.cena-prop').length, 0);
   assert.match(t.$('[data-aviso="sin_candidatos"]').textContent, /No tengo cenas habituales/);
   assert.equal(t.$('.ideas-btn').disabled, false);
+});
+
+test('(20) «Más ideas» no aparece en modo ligero ni cubierto: sin botón y sin ninguna llamada posible', { skip }, async () => {
+  const llamadas = [];
+  const crear = () => ({ ideasCena: async (a) => { llamadas.push(a); return IDEAS; } });
+  // la meta del día mostrado, para dejar R donde se quiere con aceite (kcal de aceite_oliva del documento)
+  const t0 = await setup({ createAiClient: crear });
+  await t0.ayer();
+  await t0.act(() => t0.$('.que-ceno').click());
+  const { meta, consumidas } = t0.app.state.cenas.resultado.resumen.kcal;
+  assert.ok(t0.$('.ideas-btn')); // modo normal: sí
+  const kcalAceite = realFoods.find((f) => f.id === 'aceite_oliva').nutrients.energia_kcal;
+  for (const [R, modo] of [[250, 'ligero'], [100, 'cubierto'], [-80, 'cubierto']]) {
+    const gramos = ((meta - consumidas - R) / kcalAceite) * 100;
+    const t = await setup({ createAiClient: crear, meals: [...DIA_AYER, MEAL('extra', AYER, 'otro', [['aceite_oliva', gramos]])] });
+    await t.ayer();
+    await t.act(() => t.$('.que-ceno').click());
+    const r = t.app.state.cenas.resultado;
+    assert.equal(r.modo, modo, `R=${R}`);
+    assert.ok(Math.abs(r.resumen.kcal.restantes - R) < 1, `R=${R}: ${r.resumen.kcal.restantes}`);
+    assert.equal(t.$('.ideas-btn'), null, `R=${R}`);
+    assert.equal(t.$('.cenas-ideas'), null, `R=${R}`);
+    assert.ok(!t.$$('button').some((b) => b.textContent.includes('Más ideas')));
+    assert.ok(t.$('main.cenas'));
+  }
+  assert.equal(llamadas.length, 0);
 });
