@@ -28,9 +28,21 @@ están en `data/nutrients.json` (61 columnas: energía, macros, grasas, vitamina
 Para añadir un nutriente, añade una entrada a ese fichero.
 
 ## Columnas de trabajo y desconocidas
-`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron) y `pendiente_revisar` se conservan al
+`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron), `pendiente_revisar`, `rol_cena` y `nombre_corto` se conservan al
 importar y exportar y no intervienen en ningún cálculo. Cualquier otra cabecera desconocida también se conserva,
 con un aviso (si parece un nutriente con la unidad cambiada, el aviso sugiere la correcta).
+
+### Columnas de «¿Qué ceno?»: `rol_cena` y `nombre_corto` (opcionales)
+Viven aquí, en tu documento, para que al añadir un alimento (a mano o con «Estimar con IA») todo quede en un solo sitio.
+- **`rol_cena`**: el papel del alimento en una cena. Valores: `proteina`, `hidrato`, `verdura`, `plato` (receta o plato
+  completo), `grasa`, `salsa`, `postre_base` (yogur), `postre_extra` (chía, nueces, chocolate), `fruta` y `otro`.
+  Se ignoran mayúsculas y espacios; un valor desconocido cuenta como vacío. **Vacío**: una receta se trata como `plato` y
+  cualquier otro alimento como `otro` (nunca se propone como proteína, hidrato ni verdura). Un alimento nuevo solo entra
+  en las propuestas de «¿Qué ceno?» con su rol: los añadidos con «Estimar con IA» llegan sin rol (ponlo al revisarlos).
+  Si ningún alimento del documento tiene rol, «¿Qué ceno?» avisa de que falta la columna.
+- **`nombre_corto`**: nombre breve para los **títulos** de las propuestas («Cena ligera: salmón con pepino»). Vacío =
+  el `nombre`. Las líneas de la propuesta y todo lo demás siguen con el nombre completo.
+- La semilla `data/cenas-semilla.json` ya no lleva roles: solo las cenas de Cronometer y las verduras crudas (`crudas`).
 
 ### Filas añadidas desde la app con «Estimar con IA»
 Cuando confirmas una estimación con ingredientes que no tenías, cada alimento de USDA elegido se añade al documento

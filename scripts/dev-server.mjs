@@ -1,7 +1,7 @@
 // Servidor local para probar la app en tu PC con datos reales, sin desplegar nada:
 //   node --env-file=.env scripts/dev-server.mjs [--port 8080] [--lan]
 // - Sirve la app como GitHub Pages (la raíz del repo): http://localhost:8080/ -> /frontend/.
-// - Atiende /parse, /estimate, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
+// - Atiende /parse, /estimate, /cenas, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
 //   y tus GEMINI_API_KEY y USDA_API_KEY de .env. Cada dictado o «Estimar» es una llamada real a Gemini y cada búsqueda
 //   nueva, una a USDA (se cuentan en la consola; USDA se guarda en usda/cache/, como el script).
 // - Solo sirve frontend/ y data/: nunca .env, ficheros ocultos ni nada más del proyecto.
@@ -12,13 +12,21 @@ import { readFile, stat } from 'node:fs/promises';
 import { networkInterfaces } from 'node:os';
 import { dirname, extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { handleRequest } from '../worker/src/index.js';
+import { handleRequest, callModelResiliente } from '../worker/src/index.js';
 import { callGemini } from '../worker/src/providers/gemini.js';
-import { geminiModel } from './gemini-model.mjs';
+import { geminiModel, geminiModelFallback } from './gemini-model.mjs';
 import { createUsdaClient } from './usda-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const PUBLICO = ['frontend', 'data'];
+
+// El modelo del servidor local: el MISMO reintento (un 5xx de Google, otra vez a los 2 s) y respaldo (GEMINI_MODEL_FALLBACK)
+// que el Worker; cada llamada real a Google se cuenta y se anota en la consola.
+export function crearCallModel({ call = callGemini, sleep, log = console.log } = {}) {
+  let llamadas = 0;
+  const contada = (a) => { llamadas++; log(`[gemini] llamada n.º ${llamadas} (${a.model})`); return call(a); };
+  return (e, a) => callModelResiliente(e, a, { call: contada, ...(sleep ? { sleep } : {}) });
+}
 const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.webmanifest': 'application/manifest+json', '.csv': 'text/csv; charset=utf-8',
@@ -41,7 +49,7 @@ const readBody = (req) => new Promise((ok, ko) => {
   req.on('data', (c) => chunks.push(c)).on('end', () => ok(Buffer.concat(chunks))).on('error', ko);
 });
 
-export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/usda/search', '/usda/foods'];
+export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/cenas', '/usda/search', '/usda/foods'];
 
 export function createDevServer({ env, callModel, usdaClient, base = root }) {
   return createServer(async (req, res) => {
@@ -81,17 +89,17 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const model = geminiModel(root);
   if (!process.env.GEMINI_API_KEY) console.warn('Aviso: falta GEMINI_API_KEY (arranca con node --env-file=.env ...). La app funcionará, pero "Procesar" dará error de configuración.');
   const token = process.env.APP_TOKEN || 'local';
-  let llamadas = 0;
-  const callModel = (e, a) => { llamadas++; console.log(`[gemini] llamada n.º ${llamadas} (${e.GEMINI_MODEL})`); return callGemini({ apiKey: e.GEMINI_API_KEY, model: e.GEMINI_MODEL, ...a }); };
+  const fallback = geminiModelFallback(root);
+  const callModel = crearCallModel();
   if (!process.env.USDA_API_KEY) console.warn('Aviso: falta USDA_API_KEY en .env: «Estimar con IA» no podrá buscar en USDA.');
   else if (/[\s"']/.test(process.env.USDA_API_KEY.trim())) console.warn('Aviso: USDA_API_KEY contiene espacios o comillas: revisa esa línea de .env (USDA_API_KEY=tuclave, sola en su línea).');
   // USDA con la caché en disco del script (usda/cache/): una búsqueda repetida no gasta llamadas.
   let llamadasUsda = 0;
   const contar = (url, init) => { llamadasUsda++; console.log(`[usda] llamada n.º ${llamadasUsda}`); return fetch(url, init); };
   const usdaClient = (e) => createUsdaClient({ apiKey: e.USDA_API_KEY, fetchImpl: contar, cacheDir: resolve(root, 'usda', 'cache') });
-  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, APP_TOKEN: token, USDA_API_KEY: process.env.USDA_API_KEY }, callModel, usdaClient });
+  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, GEMINI_MODEL_FALLBACK: fallback, APP_TOKEN: token, USDA_API_KEY: process.env.USDA_API_KEY }, callModel, usdaClient });
   server.listen(port, lan ? '0.0.0.0' : '127.0.0.1', () => {
-    console.log(`App: http://localhost:${port}/  (modelo: ${model})`);
+    console.log(`App: http://localhost:${port}/  (modelo: ${model}${fallback ? `, respaldo: ${fallback}` : ''})`);
     if (lan) {
       const ips = Object.values(networkInterfaces()).flat().filter((i) => i && i.family === 'IPv4' && !i.internal).map((i) => i.address);
       for (const ip of ips) console.log(`En el iPhone (misma Wi-Fi): http://${ip}:${port}/`);

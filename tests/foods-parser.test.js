@@ -169,3 +169,15 @@ test('formatIssue', () => {
   assert.equal(formatIssue({ row: 5, id: 'a', field: 'proteina_g', message: 'mal' }), 'fila 5 [a] · proteina_g: mal');
   assert.equal(formatIssue({ message: 'vacío' }), 'documento: vacío');
 });
+
+test('rol_cena y nombre_corto (¿Qué ceno?): columnas de trabajo opcionales; se conservan al importar y exportar, sin avisos', () => {
+  const doc = csv('id,nombre,estado,rol_cena,nombre_corto,energia_kcal', 'salmon,Salmón atlántico crudo,crudo,proteina,Salmón,208', 'sal,Sal,,,,');
+  const r = parseFoodsCSV(doc, { catalog });
+  assert.deepEqual(r.warnings ?? [], []);
+  assert.deepEqual(r.foods.map((f) => [f.id, f.extra.rol_cena, f.extra.nombre_corto]), [['salmon', 'proteina', 'Salmón'], ['sal', undefined, undefined]]);
+  assert.ok(r.extraHeaders.includes('rol_cena') && r.extraHeaders.includes('nombre_corto'));
+  const vuelta = parseFoodsCSV(foodsToCSV(r.foods, { catalog, extraHeaders: r.extraHeaders }), { catalog });
+  assert.deepEqual(vuelta.foods.map((f) => [f.extra.rol_cena, f.extra.nombre_corto]), r.foods.map((f) => [f.extra.rol_cena, f.extra.nombre_corto]));
+  // sin las columnas también vale (son opcionales)
+  assert.equal(parseFoodsCSV(csv('id,nombre,estado', 'a,A,crudo'), { catalog }).foods.length, 1);
+});

@@ -3,7 +3,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
-import { createDevServer, staticPath } from '../scripts/dev-server.mjs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createDevServer, staticPath, crearCallModel } from '../scripts/dev-server.mjs';
+import { ProviderError } from '../worker/src/providers/gemini.js';
+import { geminiModelFallback } from '../scripts/gemini-model.mjs';
 import { realList } from './helpers.js';
 
 const modelo = JSON.stringify({ items: [{ food_id: 'kiwi_verde', cantidad: 69, unidad: 'g', source_text: 'un kiwi', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] });
@@ -62,4 +66,45 @@ test('/parse y /health con el código del Worker: token, mismo origen y una llam
     assert.equal((await fetch(`${base}/parse`, { method: 'POST', headers: { 'X-App-Token': 'tok', Origin: 'https://otra-web.example' }, body })).status, 403);
     assert.equal(calls(), 1);
   });
+});
+
+// ---------- el servidor local reintenta y usa el respaldo como el Worker ----------
+test('servidor local: 5xx -> reintento tras 2 s -> modelo de respaldo, con cada llamada contada en la consola', async () => {
+  const vistos = [];
+  const esperas = [];
+  const logs = [];
+  const fallos = [new ProviderError(503, 'high demand'), new ProviderError(503, 'high demand')];
+  const call = async ({ model, apiKey }) => { vistos.push([model, apiKey]); if (fallos.length) throw fallos.shift(); return modelo; };
+  const callModel = crearCallModel({ call, sleep: async (ms) => { esperas.push(ms); }, log: (m) => logs.push(m) });
+  const env = { GEMINI_API_KEY: 'CLAVE-FALSA', GEMINI_MODEL: 'principal', GEMINI_MODEL_FALLBACK: 'respaldo', APP_TOKEN: 'tok' };
+  const r = await callModel(env, { system: 's', user: 'u', schema: {} });
+  assert.deepEqual(r, { text: modelo, model: 'respaldo' });
+  assert.deepEqual(vistos.map((v) => v[0]), ['principal', 'principal', 'respaldo']);
+  assert.deepEqual(esperas, [2000]);
+  assert.deepEqual(logs, ['[gemini] llamada n.º 1 (principal)', '[gemini] llamada n.º 2 (principal)', '[gemini] llamada n.º 3 (respaldo)']);
+});
+
+test('servidor local de punta a punta: Google devuelve 503 y la app recibe la respuesta del respaldo (modelo en la respuesta)', async () => {
+  const modelos = [];
+  const call = async ({ model }) => { modelos.push(model); if (model === 'principal') throw new ProviderError(503, 'x'); return modelo; };
+  const server = createDevServer({ env: { GEMINI_API_KEY: 'CLAVE-FALSA', GEMINI_MODEL: 'principal', GEMINI_MODEL_FALLBACK: 'respaldo', APP_TOKEN: 'tok' }, callModel: crearCallModel({ call, sleep: async () => {}, log: () => {} }) });
+  await new Promise((ok) => server.listen(0, '127.0.0.1', ok));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const res = await fetch(`${base}/parse`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-app-token': 'tok' }, body: JSON.stringify({ texto: 'un kiwi', alimentos: realList }) });
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).model, 'respaldo');
+    assert.deepEqual(modelos, ['principal', 'principal', 'respaldo']);
+  } finally { await new Promise((ok) => server.close(ok)); }
+});
+
+test('el modelo de respaldo sale de wrangler.toml (o de GEMINI_MODEL_FALLBACK) en un solo sitio', () => {
+  const guardado = process.env.GEMINI_MODEL_FALLBACK;
+  delete process.env.GEMINI_MODEL_FALLBACK;
+  try {
+    const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+    assert.match(geminiModelFallback(root), /^gemini-/);
+    process.env.GEMINI_MODEL_FALLBACK = 'otro';
+    assert.equal(geminiModelFallback(root), 'otro');
+  } finally { if (guardado === undefined) delete process.env.GEMINI_MODEL_FALLBACK; else process.env.GEMINI_MODEL_FALLBACK = guardado; }
 });

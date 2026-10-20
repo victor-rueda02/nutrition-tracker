@@ -14,6 +14,8 @@ export const WORK_COLUMNS = [
   'termino_busqueda_usda', 'tipo', 'incluir', 'notas', 'cantidad_habitual_g', 'dias_de_uso_en_8',
   'fdc_id', 'fuente_usda', // los rellena scripts/usda.mjs (de dónde sale cada dato)
   'pendiente_revisar', // si = añadido desde la app («Estimar con IA»): ponle alias o fúndelo con tus variantes
+  'rol_cena', // papel en una cena para «¿Qué ceno?» (proteina, hidrato, verdura, plato, grasa, salsa, postre_base, postre_extra, fruta u otro)
+  'nombre_corto', // nombre breve para los títulos de las propuestas de «¿Qué ceno?»
 ];
 
 export const ESTADOS = ['crudo', 'cocinado', 'procesado', 'tostado'];

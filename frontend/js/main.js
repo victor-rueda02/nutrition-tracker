@@ -42,8 +42,10 @@ async function boot() {
     try { targets = JSON.parse(await fetchText('targets.json')); } catch { /* se sigue sin objetivos */ }
     let recetasBase = []; // data/recetas.json del repositorio (las del dispositivo se guardan aparte)
     try { recetasBase = JSON.parse(await fetchText('recetas.json')).recetas ?? []; } catch { /* sin recetas publicadas */ }
+    let semilla = null; // data/cenas-semilla.json: cenas de Cronometer y roles de ¿Qué ceno? (sin ella, solo tu historial)
+    try { semilla = JSON.parse(await fetchText('cenas-semilla.json')); } catch { /* sin semilla */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase,
+      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase, semilla,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });

@@ -80,7 +80,7 @@ test('el "+" de una comida abre su hoja y «Dictar comida» la lleva ya elegida 
 test('tres puntos: Informe diario con todos los nutrientes y comidas; "‹" vuelve al Diario', { skip }, async () => {
   const t = await setup({ meals: [MEAL('h', '2026-10-16', 'desayuno', [['avena_copos', 80], ['huevo', 100]])] });
   await t.act(() => t.$('button[aria-label="Más opciones del día"]').click());
-  assert.deepEqual(t.$$('.popmenu button').map((b) => b.textContent), ['Ver informe diario', 'Copiar día anterior']);
+  assert.deepEqual(t.$$('.popmenu button').map((b) => b.textContent), ['Ver informe diario', 'Copiar día anterior', '¿Qué ceno?']);
   await t.act(() => t.btn('Ver informe diario').click());
   assert.match(t.$('header').textContent, /Informe diario/);
   assert.ok(t.$('li.nut[data-clave="vitamina_b12_ug"]'));
