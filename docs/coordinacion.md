@@ -14,7 +14,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | G · «null» en la vista previa de receta; robustez de chrome-cdp y NT_SIN_CHROME | desarrollador | dev/g-null-receta-cdp | 1 | integrado | – |
 | 2026-10-21 | H · Aviso «alias más específico» (salteado ⊂ salteado asadas, pan ⊂ pan de molde…) | desarrollador | dev/h-alias-especifico | 2 | integrado y publicado | – (aprobado por Victor) |
 | 2026-10-21 | I · Campo «etiqueta» en las recetas (valores de etiqueta que recalcular no pierde) | desarrollador | dev/i-etiqueta-recetas | 1 | integrado | – |
-| 2026-10-21 | J · Icono de la app (anillos + hoja morada) | coordinador | main | – | integrado (sin publicar) | Al reinstalar en el iPhone: al reinstalar, exportar diario y documento antes |
+| 2026-10-21 | J · Icono de la app (anillos + hoja morada) | coordinador | main | – | integrado y publicado | Al reinstalar en el iPhone: exportar diario y documento antes |
 | 2026-10-21 | K1 · Info de nutrientes: general, hidratos, grasas y aminoácidos (data/nutrientes-info.json) | redactor-salud (emulado) | salud/k1-macros-aminoacidos | 2 | integrado | – |
 | 2026-10-21 | K2 · Info de nutrientes: vitaminas y minerales | redactor-salud (emulado) | salud/k2-vitaminas-minerales | 2 | integrado (fusionado con K1 por clave; "completo": true) | – |
 | 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 2 | integrado | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
@@ -30,3 +30,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-21, hallazgo de K2 para Victor: UL de vitamina A (3000, solo retinol) y de folato (1000, solo ácido fólico) se comparan con el total (RAE / DFE) en el Diario y en «¿Qué ceno?» (descarta cenas): falsos avisos. Victor eligió b (encargo M). Victor confirma cantidad_habitual_g = 460 g del muslo.
 - 2026-10-21, L · revisor-estetica ronda 1: CAMBIOS (BLOQUEANTE: UL superado solo por color en detalle de nutriente; MENORES: tarjetas plegables, filas sin objetivo alineadas y sangría, títulos de grupo, cabecera, etiquetas de marcas 13 px, leyenda y Mín.=Ref., títulos de sección). Se envía junto con la revisión de código.
 - 2026-10-21, L: el revisor de código aprobó (recálculo del chorizo a 123 g y 37,5 g correcto). Nota para Victor: cantidad_habitual_g del muslo de pollo es 460 g (sale primero en «En tu catálogo»): confirmar.
+- 2026-10-22: git push de K1, K2, L y M (detalle de alimento y nutriente, información de nutrientes, UL informativo). Worker sin cambios (no hace falta deploy).
