@@ -5,6 +5,7 @@
 // mismas propuestas y mismo orden (los empates se resuelven por id).
 import { sumLines } from './nutrients.js';
 import { dayTotals, shiftDate } from './diary.js';
+import { ulVigilado } from './targets.js';
 import { foodSinDatos, foodCompleteness, isIncomplete } from './completeness.js';
 import { isExcluded } from './excluded.js';
 import { ROLES_CENA } from './cenas-validate.js';
@@ -77,7 +78,8 @@ function especsDe(objetivos, totals) {
     const keys = Array.isArray(t.suma) ? t.suma : [t.clave];
     if (keys.some((k) => !totals[k])) continue;
     const total = combine(keys.map((k) => totals[k]));
-    const { min = null, objetivo = null, max = null, ul = null } = t;
+    const { min = null, objetivo = null, max = null } = t;
+    const ul = ulVigilado(t); // un UL informativo (vitamina A, folato) ni descarta cenas ni avisa
     const meta = objetivo ?? (min !== null && max !== null ? (min + max) / 2 : min); // solo máximo: sin meta, solo tope
     const tope = max ?? (objetivo !== null ? objetivo * TOPE_BLANDO_SOBRE_OBJETIVO : null);
     if (meta === null && tope === null && ul === null) continue;

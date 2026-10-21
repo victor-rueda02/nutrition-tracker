@@ -8,7 +8,7 @@ import { isExcluded } from './excluded.js';
 import { unitOf } from './catalog.js';
 import { parseNumber } from './numbers.js';
 import { MAX_GRAMS } from './ai-contract.js';
-import { referenceValue } from './targets.js';
+import { referenceValue, ulVigilado } from './targets.js';
 
 const nf = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 const esNum = (x) => typeof x === 'number' && Number.isFinite(x);
@@ -174,7 +174,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
   const bruto = [];
   const marca = (id, etiqueta, valor) => { if (esNum(valor)) bruto.push({ id, etiqueta, valor }); };
   marca('min', 'Mín.', fila.min); marca('objetivo', 'Objetivo', fila.objetivo); marca('max', 'Máx.', fila.max);
-  marca('referencia', 'Ref.', referencia?.valor); marca('ul', 'UL', fila.ul);
+  marca('referencia', 'Ref.', referencia?.valor); marca('ul', 'UL', ulVigilado(fila)); // el UL informativo no se dibuja: estiraría la escala (3000 µg frente a 750) sin decir nada útil; va en la tabla, con su nota
   const marcas = [];
   for (const m of bruto) {
     const igual = marcas.find((x) => Math.abs(x.valor - m.valor) <= 1e-9 * Math.max(1, Math.abs(m.valor)));
@@ -197,7 +197,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
     filas.push({ id, etiqueta: funde ? `${etiqueta} (referencia)` : etiqueta, valor });
   }
   if (esNum(refValor) && !refFundida) filas.push({ id: 'referencia', etiqueta: 'Referencia', valor: refValor, nota: TIPO_TEXTO[referencia.tipo] ?? '' });
-  if (esNum(fila.ul)) filas.push({ id: 'ul', etiqueta: 'UL', valor: fila.ul });
+  if (esNum(fila.ul)) filas.push(fila.ulInformativo ? { id: 'ul', etiqueta: 'UL (informativo)', valor: fila.ul } : { id: 'ul', etiqueta: 'UL', valor: fila.ul });
   // Estado del total de la barra (lo de otros + este alimento) frente al objetivo del día, con la misma lógica del informe.
   const ev = escala ? evaluate({ value: total > 0 || aporte !== null || hayHoy ? total : null, missing: [] }, fila) : null;
   return {

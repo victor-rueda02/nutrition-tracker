@@ -267,7 +267,7 @@ test('UL superado en el detalle de nutriente: aviso con texto (no solo color) y 
   await t.act(() => t.ver('Calcio').click());
   const aviso = t.$('.ul-aviso');
   assert.ok(aviso);
-  assert.equal(aviso.textContent, '⚠ Supera el máximo tolerable (UL: 2500 mg)');
+  assert.equal(aviso.textContent, '⚠ Supera el máximo tolerable (UL: 2500\u00a0mg)'); // espacio duro: «mg)» no queda suelto en una línea
   assert.equal(aviso.getAttribute('role'), 'alert');
   assert.ok(t.$('.rango-aporte.sobre'));
   assert.ok(t.$('.marca-ul .marca-et'));
@@ -362,4 +362,50 @@ test('«Volver» restaura la posición de scroll en la que estaba el Diario o Mi
   await t.act(() => t.btn('‹ Volver').click());
   assert.equal(y, 640);
   assert.ok(t.$('main.catalogo-lista'));
+});
+
+// ---------- UL informativo (vitamina A y folato), EPA + DHA ----------
+test('UL informativo en el detalle de nutriente: vitamina A a 500 g de zanahoria (4175 µg) no avisa, sin marca UL, con su nota', { skip }, async () => {
+  const t = await setup();
+  await t.alCatalogo();
+  await t.act(() => t.ver('Zanahoria cruda').click());
+  t.type(t.$('input.detalle-cantidad'), '500');
+  await t.act(() => t.ver('Vitamina A (RAE)').click());
+  assert.match(t.$('.rango-tabla tr[data-fila="alimento"] td').textContent, /4175 µg/);
+  assert.equal(t.$('.ul-aviso'), null);
+  assert.equal(t.$('.marca-ul'), null); // la marca del UL informativo no se dibuja
+  assert.ok(!t.$('.rango-aporte').classList.contains('sobre'));
+  assert.equal(t.$('.rango-tabla tr[data-fila="ul"] th').textContent, 'UL (informativo)');
+  assert.match(t.$('.rango-tabla tr[data-fila="ul"] td').textContent, /^3000 µg$/);
+  assert.match(t.$('.nota-ul-info').textContent, /solo para retinol preformado.*no se aplica al total con carotenos/);
+});
+
+test('EPA + DHA: su detalle muestra la información de EPA y de DHA (y las fuentes una sola vez), no «aún no disponible»', { skip }, async () => {
+  const parte = (n) => ({ resumen: `Qué es ${n}.`, exceso: `Si sobra ${n}.`, referencias: [{ organismo: 'EFSA', titulo: 'Omega-3', url: 'https://www.efsa.europa.eu/en/press/news/120727', consultado: '2026-10-21' }] });
+  const t = await setup({ info: { nutrientes: { epa_g: parte('EPA'), dha_g: parte('DHA') } } });
+  await t.alCatalogo();
+  await t.act(() => t.ver('Salmón del Atlántico de piscifactoría crudo').click());
+  await t.act(() => t.ver('EPA + DHA').click());
+  assert.equal(t.$('.info-no-disponible'), null);
+  assert.deepEqual(t.$$('.info-seccion h2').map((x) => x.textContent), ['EPA: Qué es', 'EPA: Si sobra', 'DHA: Qué es', 'DHA: Si sobra', 'Fuentes consultadas']);
+  assert.equal(t.$$('.fuentes a').length, 1);
+  // sin información de ninguna de las partes sigue diciendo que no está
+  const t2 = await setup();
+  await t2.alCatalogo();
+  await t2.act(() => t2.ver('Salmón del Atlántico de piscifactoría crudo').click());
+  await t2.act(() => t2.ver('EPA + DHA').click());
+  assert.match(t2.$('.info-no-disponible').textContent, /aún no disponible/);
+});
+
+test('cabecera del detalle de alimento: con o sin subtítulo, el título va en el mismo bloque centrado (con elipsis)', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m0', '2026-10-16', 'desayuno', [['avena_copos', 80]])] });
+  await t.act(() => t.ver('Avena (copos/molida)').click()); // desde el Diario: con subtítulo
+  assert.ok(t.$('header.top > .title-block > strong'));
+  assert.ok(t.$('header.top .title-block small'));
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.alCatalogo();
+  await t.act(() => t.ver('Salmón del Atlántico de piscifactoría crudo').click()); // desde el catálogo: sin subtítulo
+  assert.equal(t.$('header.top > strong'), null);
+  assert.equal(t.$('header.top > .title-block > strong').textContent, 'Salmón del Atlántico de piscifactoría crudo');
+  assert.equal(t.$('header.top .title-block small'), null);
 });

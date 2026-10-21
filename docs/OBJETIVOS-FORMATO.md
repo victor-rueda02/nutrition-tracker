@@ -232,6 +232,15 @@ Un número suelto (`"fibra_g": 30`) **no** vale: escribe `{ "min": 30 }` o `{ "o
 El UL de la EFSA (máximo tolerable) no forma parte del plan: siempre sale de `data/targets.json` y el Diario avisa
 aparte si se supera, aunque cumplas tus objetivos.
 
+**UL informativo.** En `targets.json`, un objetivo puede llevar `"ul_informativo": true` junto a `"ul"` y una `"nota_ul"`
+corta. Es para los UL que la EFSA define para una forma concreta y no para el total que lleva tu documento: el de la
+vitamina A (3000 µg) es solo de retinol preformado (la columna es RAE, con carotenos) y el del folato (1000 µg) es solo
+de ácido fólico añadido (la columna es DFE, con el folato natural). Un UL informativo **no cuenta como superado**: ni la
+fila roja ni la tira «Máximo tolerable (UL) superado» del Diario, ni el aviso del detalle de nutriente, ni descarta ni
+avisa en «¿Qué ceno?». Solo se enseña: en el informe diario («UL 3000 µg (solo informativo)» y su nota) y en el detalle
+del nutriente (fila «UL (informativo)» y la nota; sin marca en la barra). La lógica está en un solo sitio, `ulVigilado`
+de `frontend/js/core/targets.js`; los demás UL no cambian.
+
 ### Unidades (`unidad`)
 
 `unidad` es opcional y vale para todos los límites de esa entrada.

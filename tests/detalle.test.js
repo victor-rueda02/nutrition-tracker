@@ -126,9 +126,9 @@ test('referencia de targets.json con el perfil, y rango del nutriente (marcas, b
   assert.deepEqual(referenciaDe(targets, 'vitamina_a_ug', 'hombre'), { valor: 750, tipo: 'min' });
   assert.equal(referenciaDe(targets, 'almidon_g', 'hombre'), null);
   const o = targetsForDate('2026-10-16', { plan: null, targets, catalog });
-  const fila = filasAlimento({ food: food('v', { vitamina_a_ug: 1500 }), grams: 100, objetivos: o.list, catalog }).filas.get('vitamina_a_ug');
-  const r = rangoNutriente({ fila, hoy: 2100, aporteOriginal: 500, referencia: referenciaDe(targets, 'vitamina_a_ug', o.perfil) });
-  assert.deepEqual(r.filas.map((x) => x.id), ['alimento', 'hoy', 'min', 'ul']); // la referencia (750) se funde con el mínimo (750)
+  const fila = filasAlimento({ food: food('v', { calcio_mg: 1500 }), grams: 100, objetivos: o.list, catalog }).filas.get('calcio_mg');
+  const r = rangoNutriente({ fila, hoy: 2100, aporteOriginal: 500, referencia: referenciaDe(targets, 'calcio_mg', o.perfil) });
+  assert.deepEqual(r.filas.map((x) => x.id), ['alimento', 'hoy', 'min', 'ul']); // la referencia (950) se funde con el mínimo (950)
   assert.equal(r.filas.find((x) => x.id === 'min').etiqueta, 'Mínimo (referencia)');
   assert.equal(r.filas.find((x) => x.id === 'hoy').etiqueta, 'Llevas hoy (con esta cantidad)');
   assert.equal(r.filas.find((x) => x.id === 'hoy').valor, 3100); // otros 1600 + este alimento 1500
@@ -138,7 +138,7 @@ test('referencia de targets.json con el perfil, y rango del nutriente (marcas, b
   assert.equal(r.barra.otros, 1600 / r.escala); // 2100 de hoy − 500 que ya aportaba la línea
   assert.ok(Math.abs(r.barra.aporte - 1500 / r.escala) < 1e-9);
   assert.ok(r.marcas.find((m) => m.id === 'ul').pos > r.marcas.find((m) => m.id === 'min').pos);
-  assert.equal(r.barra.superaUl, true); // 1600 + 1500 = 3100 > UL 3000
+  assert.equal(r.barra.superaUl, true); // 1600 + 1500 = 3100 > UL 2500
 });
 
 test('rango sin dato: «Este alimento» sin valor y sin segmento; sin ningún valor que dibujar no hay barra', () => {
@@ -211,4 +211,23 @@ test('subpartidas marcadas para la sangría', () => {
   const sub = (k) => grupos.flatMap((g) => g.filas).find((r) => r.clave === k).sub;
   for (const k of ['grasas_saturadas_g', 'grasas_monoinsaturadas_g', 'ala_g', 'epa_g', 'dha_g', 'azucares_g', 'fibra_g', 'almidon_g']) assert.equal(sub(k), true, k);
   for (const k of ['grasa_total_g', 'omega3_g', 'hidratos_g', 'proteina_g', 'calcio_mg']) assert.equal(sub(k), false, k);
+});
+
+test('UL informativo (vitamina A, folato): sin aviso en la barra, sin marca UL, y en la tabla con su etiqueta', () => {
+  const o = targetsForDate('2026-10-16', { plan: null, targets, catalog });
+  for (const [clave, ul, cantidad] of [['vitamina_a_ug', 3000, 4000], ['vitamina_b9_ug', 1000, 1080]]) {
+    const fila = filasAlimento({ food: food('v', { [clave]: cantidad }), grams: 100, objetivos: o.list, catalog }).filas.get(clave);
+    assert.equal(fila.ulInformativo, true, clave);
+    assert.equal(fila.superaUl, false, clave);
+    const r = rangoNutriente({ fila, hoy: cantidad, aporteOriginal: cantidad, referencia: referenciaDe(targets, clave, o.perfil) });
+    assert.equal(r.barra.superaUl, false, clave);
+    assert.ok(!r.marcas.some((m) => m.ids.includes('ul')), clave);
+    assert.deepEqual(r.filas.find((x) => x.id === 'ul'), { id: 'ul', etiqueta: 'UL (informativo)', valor: ul }, clave);
+  }
+  // un UL normal (zinc) sigue avisando y con su marca
+  const zinc = filasAlimento({ food: food('z', { zinc_mg: 40 }), grams: 100, objetivos: o.list, catalog }).filas.get('zinc_mg');
+  const rz = rangoNutriente({ fila: zinc, hoy: 40, aporteOriginal: 40 });
+  assert.equal(rz.barra.superaUl, true);
+  assert.ok(rz.marcas.some((m) => m.ids.includes('ul')));
+  assert.equal(rz.filas.find((x) => x.id === 'ul').etiqueta, 'UL');
 });

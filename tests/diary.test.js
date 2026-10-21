@@ -12,7 +12,7 @@ const val = (list, clave) => list.find((t) => t.clave === clave);
 const meal = (id, mealName, lines, date = '2026-10-17') => ({ id, date, meal: mealName, createdAt: `${date}T10:00:00Z`, text: '', lines: lines.map(([food_id, grams]) => ({ food_id, grams, source_text: '' })) });
 
 // ---------- targets.json ----------
-test('targets.json: válido, cubre los 31 obligatorios (EPA y DHA como EPA + DHA) y trae UL de la EFSA', () => {
+test('targets.json: válido, cubre los 31 obligatorios (EPA y DHA como EPA + DHA) y trae UL de la EFSA (vitamina A y folato, informativos)', () => {
   assert.deepEqual(warnings, []);
   const claves = new Set(targets.list.flatMap((t) => t.suma ?? [t.clave]));
   for (const k of settings.requiredNutrients) assert.ok(claves.has(k), k);
@@ -20,6 +20,7 @@ test('targets.json: válido, cubre los 31 obligatorios (EPA y DHA como EPA + DHA
   const ul = Object.fromEntries(targets.list.filter((t) => t.ul !== null).map((t) => [t.clave, t.ul]));
   assert.deepEqual(ul, { vitamina_a_ug: 3000, vitamina_d_ug: 100, vitamina_e_mg: 300, vitamina_b6_mg: 12, vitamina_b9_ug: 1000, calcio_mg: 2500, zinc_mg: 25, cobre_mg: 5, selenio_ug: 255 });
   assert.match(val(targets.list, 'vitamina_a_ug').notaUl, /retinol preformado/);
+  assert.deepEqual(targets.list.filter((t) => t.ulInformativo).map((t) => t.clave), ['vitamina_a_ug', 'vitamina_b9_ug']);
 });
 
 test('loadTargets avisa de lo inválido y lo ignora', () => {
@@ -84,7 +85,9 @@ test('diario real: totales del día, por comida, EPA + DHA sumados y UL superado
   const s = byId.get('salmon_atlantico').nutrients;
   assert.ok(Math.abs(omega.total - (s.epa_g + s.dha_g) * 2 - (byId.get('leche_entera').nutrients.epa_g ?? 0) * 2.5 - (byId.get('leche_entera').nutrients.dha_g ?? 0) * 2.5) < 1e-9);
   assert.equal(omega.estado, 'cumplido');
-  assert.deepEqual(r.avisosUl.map((x) => x.clave), ['vitamina_a_ug', 'vitamina_b9_ug']); // fortificados: retinol y ácido fólico
+  // fortificados: retinol y ácido fólico por encima de 3000 y 1000, pero esos dos UL son informativos (solo retinol / ácido fólico añadido)
+  assert.ok(val(r.rows, 'vitamina_a_ug').total > 3000 && val(r.rows, 'vitamina_b9_ug').total > 1000);
+  assert.deepEqual(r.avisosUl.map((x) => x.clave), []);
   assert.deepEqual(r.comidas.map((c) => c.meal), ['desayuno', 'comida', 'cena']);
   assert.equal(Math.round(r.comidas[0].kcal), Math.round(379 * 0.8 + 61 * 2.5));
   assert.ok(r.otros.some((o) => o.clave === 'epa_g')); // EPA y DHA sueltos, en "otros"
@@ -108,4 +111,30 @@ test('dayTotals y shiftDate (cambios de mes y año)', () => {
   assert.equal(shiftDate('2026-10-17', -1), '2026-10-16');
   assert.equal(shiftDate('2026-03-01', -1), '2026-02-28');
   assert.equal(shiftDate('2026-12-31', 1), '2027-01-01');
+});
+
+// ---------- UL informativo (rama m): vitamina A (retinol preformado) y folato (ácido fólico añadido) ----------
+test('UL informativo: 1080 µg DFE de folato y 4000 µg RAE de vitamina A no superan nada (ni fila roja ni tira)', () => {
+  const comidas = [meal('a', 'comida', [['lentejas_secas', 150], ['corn_flakes', 50], ['brocoli', 200]]), meal('b', 'cena', [['zanahoria', 500]], '2026-10-17')];
+  const r = diaryReport(comidas, byId, resolveTargets(targets), catalog);
+  const folato = val(r.rows, 'vitamina_b9_ug');
+  const a = val(r.rows, 'vitamina_a_ug');
+  assert.ok(folato.total > 1000, `folato ${folato.total}`);
+  assert.ok(a.total > 4000, `vitamina A ${a.total}`);
+  assert.equal(folato.superaUl, false); assert.equal(a.superaUl, false);
+  assert.deepEqual(r.avisosUl, []);
+  assert.equal(folato.ulInformativo, true); assert.equal(folato.ul, 1000); // el valor sigue ahí para enseñarlo
+  // evaluate directamente: un UL informativo nunca es superado; uno normal, sí
+  const tot = (v) => ({ value: v, missing: [] });
+  assert.equal(evaluate(tot(4000), { tipo: 'min', valor: 750, ul: 3000, ulInformativo: true }).superaUl, false);
+  assert.equal(evaluate(tot(4000), { tipo: 'min', valor: 750, ul: 3000, ulInformativo: false }).superaUl, true);
+});
+
+test('UL normal (zinc, vitamina D) sigue avisando como antes', () => {
+  const zinc = { ...byId.get('huevo'), id: 'zinc_extra', nutrients: { zinc_mg: 100, vitamina_d_ug: 400 } };
+  const conZinc = new Map([...byId, ['zinc_extra', zinc]]);
+  const r = diaryReport([meal('a', 'cena', [['zinc_extra', 100]])], conZinc, resolveTargets(targets), catalog);
+  assert.deepEqual(r.avisosUl.map((x) => x.clave).sort(), ['vitamina_d_ug', 'zinc_mg']);
+  assert.equal(val(r.rows, 'zinc_mg').superaUl, true);
+  assert.equal(val(r.rows, 'zinc_mg').ulInformativo, false);
 });

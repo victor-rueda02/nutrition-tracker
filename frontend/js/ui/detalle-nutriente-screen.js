@@ -34,7 +34,7 @@ export function detalleNutrienteScreen(ui) {
         otros > 0 ? h('span', { class: 'rango-otros', style: `width:${(otros * 100).toFixed(2)}%` }) : null,
         rango.barra.aporte > 0 ? h('span', { class: `rango-aporte ${rango.barra.superaUl || ['excedido', 'por_encima'].includes(rango.barra.estado) ? 'sobre' : ''}`, style: `left:${(otros * 100).toFixed(2)}%;width:${(rango.barra.aporte * 100).toFixed(2)}%` }) : null,
         rango.marcas.map((m) => h('span', { class: `marca marca-${m.ids.includes('ul') ? 'ul' : m.id}${niveles.get(m.id) ? ' n2' : ''}`, style: `left:${(m.pos * 100).toFixed(2)}%` }, h('span', { class: 'marca-et' }, m.etiqueta)))),
-      rango.barra.superaUl ? h('p', { class: 'ul-aviso', role: 'alert' }, `⚠ Supera el máximo tolerable (UL: ${q(fila.ul)})`) : null,
+      rango.barra.superaUl ? h('p', { class: 'ul-aviso', role: 'alert' }, `⚠ Supera el máximo tolerable (UL: ${q(fila.ul).replace(/ /g, ' ')})`) : null, // espacio duro: la cifra y la unidad no se separan al partir la línea
       h('div', { class: 'rango-leyenda small' },
         rango.leyenda.otros && otros > 0 ? h('p', { class: 'ley ley-otros' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), rango.leyenda.otros.etiqueta) : null,
         h('p', { class: 'ley ley-aporte' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), `Este alimento · ${pct}`)));
@@ -43,15 +43,23 @@ export function detalleNutrienteScreen(ui) {
   const tabla = h('table', { class: 'rango-tabla' }, h('tbody', {}, rango.filas.map((r) => h('tr', { 'data-fila': r.id },
     h('th', { scope: 'row' }, r.etiqueta),
     h('td', {}, r.valor === null ? h('span', { 'aria-label': 'sin dato' }, '—') : q(r.valor), r.nota ? h('span', { class: 'muted small' }, ` (${r.nota})`) : null)))));
+  // UL informativo (vitamina A, folato): se enseña con su nota, pero no avisa ni se compara con el total.
+  const notaUl = fila.ulInformativo && fila.notaUl ? h('p', { class: 'muted small nota-ul-info' }, fila.notaUl) : null;
 
   const entrada = ui.info?.[clave];
   const seccion = (titulo, contenido) => h('section', { class: 'info-seccion' }, h('h2', { class: 'caps' }, titulo), h('div', { class: 'panel' }, contenido));
+  const fuentes = (refs) => (refs?.length ? seccion('Fuentes consultadas', h('ul', { class: 'fuentes' }, refs.map((r) => h('li', {},
+    h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, `${r.organismo ? `${r.organismo} · ` : ''}${r.titulo}`),
+    r.consultado ? h('span', { class: 'muted small' }, ` (consultado: ${r.consultado})`) : null)))) : null);
+  const textos = (e, prefijo = '') => SECCIONES_INFO.filter(([c]) => e[c]).map(([c, titulo]) => seccion(prefijo ? `${prefijo}: ${titulo}` : titulo, h('p', {}, e[c])));
+  // Una suma (EPA + DHA) no tiene texto propio: se enseñan los de sus partes, cada sección con el nombre de la parte, y las fuentes una vez.
+  const partes = !entrada && Array.isArray(fila.suma) ? fila.suma.map((k) => [(ui.catalog.byKey.get(k)?.label ?? k).replace(/\s*\(.*\)\s*$/, ''), ui.info?.[k]]).filter(([, e]) => e) : [];
   const informacion = entrada
-    ? [SECCIONES_INFO.filter(([c]) => entrada[c]).map(([c, titulo]) => seccion(titulo, h('p', {}, entrada[c]))),
-      entrada.referencias?.length ? seccion('Fuentes consultadas', h('ul', { class: 'fuentes' }, entrada.referencias.map((r) => h('li', {},
-        h('a', { href: r.url, target: '_blank', rel: 'noopener noreferrer' }, `${r.organismo ? `${r.organismo} · ` : ''}${r.titulo}`),
-        r.consultado ? h('span', { class: 'muted small' }, ` (consultado: ${r.consultado})`) : null)))) : null]
-    : seccion('Información', h('p', { class: 'muted info-no-disponible' }, 'Información aún no disponible'));
+    ? [textos(entrada), fuentes(entrada.referencias)]
+    : partes.length
+      ? [partes.map(([nombre, e]) => textos(e, nombre)),
+        fuentes([...new Map(partes.flatMap(([, e]) => e.referencias ?? []).map((r) => [r.url, r])).values()])]
+      : seccion('Información', h('p', { class: 'muted info-no-disponible' }, 'Información aún no disponible'));
 
   const objetivoDia = fila.objetivo ?? fila.valor ?? fila.min ?? fila.max;
   const top = topCatalogo({ foods: ui.foods, clave, suma: fila.suma ?? null, objetivo: objetivoDia });
@@ -61,7 +69,7 @@ export function detalleNutrienteScreen(ui) {
     h('section', { class: 'panel rango', 'aria-label': 'Tu rango' },
       h('h2', { class: 'caps' }, 'Tu rango'),
       ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
-      barra(), tabla),
+      barra(), tabla, notaUl),
     informacion,
     h('section', { class: 'catalogo-top', 'aria-label': 'En tu catálogo' },
       h('h2', { class: 'caps' }, 'En tu catálogo'),

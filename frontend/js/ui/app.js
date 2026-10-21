@@ -516,10 +516,10 @@ export function mountApp(root, deps) {
   }
 
   // Cabecera de las pantallas interiores: "‹" a la izquierda (el texto "Volver" queda solo para lectores de pantalla) y el título centrado.
-  function header(title, back, { close = false, sub = '' } = {}) {
+  function header(title, back, { close = false, sub = '', bloque = false } = {}) { // bloque: título centrado en un bloque con elipsis aunque no haya subtítulo (detalles)
     return h('header', { class: back ? 'top with-back' : 'top' },
       back ? h('button', { type: 'button', class: 'icon back', onclick: back }, icon(doc, close ? 'close' : 'back'), h('span', { class: 'sr' }, '‹ Volver')) : h('strong', { class: 'brand' }, title),
-      back ? (sub ? h('div', { class: 'title-block' }, h('strong', {}, title), h('small', { class: 'muted' }, sub)) : h('strong', {}, title)) : null, back ? h('span', {}) : null);
+      back ? (sub || bloque ? h('div', { class: 'title-block' }, h('strong', {}, title), sub ? h('small', { class: 'muted' }, sub) : null) : h('strong', {}, title)) : null, back ? h('span', {}) : null);
   }
 
   // ---------- navegación (barra inferior y "+") ----------
@@ -782,8 +782,8 @@ export function mountApp(root, deps) {
   };
 
   // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
-  const nutrientRow = (r) => nutrientRowCon(r, fmtQty);
-  function nutrientRowCon(r, fmtQty) { // fmtQty propio: el detalle usa uno que no confunde lo muy pequeño con un 0
+  const nutrientRow = (r) => nutrientRowCon(r, fmtQty, true);
+  function nutrientRowCon(r, fmtQty, conUlInformativo = false) { // fmtQty propio: el detalle usa uno que no confunde lo muy pequeño con un 0
     const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
     const objetivo = r.valor === null ? '' : r.objetivo === null && r.min != null && r.max != null ? ` / ${fmtNum(r.min, r.unit)}–${fmtQty(r.max, r.unit)}` : ` / ${fmtQty(r.valor, r.unit)}`;
     const fill = h('span', {});
@@ -798,7 +798,10 @@ export function mountApp(root, deps) {
       h('div', { class: excepcional ? 'small nut-estado' : 'small nut-estado sr' },
         h('span', { class: r.superaUl ? 'estado sr' : `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
         r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null,
-        r.superaUl && r.notaUl ? h('div', { class: 'small muted nota-ul' }, r.notaUl) : null));
+        r.superaUl && r.notaUl ? h('div', { class: 'small muted nota-ul' }, r.notaUl) : null),
+      // UL informativo (vitamina A, folato): solo se enseña en el informe, con su nota; no avisa ni pinta de rojo.
+      conUlInformativo && r.ulInformativo && r.ul != null ? h('div', { class: 'small muted nota-ul ul-informativo' },
+        `UL ${fmtQty(r.ul, r.unit)} (solo informativo)`, r.notaUl ? h('div', {}, r.notaUl) : null) : null);
   }
 
   const fmtKcal = (x) => (x.kcal === null ? 'sin dato de kcal' : `${nf0.format(x.kcal)} kcal${x.kcalParcial ? ' (parcial)' : ''}`);

@@ -86,7 +86,7 @@ export function detalleAlimentoScreen(ui) {
 
   input.addEventListener('input', (e) => { d.cantidad = e.target.value; pintar(); });
   main.append(
-    ui.header(food.nombre, ui.back, { close: true, sub: ui.origenTexto ?? '' }),
+    ui.header(food.nombre, ui.back, { close: true, sub: ui.origenTexto ?? '', bloque: true }),
     h('section', { class: 'panel detalle-cantidad-panel' },
       h('label', { class: 'detalle-campo' }, h('span', {}, delDiario ? 'Cantidad (g)' : 'Cantidad'), input),
       selector ? h('label', { class: 'detalle-campo' }, h('span', {}, 'Tamaño de la porción'), selector) : null,

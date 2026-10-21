@@ -52,7 +52,7 @@ function infoNutriente(clave, targets, catalog) {
   const t = targets.list.find((x) => x.clave === clave);
   if (t) return t;
   const n = catalog.byKey.get(clave);
-  return n ? { clave, label: n.label, unit: unitOf(clave), suma: null, ul: null, nota: '', notaUl: '', fuente: '' } : null;
+  return n ? { clave, label: n.label, unit: unitOf(clave), suma: null, ul: null, ulInformativo: false, nota: '', notaUl: '', fuente: '' } : null;
 }
 
 // Unidades que admite un nutriente: la suya (o ninguna), por kg y % de kcal (ver tabla del formato).

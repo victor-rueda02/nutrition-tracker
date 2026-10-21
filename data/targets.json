@@ -1,5 +1,5 @@
 {
-  "_comentario": "Objetivos diarios por defecto. Es la referencia para lo que no define tu plan de objetivos (pantalla Objetivos; formato en docs/OBJETIVOS-FORMATO.md), que tiene prioridad y se guarda en el iPhone; los UL salen siempre de aquí. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
+  "_comentario": "Objetivos diarios por defecto. Es la referencia para lo que no define tu plan de objetivos (pantalla Objetivos; formato en docs/OBJETIVOS-FORMATO.md), que tiene prioridad y se guarda en el iPhone; los UL salen siempre de aquí. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'ul_informativo': true = ese UL solo se enseña (informe y detalle del nutriente, con su 'nota_ul') y nunca avisa ni descarta cenas, porque la EFSA lo define para una forma concreta (retinol preformado, ácido fólico añadido) y no para el total de la columna del documento. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
   "fuentes": {
     "ir_ue": "Ingestas de referencia para un adulto medio, Reglamento (UE) 1169/2011, anexo XIII",
     "efsa": "EFSA, valores dietéticos de referencia para adultos (PRI o AI) y niveles máximos tolerables (UL)"
@@ -16,7 +16,8 @@
     { "clave": "fibra_g", "tipo": "min", "valor": 25, "fuente": "efsa" },
 
     { "clave": "vitamina_a_ug", "tipo": "min", "hombre": 750, "mujer": 650, "ul": 3000, "fuente": "efsa",
-      "nota_ul": "El UL es para retinol preformado (alimentos de origen animal, enriquecidos y suplementos); tu columna es RAE e incluye carotenos, así que puede avisar de más." },
+      "ul_informativo": true,
+      "nota_ul": "El UL de la EFSA es solo para retinol preformado (alimentos de origen animal y suplementos); no se aplica al total con carotenos, así que no se compara con tu columna (RAE)." },
     { "clave": "vitamina_c_mg", "tipo": "min", "hombre": 110, "mujer": 95, "fuente": "efsa" },
     { "clave": "vitamina_d_ug", "tipo": "min", "valor": 15, "ul": 100, "fuente": "efsa" },
     { "clave": "vitamina_e_mg", "tipo": "min", "hombre": 13, "mujer": 11, "ul": 300, "fuente": "efsa" },
@@ -28,7 +29,8 @@
     { "clave": "vitamina_b5_mg", "tipo": "min", "valor": 5, "fuente": "efsa" },
     { "clave": "vitamina_b6_mg", "tipo": "min", "hombre": 1.7, "mujer": 1.6, "ul": 12, "fuente": "efsa" },
     { "clave": "vitamina_b9_ug", "tipo": "min", "valor": 330, "ul": 1000, "fuente": "efsa",
-      "nota_ul": "El UL es para ácido fólico añadido (enriquecidos y suplementos), no para el folato natural; tu columna es folato total (DFE), así que puede avisar de más." },
+      "ul_informativo": true,
+      "nota_ul": "El UL de la EFSA es solo para el ácido fólico añadido (enriquecidos y suplementos); no se aplica al folato natural ni al total, así que no se compara con tu columna (DFE)." },
     { "clave": "vitamina_b12_ug", "tipo": "min", "valor": 4, "fuente": "efsa" },
     { "clave": "colina_mg", "tipo": "min", "valor": 400, "fuente": "efsa" },
 
