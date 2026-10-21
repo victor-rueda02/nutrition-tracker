@@ -3,13 +3,13 @@
   "completo": false,
   "nutrientes": {
     "vitamina_a_ug": {
-      "resumen": "Vitamina liposoluble para la visión, la inmunidad, el hueso y la división celular. Es preformada (retinol, de alimentos animales y enriquecidos) o provitamina A (carotenoides vegetales).",
-      "necesidades": "EFSA: PRI de 750 µg RAE al día en hombres adultos y 650 en mujeres (1 µg RAE = 1 µg de retinol = 6 µg de betacaroteno = 12 µg de otros carotenoides). UL de 3000 µg al día, solo de retinol preformado.",
-      "deficit": "Rara en países ricos. Leve: cansancio e infecciones. Grave: ceguera nocturna, sequedad ocular (xeroftalmía), piel y pelo secos. Más riesgo con malabsorción o dietas muy limitadas.",
+      "resumen": "Vitamina liposoluble para visión, inmunidad, hueso y división celular. Preformada (retinol) o provitamina A (carotenoides vegetales).",
+      "necesidades": "EFSA: PRI de 750 µg RE (equivalentes de retinol) al día en hombres adultos y 650 en mujeres (1 µg RE = 1 µg de retinol = 6 µg de betacaroteno = 12 µg de otros carotenoides). UL de 3000 µg al día, solo de retinol preformado.",
+      "deficit": "Rara. Leve: cansancio e infecciones. Grave: ceguera nocturna, xeroftalmía (sequedad ocular), piel y pelo secos.",
       "exceso": "El retinol preformado se acumula en el hígado: visión borrosa, dolor óseo, náuseas, piel seca; se ha asociado a pérdida de hueso y malformaciones fetales. El betacaroteno de los alimentos no es tóxico.",
-      "fuentes_alimentos": "Retinol: hígado, huevos, leche, aceites de pescado. Carotenoides: verduras de hoja, zanahoria, boniato, calabaza, tomate, pimiento rojo, melón y mango.",
-      "consejos": "El aceite de hígado de bacalao es muy rico en retinol: no lo sumes a otros suplementos con vitamina A. Los fumadores deben evitar suplementos de betacaroteno en dosis altas (más cáncer de pulmón).",
-      "discrepancias": "La app cuenta RAE total, pero el UL de la EFSA es solo de retinol: puede avisar de más.",
+      "fuentes_alimentos": "Retinol: hígado, huevos, leche, aceites de pescado. Carotenoides: verduras de hoja, zanahoria, boniato, calabaza, tomate, pimiento rojo, melón, mango.",
+      "consejos": "El aceite de hígado de bacalao es muy rico en retinol: no lo sumes a otros suplementos. Los fumadores deben evitar el betacaroteno en dosis altas (más cáncer de pulmón).",
+      "discrepancias": "Tu documento usa RAE (unidad de EE. UU.), que da menos valor a los carotenoides que el RE: con verduras el % del Diario puede quedarse corto. El UL es solo de retinol: puede avisar de más.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -36,6 +36,7 @@
       "necesidades": "EFSA: PRI de 110 mg al día en hombres adultos y 95 en mujeres. Sin UL (datos insuficientes). Fumar aumenta las necesidades.",
       "deficit": "Rara; aparece con dietas casi sin fruta ni verdura (menos de 10 mg al día durante un mes o más). Escorbuto: encías sangrantes, moratones, mala cicatrización, cansancio, caída del pelo y anemia por absorber peor el hierro no hemo.",
       "exceso": "Por encima de 1000 mg se absorbe menos de la mitad y el resto se elimina. Con más de 3000 mg al día: diarrea y, si hay antecedentes, cálculos renales, más ácido úrico o sobrecarga de hierro (hemocromatosis).",
+      "discrepancias": "Harvard cita un UL de 2000 mg; la EFSA no fija UL. Manda la EFSA.",
       "fuentes_alimentos": "Cítricos, pimientos, fresas, kiwi, tomate, brócoli, coles de Bruselas, repollo, coliflor y patata.",
       "consejos": "El calor y la luz la destruyen y pasa al agua de cocción: cocina poco tiempo y con poca agua (salteado, escaldado) o toma crudo. Con las comidas, mejora la absorción del hierro no hemo.",
       "referencias": [
@@ -209,11 +210,11 @@
     "vitamina_b3_mg": {
       "resumen": "Niacina: vitamina hidrosoluble (ácido nicotínico y nicotinamida) que usan más de 400 enzimas para obtener energía y reparar el ADN. El cuerpo también la forma a partir del triptófano.",
       "necesidades": "EFSA: PRI de 1,6 mg de equivalentes de niacina (NE) por MJ (unos 13 mg NE con 2000 kcal); 1 NE = 1 mg de niacina = 60 mg de triptófano. UL solo de suplementos: 900 mg al día de nicotinamida y 10 mg de ácido nicotínico.",
-      "deficit": "Rara. Pelagra: erupción oscura en zonas expuestas al sol, lengua muy roja, diarrea o estreñimiento, depresión, cansancio y pérdida de memoria. Riesgo: dietas muy limitadas, alcoholismo y dietas basadas en maíz.",
-      "exceso": "Por suplementos de ácido nicotínico: rubor con picor en cara, brazos y pecho, mareo, malestar gástrico y más ácido úrico. Dosis muy altas durante meses pueden dañar el hígado.",
+      "deficit": "Rara. Pelagra: erupción oscura en zonas expuestas al sol, lengua muy roja, diarrea o estreñimiento, depresión, cansancio y pérdida de memoria. Riesgo: dietas muy limitadas y alcoholismo.",
+      "exceso": "Por suplementos de ácido nicotínico: rubor con picor en cara, brazos y pecho, mareo y malestar gástrico. Dosis muy altas durante meses pueden dañar el hígado.",
       "fuentes_alimentos": "Carne roja, aves, pescado, frutos secos, legumbres, arroz integral y cereales enriquecidos. En los cereales va unida a la fibra y se absorbe peor.",
-      "consejos": "Tomar dosis muy superiores a las necesarias no da más energía.",
-      "discrepancias": "La app solo suma niacina preformada, mientras que la cifra de la EFSA incluye la que sale del triptófano: tu porcentaje real es mayor.",
+      "consejos": "Una dosis muy superior a la necesaria no da más energía.",
+      "discrepancias": "La app suma solo niacina preformada y la cifra de la EFSA incluye la del triptófano: tu % real es mayor. Harvard cita un UL de 35 mg; la EFSA, 10 mg de ácido nicotínico y 900 mg de nicotinamida.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -270,7 +271,7 @@
       "exceso": "Con alimentos es improbable. Los suplementos en dosis altas y prolongadas causan neuropatía en manos y pies, falta de coordinación y náuseas, que suelen remitir al suspenderlos.",
       "fuentes_alimentos": "Hígado, atún, salmón, pollo, garbanzos, cereales enriquecidos, verduras de hoja, plátano, papaya, naranja y melón.",
       "consejos": "Solo los suplementos pueden superar el UL: revisa la etiqueta de multivitamínicos y complejos B.",
-      "discrepancias": "Harvard cita el UL antiguo de EE. UU. (100 mg); la EFSA lo bajó a 12 mg en 2023. Manda la EFSA.",
+      "discrepancias": "EE. UU. usa un UL de 100 mg; la EFSA fijó 12 mg en 2023 (antes, 25 mg). Manda la EFSA.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -282,6 +283,12 @@
           "organismo": "EFSA",
           "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
           "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
           "consultado": "2026-10-21"
         },
         {
@@ -357,7 +364,7 @@
       "exceso": "Dosis muy altas (suplementos): hipotensión, daño hepático, sudoración, olor corporal a pescado, náuseas y más TMAO, un compuesto asociado a riesgo cardiovascular.",
       "fuentes_alimentos": "Yema de huevo, hígado y vacuno, pollo, pescado, setas shiitake, patata, legumbres, cacahuetes, leche, yogur, crucíferas y pipas de girasol.",
       "consejos": "Los multivitamínicos no suelen llevarla. También la aportan alimentos con poca grasa saturada: salmón, bacalao, pollo y legumbres.",
-      "discrepancias": "Harvard recoge la AI de EE. UU. (550 mg en hombres); la EFSA da 400 mg. Manda la EFSA.",
+      "discrepancias": "Harvard recoge la AI de EE. UU. (550 mg en hombres) y un UL de 3500 mg; la EFSA da 400 mg y no da UL. Manda la EFSA.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -415,11 +422,11 @@
     },
     "hierro_mg": {
       "resumen": "Componente de la hemoglobina (transporta oxígeno) y de la mioglobina del músculo. Su falta, la carencia nutricional más común del mundo, causa anemia.",
-      "necesidades": "EFSA: PRI de 11 mg al día en hombres adultos y mujeres posmenopáusicas; 16 mg en premenopáusicas (por la menstruación). Sin UL: nivel seguro de suplemento, 40 mg al día.",
+      "necesidades": "EFSA: PRI de 11 mg al día en hombres adultos y mujeres posmenopáusicas; 16 mg en premenopáusicas (por la menstruación). Sin UL: nivel de ingesta seguro de 40 mg al día en total, dieta y suplementos (EFSA 2024).",
       "deficit": "Cansancio, debilidad, mareo, poca concentración, frío, falta de aire, palidez, caída del pelo y uñas quebradizas; anemia ferropénica si se agotan las reservas. Más riesgo: menstruación abundante, embarazo, vegetarianos y deportistas de resistencia.",
       "exceso": "Raro con la dieta (el cuerpo regula la absorción); con suplementos innecesarios: estreñimiento, náuseas, vómitos y dolor abdominal. En la hemocromatosis se acumula y daña órganos.",
-      "fuentes_alimentos": "Hemo (se absorbe un 20-30 %): moluscos, hígado, vacuno, aves, sardinas. No hemo: legumbres, frutos secos y semillas, espinacas, cereales enriquecidos, chocolate negro, patata con piel.",
-      "consejos": "La carne y la vitamina C en la misma comida mejoran la absorción del hierro no hemo. La reducen el té, el café, los fitatos (salvado), el calcio (un vaso de leche la baja un 50 %) y algunas especias.",
+      "fuentes_alimentos": "Hemo (se absorbe mejor): moluscos, hígado, vacuno, aves, sardinas. No hemo: legumbres, frutos secos y semillas, espinacas, cereales enriquecidos, chocolate negro, patata con piel.",
+      "consejos": "La carne y la vitamina C en la misma comida mejoran la absorción del hierro no hemo. La reducen el salvado, los fitatos, el té (taninos) y mucho calcio, sobre todo en suplementos.",
       "discrepancias": "En EE. UU. la RDA del hombre es 8 mg y el UL 45 mg. Manda la EFSA.",
       "referencias": [
         {
@@ -432,12 +439,6 @@
           "organismo": "EFSA",
           "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
           "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
-          "consultado": "2026-10-21"
-        },
-        {
-          "organismo": "OMS",
-          "titulo": "Guidelines for the control of iron deficiency (OMS, Oficina Regional del Mediterráneo Oriental, 1995)",
-          "url": "https://applications.emro.who.int/docs/who_em_nut_177_e_g_11_96_en.pdf",
           "consultado": "2026-10-21"
         },
         {
@@ -454,7 +455,8 @@
       "deficit": "Una carencia moderada no suele dar síntomas. La grave: cansancio, debilidad, náuseas, hormigueo, calambres, convulsiones y arritmias. Más riesgo con alcohol, edad avanzada, malabsorción y algunos diuréticos, antibióticos e inhibidores de la bomba de protones.",
       "exceso": "El de los alimentos se elimina por el riñón. Los suplementos altos dan diarrea, náuseas y calambres; con enfermedad renal hay riesgo de toxicidad (debilidad, tensión baja, arritmia).",
       "fuentes_alimentos": "Almendras, cacahuetes, anacardos, semillas de calabaza, legumbres, espinacas cocidas, patata con piel, arroz integral, avena, salmón, plátano, chocolate negro, leche y yogur.",
-      "consejos": "El procesado industrial reduce su contenido: prefiere integrales y poco refinados. Los suplementos no alivian los calambres nocturnos según una revisión Cochrane que cita Harvard.",
+      "consejos": "El procesado industrial reduce su contenido: prefiere integrales y poco refinados. Según Harvard, una revisión Cochrane no halló que los suplementos alivien los calambres musculares.",
+      "discrepancias": "Harvard cita un UL de 350 mg; la EFSA, 250 mg (solo de suplementos).",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -483,6 +485,7 @@
       "exceso": "Raro en personas sanas, porque el cuerpo lo regula. En enfermedad renal puede dar calcificaciones y endurecimiento de tejidos blandos, como el riñón.",
       "fuentes_alimentos": "Lácteos, salmón, vacuno, pollo, cerdo, legumbres, frutos secos, semillas y cereales integrales.",
       "consejos": "En vegetales va como fitato y se absorbe peor; remojar, germinar y cocinar ayudan. El de los aditivos (fosfatos en fiambres, refrescos, bebidas embotelladas) se absorbe un 90 %, frente a 40-60 % del natural: mira la etiqueta.",
+      "discrepancias": "Harvard cita un UL de 4000 mg; la EFSA no fija UL.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -543,7 +546,7 @@
       "necesidades": "EFSA (2019): 2 g de sodio al día son seguros y adecuados en adultos; sin UL. OMS: menos de 2 g de sodio, es decir, menos de 5 g de sal. Equivalencia: sal = sodio × 2,5 (1 g de sal = 400 mg de sodio).",
       "deficit": "Rara. La hiponatremia (sodio bajo en sangre) afecta sobre todo a mayores con ciertos fármacos o enfermedades: náuseas, cefalea, confusión, letargo y, en casos graves, convulsiones.",
       "exceso": "Sube la tensión arterial y con ella el riesgo cardiovascular, de cáncer gástrico, osteoporosis y enfermedad renal (OMS). La ingesta media de los adultos duplica la recomendación.",
-      "fuentes_alimentos": "Casi todo viene de procesados (pan, embutidos y fiambres, sopas, quesos, snacks, pizzas), no del salero. Fruta, verdura, carne y legumbres sin procesar aportan poco.",
+      "fuentes_alimentos": "En EE. UU., unas tres cuartas partes vienen de procesados (pan, embutidos y fiambres, sopas, quesos, snacks, pizzas), no del salero. Fruta, verdura, carne y legumbres sin procesar aportan poco.",
       "consejos": "En la etiqueta, la sal se da en gramos: × 0,4 = sodio. Más fruta y verdura (ricas en potasio). El exceso de sodio aumenta las necesidades de calcio.",
       "referencias": [
         {
@@ -572,6 +575,12 @@
         },
         {
           "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Salt and Sodium: Public Health Concerns",
+          "url": "https://nutritionsource.hsph.harvard.edu/salt-and-sodium/sodium-public-health-concerns/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
           "titulo": "The Nutrition Source: Calcium",
           "url": "https://nutritionsource.hsph.harvard.edu/calcium/",
           "consultado": "2026-10-21"
@@ -585,6 +594,7 @@
       "exceso": "Casi siempre por suplementos: náuseas, vómitos, dolor abdominal y cefalea. Con 50-300 mg al día, la EFSA describe cobre bajo, anemia, neutropenia y peor inmunidad.",
       "fuentes_alimentos": "Marisco (ostras, cangrejo), vacuno, pollo, cerdo, legumbres, frutos secos, semillas y cereales integrales o enriquecidos.",
       "consejos": "Zinc y cobre: el exceso de zinc bloquea la absorción del cobre y puede causar su déficit; el UL se fijó por ese efecto. También interfiere con el hierro. Los fitatos de integrales y legumbres reducen su absorción.",
+      "discrepancias": "Harvard cita un UL de 40 mg; la EFSA, 25 mg.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -600,7 +610,7 @@
         },
         {
           "organismo": "EFSA",
-          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc (interacción con el cobre)",
           "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
           "consultado": "2026-10-21"
         },
@@ -625,6 +635,7 @@
       "exceso": "Rara: el cuerpo excreta el exceso, salvo en la enfermedad de Wilson (daño hepático, náuseas, vómitos, diarrea, dolor abdominal). El agua de tuberías de cobre viejas puede aportar demasiado.",
       "fuentes_alimentos": "Hígado, ostras, cangrejo, salmón, chocolate negro, anacardos, semillas de girasol y sésamo, garbanzos, mijo, pasta integral, patata y espinacas.",
       "consejos": "Zinc y cobre: dosis altas de zinc en suplemento bloquean la absorción del cobre; no suplementes zinc sin necesidad. Si la dieta aporta poco cobre, se absorbe más.",
+      "discrepancias": "Harvard cita un UL de 10 mg; la EFSA, 5 mg.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -640,7 +651,7 @@
         },
         {
           "organismo": "EFSA",
-          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc (interacción con el cobre)",
           "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
           "consultado": "2026-10-21"
         },
@@ -685,10 +696,10 @@
       "resumen": "Oligoelemento de las selenoproteínas, que ayudan a fabricar ADN, proteger las células y regular las hormonas tiroideas y la reproducción.",
       "necesidades": "EFSA: AI de 70 µg al día en adultos. UL de 255 µg al día (opinión de 2023).",
       "deficit": "Rara. La carencia grave causa la enfermedad de Keshan (cardiomiopatía) y la de Kashin-Beck (artrosis). Más riesgo con dieta vegetal en regiones de suelo pobre, VIH y diálisis.",
-      "exceso": "Sabor metálico, mal aliento, náuseas, diarrea, caída del pelo, uñas quebradizas, erupciones y cansancio; si persiste, temblores, fallo renal o cardiaco.",
+      "exceso": "Sabor metálico, mal aliento, náuseas, diarrea, caída del pelo, uñas quebradizas, erupciones y cansancio; si persiste, temblores, infarto, dificultad respiratoria o fallo renal.",
       "fuentes_alimentos": "Nueces de Brasil, pescado y marisco, vísceras, vacuno, pavo, pollo, cereales enriquecidos, pan integral y legumbres. Varía con el suelo donde se cultivan.",
       "consejos": "Una sola nuez de Brasil puede superar la ingesta recomendada: no las tomes a diario en cantidad. Selenio y yodo trabajan juntos en el tiroides, y el exceso de uno puede contribuir al déficit del otro.",
-      "discrepancias": "Harvard cita un UL de EE. UU. de 400 µg; la EFSA lo bajó a 255 µg en 2023. Manda la EFSA.",
+      "discrepancias": "EE. UU. usa un UL de 400 µg; la EFSA fijó 255 µg en 2023 (antes, 300 µg). Manda la EFSA.",
       "referencias": [
         {
           "organismo": "EFSA",
@@ -700,6 +711,12 @@
           "organismo": "EFSA",
           "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
           "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
           "consultado": "2026-10-21"
         },
         {
