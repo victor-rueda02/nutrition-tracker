@@ -10,7 +10,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 2 | integrado (falta worker:deploy) | ¿Aprobar que el rol_cena viaje a Gemini en «Más ideas» (regla 6)? ¿Dónde probó: Worker publicado o servidor local? |
 | 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
 | 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 2 | integrado | – |
-| 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 0 | en revisión (ronda 1) | – (etiquetas recibidas) |
+| 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 1 | bloqueado (Victor) | ¿Campo «etiqueta» en recetas.json (código) o sacar los salteados de recetas.json? |
 | 2026-10-21 | G · «null» en la vista previa de receta; robustez de chrome-cdp y NT_SIN_CHROME | desarrollador | dev/g-null-receta-cdp | 0 | en curso | – |
 
 ## Notas
