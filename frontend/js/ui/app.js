@@ -529,6 +529,9 @@ export function mountApp(root, deps) {
   }
   const TAB_OF = { diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas', cenas: 'diary' };
   const SIN_BARRA = ['home', 'confirm', 'repeat', 'estimar']; // llevan su propia barra de acciones
+  // Regla general: una pantalla con su propia barra fija de acciones (footer.bar) nunca lleva la barra inferior de navegación,
+  // que si no la taparía (mismo bottom:0 y más z-index) y dejaría el botón de guardar fuera de alcance (recetas, y las que vengan).
+  const llevaBarraPropia = (screen) => screen.querySelector(':scope > footer.bar') !== null;
 
   function openPicker({ title, onPick }) {
     const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
@@ -936,7 +939,7 @@ export function mountApp(root, deps) {
       if (cabecera) cabecera.after(aviso); else screen.prepend(aviso);
     }
     const extras = [];
-    if (!SIN_BARRA.includes(state.screen)) extras.push(bottomNav({ h, doc, active: TAB_OF[state.screen] ?? null, go }));
+    if (!SIN_BARRA.includes(state.screen) && !llevaBarraPropia(screen)) extras.push(bottomNav({ h, doc, active: TAB_OF[state.screen] ?? null, go }));
     if (state.menu && state.screen === 'diary') {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },

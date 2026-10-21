@@ -111,3 +111,37 @@ test('Alimentos: catálogo buscable con filtros; Más: lista con sus cinco apart
   await t.act(() => t.btn('‹ Volver').click());
   assert.ok(t.$('.menu-list'));
 });
+
+// Regresión (iPhone): en Alimentos → Recetas → «Nueva» el botón «Guardar receta» no se veía porque la barra inferior de navegación
+// (fixed, bottom:0, z-index mayor) tapaba el pie fijo de la pantalla (footer.bar, fixed, bottom:0). Regla general: una pantalla con su
+// propio pie de acciones no lleva la barra de navegación; las demás sí, y sin pie fijo. (El layout real, en Chrome: tests/layout-chrome.test.js.)
+test('una pantalla con pie fijo de acciones (footer.bar) nunca lleva a la vez la barra de navegación', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m1', '2026-10-16', 'desayuno', [['avena_copos', 80]])] });
+  const conjunto = () => ({ barra: t.$('nav.tabbar') !== null, pie: t.$('main > footer.bar') !== null });
+  assert.deepEqual(conjunto(), { barra: true, pie: false }); // Diario
+  await t.act(() => t.btn('Alimentos').click());
+  assert.deepEqual(conjunto(), { barra: true, pie: false });
+  await t.act(() => t.btn('Ver recetas').click());
+  assert.deepEqual(conjunto(), { barra: true, pie: false }); // lista de recetas: con barra
+  await t.act(() => t.btn('Nueva receta').click());
+  assert.deepEqual(conjunto(), { barra: false, pie: true }); // formulario: «Guardar receta» en su pie, sin barra encima
+  assert.ok(t.$('main > footer.bar button.primary').textContent.includes('Guardar receta'));
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.deepEqual(conjunto(), { barra: true, pie: false });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => t.btn('Guardar como receta').click()); // desde una comida del Diario
+  assert.deepEqual(conjunto(), { barra: false, pie: true });
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.deepEqual(conjunto(), { barra: true, pie: false });
+  // la confirmación de una comida (editar) ya iba sin barra
+  await t.act(() => t.btn('Editar').click());
+  assert.deepEqual(conjunto(), { barra: false, pie: true });
+});
+
+test('CSS: el contenido deja hueco bajo la barra de navegación (barra + zona segura) para que el último botón se pueda pulsar', () => {
+  const css = readFile('../frontend/css/navegacion.css');
+  const m = css.match(/(?:^|\n)main\s*\{[^}]*padding-bottom:\s*calc\((\d+)px \+ env\(safe-area-inset-bottom\)\)/);
+  const alto = 6 + 60 + 6; // la barra: relleno + el «+» de 60 px (más alto que las pestañas de 56) + relleno; la zona segura suma en ambos
+  assert.ok(m && Number(m[1]) >= alto + 16, `main deja ${m?.[1]} px bajo el contenido (mínimo ${alto + 16}) más env(safe-area-inset-bottom)`);
+  assert.match(css, /\.tabbar\s*\{[^}]*padding:\s*6px 8px calc\(6px \+ env\(safe-area-inset-bottom\)\)/);
+});
