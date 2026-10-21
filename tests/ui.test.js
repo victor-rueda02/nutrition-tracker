@@ -386,6 +386,50 @@ test('no coincide con tus alias: Guardar desactivado hasta pulsar "Sí, es ..." 
   assert.equal(t.btn('Guardar').disabled, false);
 });
 
+const MAS_ESPECIFICO = (o = {}) => ({ ...RESULT, items: [ITEM('pan_blanco_barra', 60, '60 g de pan de molde', { flags: ['alias_mas_especifico'], mas_especifico: 'pan_molde_blanco', confidence: 'baja', requiresConfirmation: true, ...o })], unmatched: [] });
+
+test('alias más específico: aviso, botón «Cambiar a …» y Guardar desactivado hasta tocar', { skip }, async () => {
+  const t = await setup({ responses: [MAS_ESPECIFICO()] });
+  t.type(t.$('textarea'), 'x');
+  await t.act(() => t.btn('Procesar').click());
+  assert.match(t.root.textContent, /Dijiste algo más específico que este alimento/);
+  assert.match(t.root.textContent, /Dijiste «60 g de pan de molde»: ¿es «Pan de molde blanco»\?/);
+  assert.ok(t.btn('Cambiar a «Pan de molde blanco»'));
+  assert.ok(t.btn('Sí, es «Pan blanco de barra»'));
+  assert.equal(t.btn('Guardar').disabled, true);
+  assert.match(t.root.textContent, /Confirma o cambia los alimentos que no coinciden con tus alias o tienen uno más específico/);
+  t.type(t.$('li.card[data-key] input.grams'), '70');
+  assert.equal(t.btn('Guardar').disabled, true); // editar gramos no basta
+  // Con un toque, la línea pasa al alimento del alias largo, conserva los gramos y ya se puede guardar.
+  await t.act(() => t.btn('Cambiar a «Pan de molde blanco»').click());
+  assert.equal(t.btn('Cambiar a'), undefined);
+  assert.equal(t.btn('Sí, es'), undefined);
+  assert.match(t.$('li.card[data-key] button.name').textContent, /Pan de molde blanco/);
+  assert.equal(t.$('li.card[data-key] input.grams').value, '70');
+  assert.equal(t.btn('Guardar').disabled, false);
+});
+
+test('alias más específico: «Sí, es …» mantiene el alimento elegido y desbloquea Guardar', { skip }, async () => {
+  const t = await setup({ responses: [MAS_ESPECIFICO()] });
+  t.type(t.$('textarea'), 'x');
+  await t.act(() => t.btn('Procesar').click());
+  assert.equal(t.btn('Guardar').disabled, true);
+  await t.act(() => t.btn('Sí, es «Pan blanco de barra»').click());
+  assert.equal(t.btn('Cambiar a'), undefined);
+  assert.match(t.$('li.card[data-key] button.name').textContent, /Pan blanco de barra/);
+  assert.equal(t.btn('Guardar').disabled, false);
+});
+
+test('alias más específico: la frase queda en «Frases a revisar» con el alimento más específico', { skip }, async () => {
+  const t = await setup({ responses: [MAS_ESPECIFICO()] });
+  t.type(t.$('textarea'), 'pan de molde');
+  await t.act(() => t.btn('Procesar').click());
+  await t.act(() => t.btn('Sí, es «Pan blanco de barra»').click());
+  await t.act(() => t.btn('Guardar').click());
+  const log = await t.store.getSetting('registro_frases');
+  assert.deepEqual(log.map((e) => e.problemas.map((p) => [p.texto, p.tipo, p.mas_especifico, p.resolucion])), [[['60 g de pan de molde', 'alias_mas_especifico', 'pan_molde_blanco', 'pan_blanco_barra']]]);
+});
+
 // ---------- Hito 4, fase 2: editar y borrar comidas guardadas ----------
 const AYER = MEAL('r1', '2026-10-15', 'comida', [['arroz_blanco_crudo', 150], ['kiwi_verde', 69], ['aceite_oliva', 10]]);
 const toAyer = async (t) => { await t.act(() => t.btn('Diario').click()); await t.act(() => t.$('button[aria-label="Día anterior"]').click()); };

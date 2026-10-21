@@ -1,7 +1,7 @@
 // Validación en código de la respuesta de la IA + elección determinista de variante crudo/cocinado.
 // La IA propone; aquí se descarta lo inválido y se aplican las reglas de variantes.
 import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectEstado, detectVolumen, detectPeso, cantidadDicha } from './ai-contract.js';
-import { normalizeText, containsTerm, removeTerms } from './text.js';
+import { normalizeText, containsTerm, removeTerms, termSpans } from './text.js';
 
 const CONF = ['alta', 'media', 'baja'];
 const lower = (c) => CONF[Math.min(CONF.indexOf(c) + 1, CONF.length - 1)];
@@ -56,6 +56,31 @@ const nameTerms = (f) => [f.nombre, ...(f.alias ?? [])];
 // ¿El texto dicho contiene el nombre o algún alias de alguno de estos alimentos? Sin acentos, sin mayúsculas
 // y tolerando plurales por palabra ("tomates fritos" ~ "tomate frito", "macarrones" ~ "macarrón").
 export const mentionsFood = (text, foods) => foods.some((f) => nameTerms(f).some((term) => containsTerm(text, term)));
+
+// Alias más específico: lo dicho nombra al alimento elegido ("pan"), pero esa mención queda DENTRO de un alias o nombre más
+// largo de OTRO alimento ("pan de molde" -> pan de molde blanco) que también está en lo dicho. Es el hueco de mentionsFood:
+// una equivocación de la IA pasaría sin aviso. Solo cuenta si el otro alimento está en la lista (incluir=si), es de otro
+// grupo (las variantes del grupo ya las trata resolveVariant) y la mención del elegido no cubre ya ese alias largo.
+// Devuelve el alimento más específico (el de la mención más larga) o null.
+export function masEspecifico(text, chosenFoods, chosen, list) {
+  const propios = chosenFoods.flatMap((f) => nameTerms(f).flatMap((t) => termSpans(text, t)));
+  if (!propios.length) return null;
+  const dentro = (a, b) => a[0] >= b[0] && a[1] <= b[1];
+  const nuestros = new Set(chosenFoods.map((f) => f.id));
+  let best = null;
+  for (const f of list) {
+    if (nuestros.has(f.id) || (f.grupo && f.grupo === chosen.grupo)) continue;
+    for (const term of nameTerms(f)) {
+      for (const s of termSpans(text, term)) {
+        const len = s[1] - s[0];
+        if (best && len <= best.len) continue;
+        if (propios.some((p) => dentro(s, p))) continue; // el propio elegido ya casa con el alias largo
+        if (propios.some((p) => dentro(p, s) && p[1] - p[0] < len)) best = { food: f, len };
+      }
+    }
+  }
+  return best?.food ?? null;
+}
 
 // Cantidad dicha sin unidad: ¿los gramos salen de una porción del alimento? Si se dijo el número ("2 huevos",
 // "medio vaso"), gramos = número × porción; si se nombra una porción ("una cucharadita"), tiene que ser esa. Sin número
@@ -187,6 +212,13 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
       confidence = 'baja';
       warnings.push(`${v.food_id}: "${text}" no coincide con tus alias`);
     }
+    // Lo dicho contiene un alias más largo de otro alimento que incluye al del elegido ("pan de molde" -> pan de molde blanco).
+    const especifico = flags.includes('sin_alias') ? null : masEspecifico(text, foods, index.byId.get(v.food_id), compactList);
+    if (especifico) {
+      flags.push('alias_mas_especifico');
+      confidence = 'baja';
+      warnings.push(`${v.food_id}: "${text}" nombra también «${especifico.nombre}» (${especifico.id}), más específico`);
+    }
     // Volumen: aquí no se convierte (la densidad no viaja a internet); lo convierte la app al crear el borrador.
     const amount = unidadFinal === 'ml' ? { grams: null, ml: cantidad } : { grams: cantidad };
     if (cantidad > maxGrams) { flags.push('gramos_altos'); warnings.push(`${v.food_id}: ${cantidad} ${unidadFinal} supera ${maxGrams}, confirma la cantidad`); }
@@ -195,7 +227,8 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     if (v.flags.includes('sin_variante_por_defecto')) warnings.push(`${raw.food_id}: grupo sin variante_por_defecto`);
     items.push({
       food_id: v.food_id, ...amount, source_text: text, confidence, flags,
-      requiresConfirmation: confidence === 'baja' || flags.some((f) => ['gramos_altos', 'variante_no_disponible', 'estado_discrepante', 'unidad_discrepante', 'sin_alias'].includes(f)),
+      ...(especifico ? { mas_especifico: especifico.id } : {}),
+      requiresConfirmation: confidence === 'baja' || flags.some((f) => ['gramos_altos', 'variante_no_disponible', 'estado_discrepante', 'unidad_discrepante', 'sin_alias', 'alias_mas_especifico'].includes(f)),
     });
   }
   return { items, unmatched, warnings };

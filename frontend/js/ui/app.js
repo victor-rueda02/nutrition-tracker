@@ -46,6 +46,7 @@ const FLAG_TEXT = {
   convertido_ml: 'Convertido de ml a g con la densidad de tu documento',
   unidad_discrepante: 'Dijiste un volumen pero la IA lo pasó como gramos: revisa la cantidad',
   sin_alias: 'No coincide con tus alias: revisa que sea este alimento',
+  alias_mas_especifico: 'Dijiste algo más específico que este alimento: revisa cuál es',
   gramos_asumidos: 'Asumido en gramos (no dijiste la unidad)',
   estimado_ia: 'Estimado con IA: proporciones típicas del plato, revisa los gramos',
 };
@@ -614,7 +615,7 @@ export function mountApp(root, deps) {
       const t = previewTotals(state.draft, byId());
       totalsEl.textContent = `Total: ${fmtTotal(t, 'energia_kcal', 'kcal', nf0)} · ${fmtTotal(t, 'proteina_g', 'g de proteína', nf1)}`;
       saveBtn.disabled = !v.ok || state.busy;
-      hint.textContent = v.empty ? (editing ? 'Añade al menos un alimento o borra la comida.' : 'Añade al menos un alimento.') : v.problems.some((p) => p.code === 'fecha') ? 'La fecha no es válida.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
+      hint.textContent = v.empty ? (editing ? 'Añade al menos un alimento o borra la comida.' : 'Añade al menos un alimento.') : v.problems.some((p) => p.code === 'fecha') ? 'La fecha no es válida.' : v.problems.some((p) => p.code === 'sin_revisar') ? 'Confirma o cambia los alimentos que no coinciden con tus alias o tienen uno más específico.' : v.problems.length ? 'Revisa las líneas marcadas (gramos).' : state.draft.unmatched.length ? `${state.draft.unmatched.length} sin resolver (no se guardarán).` : '';
       ajustarMargen();
     };
 
@@ -641,8 +642,9 @@ export function mountApp(root, deps) {
         gramsIn.setAttribute('aria-invalid', String(badGrams));
       };
       gramsIn.addEventListener('input', (e) => { state.draft = setGrams(state.draft, line.key, e.target.value); paint(); paintFooter(); });
+      const masEspecifico = line.masEspecifico ? byId().get(line.masEspecifico) : null; // alimento del alias más largo que dijiste
       const sinDatos = foodSinDatos(food);
-      const inc = sinDatos ? null : incompleteInfo(food);
+      const inc =sinDatos ? null : incompleteInfo(food);
       const card = h('li', { class: 'card', 'data-key': line.key },
         h('div', { class: 'row between' },
           h('button', { class: 'name', 'aria-label': `Cambiar alimento: ${food.nombre}`, onclick: () => openPicker({ title: 'Cambiar alimento', onPick: (f) => { state.draft = changeFood(state.draft, line.key, f.id); render(); } }) }, food.nombre),
@@ -655,6 +657,8 @@ export function mountApp(root, deps) {
         sinDatos ? h('div', { class: 'row wrap' },
           h('button', { class: 'secondary', disabled: state.busy, onclick: () => estimarLinea(line.key) }, 'Estimar con IA'),
           h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Elegir otro alimento', onPick: (f) => { state.draft = changeFood(state.draft, line.key, f.id); render(); } }) }, 'Elegir otro alimento')) : null,
+        line.needsReview && masEspecifico ? h('div', { class: 'flag', role: 'alert' }, `Dijiste «${line.source_text}»: ¿es «${masEspecifico.nombre}»?`) : null,
+        line.needsReview && masEspecifico ? h('button', { class: 'secondary review', onclick: () => { state.draft = changeFood(state.draft, line.key, masEspecifico.id); render(); } }, `Cambiar a «${masEspecifico.nombre}»`) : null,
         line.needsReview ? h('button', { class: 'secondary review', onclick: () => { state.draft = confirmFood(state.draft, line.key); render(); } }, `Sí, es «${food.nombre}»`) : null,
         high,
         inc ? h('div', { class: 'flag' }, `Alimento incompleto (${inc.filled}/${inc.total} nutrientes): los totales de micronutrientes no serán completos`) : null);

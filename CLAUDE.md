@@ -90,7 +90,8 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
 
 ### Lo dicho debe coincidir con el alimento
 - Si lo que dije no contiene el nombre ni ningún alias del alimento elegido (ni de otra variante de su grupo), la línea pasa a confianza baja con el aviso "no coincide con tus alias" y pide confirmación. La comparación ignora acentos, mayúsculas y plurales.
-- Esa línea **no se puede guardar** hasta que la toque explícitamente: pulsar "Sí, es «alimento»" o cambiar el alimento. Editar los gramos no basta.
+- **Alias más específico** (`alias_mas_especifico`, `masEspecifico` en `ai-validate.js`): si lo dicho contiene un alias o nombre más largo de OTRO alimento `incluir=si` de otro grupo que incluye, como palabras completas, el alias que casó con el elegido («pan de molde» elegido como pan de barra; «lata de atún» como atún en lata), la línea pasa igual a confianza baja con el aviso «Dijiste «…»: ¿es «Otro alimento»?» y el botón «Cambiar a «Otro alimento»». No salta entre variantes del mismo grupo, ni si el elegido ya casa con el alias largo, ni con palabras sueltas. El Worker debe estar desplegado para que la regla actúe en producción.
+- Esa línea (con `sin_alias` o `alias_mas_especifico`) **no se puede guardar** hasta que la toque explícitamente: pulsar "Sí, es «alimento»", «Cambiar a …» o cambiar el alimento. Editar los gramos no basta.
 - En "no reconocido", el texto es el fragmento exacto con su cantidad ("180 g de pollo"); al elegir el alimento, los gramos se rellenan solos.
 
 ### Cantidades sin unidad de peso ni volumen

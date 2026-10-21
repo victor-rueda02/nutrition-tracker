@@ -32,7 +32,10 @@ Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 lla
    identifica nada (come curado serrano y cocido); sin "ternera" ni "solomillo" a secas (regla de cortes).
    Genéricos con un solo alimento aceptados por Victor: "chocolate", "yogur", "griego", "queso", "galletas" (si
    come otro tipo, lo dirá). Solo merecen alias las frases que el código no casa ya (acentos y plurales simples
-   ya se toleran; plurales irregulares como "nuez"/"nueces", no).
+   ya se toleran; plurales irregulares como "nuez"/"nueces", no). Un alias corto que queda dentro de uno más largo de
+   otro alimento (de otro grupo) es válido: si dices el largo y la IA elige el corto, la app avisa
+   (`alias_mas_especifico`, ver CLAUDE.md §4). Hoy: "pan" / "pan de molde" / "pan integral", "atún" / "lata de atún",
+   "pechuga de pavo" / "pechuga de pavo en lonchas", "lentejas" y "chorizo" / "lentejas con chorizo".
 6. **Productos con etiqueta y fortificación** (corn flakes): kcal, macros, fibra, azúcares, sal (sodio = sal ÷ 2,5)
    y vitaminas y minerales declarados, de la etiqueta; ácido fólico a DFE × 1,7; lo que USDA trae por fortificación
    de EE. UU. y la etiqueta no declara, vacío; lo natural del alimento, de USDA.

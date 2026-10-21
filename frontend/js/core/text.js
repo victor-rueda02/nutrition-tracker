@@ -27,6 +27,17 @@ export function containsTerm(text, term) {
   return false;
 }
 
+// Dónde aparece el término en el texto: [[inicio, fin)] en palabras, mismas reglas que containsTerm. Sirve para saber si
+// una aparición queda dentro de otra más larga ("pan" dentro de "pan de molde").
+export function termSpans(text, term) {
+  const t = words(text);
+  const w = words(term);
+  const out = [];
+  if (!w.length) return out;
+  for (let i = 0; i + w.length <= t.length; i++) if (w.every((x, j) => sameWord(t[i + j], x))) out.push([i, i + w.length]);
+  return out;
+}
+
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // El texto normalizado sin las apariciones de estos términos (tolerando plurales). Sirve para no confundir un número
 // del nombre ("chocolate 85") con una cantidad dicha. Sin lookbehind, por compatibilidad con Safari antiguos.
