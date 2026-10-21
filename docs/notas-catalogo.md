@@ -109,3 +109,10 @@ crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere acti
 `candidatos` y `filas` aceptan `--incluir-excluidos` (todos los `incluir=no` con término) o `--incluir id1,id2` para
 volcar datos USDA en ingredientes que solo se usan en recetas, **sin activarlos** (la fila sigue con `incluir=no`).
 Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-file=.env scripts/usda.mjs filas --incluir morro_cerdo`.
+
+## Rama `cat/d-e-atun-huecos` (21-10-2026)
+- **Receta `atun_lata_con_aceite`** («Lata de atún con aceite»): 60 g de `atun_lata_aceite` + 20 g de `aceite_oliva`, peso final 80 g, porción `lata:80`, `rol_cena=proteina`, alias solo `lata de atún` (31/31 obligatorios; 369,5 kcal y 21,8 g de proteína por 100 g). Pendiente con Victor: «atún en lata» ya es alias de `atun_lata_aceite` (chocaría) y «una lata» es demasiado genérico. Mientras tanto, «una lata de atún» contiene también «atún» (alias del atún escurrido): la elección entre las dos filas es de la IA.
+- **Huecos con BEDCA/CIQUAL** (CIQUAL 2020 en inglés, `Table Ciqual 2020_ENG_2020 07 07.xls`):
+  - `muesli` 29 -> 31/31: manganeso 1,61 y B5 0,6 de CIQUAL 32113 (muesli de copos con frutas, sin azúcar). El «promedio sin fortificar» (32141) y el 32138 no traen micros; el 32108 trae B5 = 5 mg, que parece añadido, y se descartó.
+  - `chocolate_negro_85` 27 -> 30/31: C = 0 y D = 0 de BEDCA 28 (Chocolate negro); B9 = 52 µg de CIQUAL 31074 (chocolate negro > 70 % de cacao; el de BEDCA es de menos cacao). Se descartó la D = 2,16 de CIQUAL por incoherente con un chocolate sin leche. Colina: ninguna fuente.
+  - `semillas_chia`, `corn_flakes`, `pasta_seca`: sin cambios. Chía: ni BEDCA ni CIQUAL (15047) tienen A, D, K, B5, B6 ni colina. Corn flakes: A, C y D siguen vacíos a propósito (fortificación). Pasta: la colina no está en BEDCA 598 ni en CIQUAL; B1, B2, B3, B9 y hierro ya están en la fila (USDA sin enriquecer), no se tocan.
