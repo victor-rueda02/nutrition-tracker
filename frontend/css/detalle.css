@@ -1,0 +1,89 @@
+/* Detalle de alimento y de nutriente. Solo tokens de la paleta (styles.css); reutiliza panel, plegable, nuts/nut, meter, caps y bar. */
+.detalle .panel, .detalle-nutriente .panel { margin:12px 0; }
+
+/* Cabecera: título en una línea (con puntos suspensivos) y subtítulo de 13 px a 2 px de aire */
+.detalle .top.with-back > *, .detalle-nutriente .top.with-back > * { min-width:0; }
+.detalle .top.with-back > strong, .detalle-nutriente .top.with-back > strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.detalle .title-block, .detalle-nutriente .title-block { gap:2px; max-width:100%; }
+.detalle .title-block strong, .detalle-nutriente .title-block strong { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.detalle .title-block small, .detalle-nutriente .title-block small { font-size:13px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* Cantidad */
+.detalle-campo { display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:52px; font-weight:600; }
+.detalle-campo + .detalle-campo { border-top:1px solid var(--line); }
+.detalle-campo input, .detalle-campo select { width:9rem; max-width:55%; min-height:44px; text-align:right; font:inherit; padding:8px 12px; border-radius:12px; border:1px solid var(--field); background:var(--bg); color:var(--fg); }
+.detalle-campo select { width:auto; max-width:65%; text-align:left; }
+.detalle-cantidad-panel .error { margin:4px 0 8px; }
+.detalle-info { text-align:center; margin:16px 0 8px; }
+.detalle-info p { margin:4px 0; }
+.detalle-por { font-size:1.05rem; }
+.detalle-fuente-completa { text-align:left; margin:4px 0 0; }
+.detalle-fuente-completa summary { justify-content:center; gap:6px; font-weight:500; color:var(--link); }
+.detalle-cuerpo.obsoleto { opacity:.5; }
+
+/* Secciones plegables (mismo componente que el informe diario) y grupos: título de 15 px / 600 */
+.detalle .plegable > summary h2 { font-size:1.1rem; }
+.detalle .grupo { margin:18px 0 0; }
+.detalle .grupo:first-of-type { margin-top:8px; }
+.detalle .grupo > summary { min-height:44px; margin:0; }
+.detalle .grupo > summary h3 { margin:0; font-size:15px; font-weight:600; color:var(--fg); text-transform:none; }
+.detalle .nuts { gap:0; }
+.detalle .nut { min-height:44px; padding:8px 0; border-top:1px solid var(--line); }
+.detalle .nuts > .nut:first-child { border-top:none; }
+.detalle .nut .meter { margin-top:4px; }
+/* Filas sin barra: el valor en la misma columna que el % (borde derecho) */
+.detalle .nut-simple .nut-head { align-items:center; }
+.detalle .nut-simple-valor { width:auto; min-width:56px; font-weight:400; }
+.detalle .nut-simple .nut-valor { color:var(--fg); margin:0; font-size:.95rem; }
+.detalle .nut-simple.sin-dato .nut-valor { color:var(--muted); }
+/* Subpartidas: sangría de 16 px y peso normal */
+.detalle .nut.sub { padding-left:16px; }
+.detalle .nut.sub .nut-label { font-weight:400; }
+/* La fila entera es el botón que abre el detalle del nutriente (≥ 44 px de alto). */
+.abre-detalle { position:absolute; inset:0 -8px; width:auto; min-height:44px; padding:0; border:none; border-radius:12px; background:none; }
+.abre-detalle:active { background:var(--soft); opacity:.6; }
+.aviso-sanitario { text-align:center; margin:16px 8px 0; }
+.detalle .objetivos-dia { text-align:center; margin:8px 0 0; }
+
+/* Barra del rango */
+.rango-caja { padding:0 22px; margin:16px 0 8px; }
+.rango-barra { position:relative; height:14px; border-radius:999px; background:var(--track); margin:4px 0 52px; }
+.rango-otros, .rango-aporte { position:absolute; top:0; bottom:0; left:0; }
+.rango-otros { background:var(--bar-under); border-radius:999px 0 0 999px; }
+.rango-aporte { background:var(--link); }
+.rango-aporte.sobre { background:var(--bar-over); }
+.rango-barra > :first-child:is(.rango-aporte) { border-radius:999px 0 0 999px; }
+/* Marcas de 4 px con contorno de 2 px del color de la tarjeta para que se vean sobre el relleno; la del UL también en --fg */
+.marca { position:absolute; top:-6px; bottom:-6px; width:4px; margin-left:-2px; background:var(--fg); border-radius:2px; box-shadow:0 0 0 2px var(--surface); }
+.marca-referencia { background:var(--muted); }
+.marca-et { position:absolute; top:calc(100% + 4px); left:50%; transform:translateX(-50%); font-size:13px; line-height:1.15; font-weight:600; white-space:nowrap; color:var(--fg); }
+.marca-ul .marca-et { color:var(--ul-fg); }
+.marca.n2 .marca-et { top:calc(100% + 22px); }
+/* Aviso de UL superado: texto además del color */
+.ul-aviso { margin:0 -22px 8px; padding:8px 12px; border-radius:12px; background:var(--ul-bg); color:var(--ul-fg); font-size:15px; font-weight:700; text-align:center; }
+/* Leyenda en dos líneas, con el color de cada parte como puntito */
+.rango-leyenda { margin:0 0 8px; }
+.rango-leyenda .ley { display:flex; align-items:center; gap:8px; margin:2px 0; color:var(--muted); }
+.rango-leyenda .ley-aporte { color:var(--fg); font-weight:600; }
+.rango-leyenda .punto { flex:none; width:10px; height:10px; border-radius:50%; background:var(--bar-under); }
+.rango-leyenda .ley-aporte .punto { background:var(--link); }
+.rango-tabla { width:100%; border-collapse:collapse; margin-top:4px; font-variant-numeric:tabular-nums; }
+.rango-tabla th, .rango-tabla td { padding:10px 0; border-top:1px solid var(--line); text-align:left; font-weight:400; min-height:44px; }
+.rango-tabla th { font-weight:600; }
+.rango-tabla td { text-align:right; }
+.rango-tabla tr:first-child th, .rango-tabla tr:first-child td { border-top:none; }
+.info-seccion .panel p { margin:4px 0; }
+/* Títulos de las secciones de información: 13 px, 600, --muted, 24 px de margen superior */
+.info-seccion h2.caps, .catalogo-top h2.caps { margin:24px 4px 8px; font-size:13px; font-weight:600; color:var(--muted); }
+.fuentes { list-style:none; padding:0; margin:0; font-size:.95rem; }
+.fuentes li { padding:8px 0; border-top:1px solid var(--line); min-height:44px; display:block; }
+.fuentes li:first-child { border-top:none; }
+.fuentes a { color:var(--link); font-weight:600; text-decoration:underline; }
+.top-lista { list-style:none; padding:0; margin:0; }
+.top-lista li { padding:10px 0; border-top:1px solid var(--line); min-height:44px; }
+.top-lista li:first-child { border-top:none; }
+
+/* Líneas del Diario: el nombre abre el detalle del alimento */
+.line-name button.line-open { display:block; width:100%; min-height:44px; margin:-10px 0 -6px; padding:10px 0; border:none; border-radius:0; background:none; color:inherit; font:inherit; font-weight:600; text-align:left; }
+.food-row { position:relative; }
+.food-row .abre-detalle { inset:0; border-radius:0; }

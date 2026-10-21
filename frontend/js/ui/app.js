@@ -10,11 +10,12 @@ import { parseFoodsDocument, parseFoodsCSV, formatIssue, foodsToCSV } from '../c
 import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
+import { cantidadDeGramos, registroConGramos, limpiarInfoNutrientes, cantidadLegible } from '../core/detalle.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
 import { loadTargets } from '../core/targets.js';
 import { targetsForDate, planFromLegacy, validatePlan } from '../core/targets-plan.js';
-import { diaryReport, shiftDate } from '../core/diary.js';
+import { diaryReport, dayTotals, shiftDate } from '../core/diary.js';
 import { avisoParciales } from '../core/parciales.js';
 import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
@@ -35,6 +36,8 @@ import { reportScreen, energySummary, parcialesDiario } from './report-screen.js
 import { alimentosScreen, catalogoListScreen } from './foods-screen.js';
 import { masScreen } from './more-screen.js';
 import { cenasActions, cenasScreen } from './cenas-screen.js';
+import { detalleAlimentoScreen } from './detalle-alimento-screen.js';
+import { detalleNutrienteScreen } from './detalle-nutriente-screen.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -94,7 +97,7 @@ export function mountApp(root, deps) {
     screen: 'diary', sheet: null, menu: false, docSection: 'documento', catQuery: '', catFilter: 'todos', catFocus: false, addDate: null, plantillasBack: 'alimentos', recetasBack: 'alimentos', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
     day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'diary',
-    estimate: null, cenas: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
+    detalle: null, estimate: null, cenas: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   // Plan de objetivos (docs/OBJETIVOS-FORMATO.md): cada día se evalúa con los objetivos vigentes ESE día.
@@ -534,8 +537,11 @@ export function mountApp(root, deps) {
     if (id === 'mas') { state.screen = 'mas'; state.pendingDelete = null; render(); return undefined; }
     return openAdd();
   }
-  const TAB_OF = { diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas', cenas: 'diary' };
+  const TAB_OF = { detalle: 'alimentos', 'detalle-nutriente': 'alimentos', diary: 'diary', informe: 'diary', alimentos: 'alimentos', micatalogo: 'alimentos', plantillas: 'alimentos', recetas: 'alimentos', catalogo: 'alimentos', mas: 'mas', doc: 'mas', objetivos: 'mas', registro: 'mas', cenas: 'diary' };
   const SIN_BARRA = ['home', 'confirm', 'repeat', 'estimar']; // llevan su propia barra de acciones
+  // El detalle de una línea del Diario saca un «Guardar» fijo al cambiar la cantidad: sin barra inferior desde el principio.
+  const sinBarra = () => SIN_BARRA.includes(state.screen) || (state.screen === 'detalle' && state.detalle?.origen === 'diary');
+  const tabActiva = () => (state.screen === 'catalogo' && state.catBack === 'cenas' ? 'diary' : state.screen.startsWith('detalle') && state.detalle?.origen === 'diary' ? 'diary' : TAB_OF[state.screen]) ?? null;
   // Regla general: una pantalla con su propia barra fija de acciones (footer.bar) nunca lleva la barra inferior de navegación,
   // que si no la taparía (mismo bottom:0 y más z-index) y dejaría el botón de guardar fuera de alcance (recetas, y las que vengan).
   const llevaBarraPropia = (screen) => screen.querySelector(':scope > footer.bar') !== null;
@@ -776,7 +782,8 @@ export function mountApp(root, deps) {
   };
 
   // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
-  function nutrientRow(r) {
+  const nutrientRow = (r) => nutrientRowCon(r, fmtQty);
+  function nutrientRowCon(r, fmtQty) { // fmtQty propio: el detalle usa uno que no confunde lo muy pequeño con un 0
     const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
     const objetivo = r.valor === null ? '' : r.objetivo === null && r.min != null && r.max != null ? ` / ${fmtNum(r.min, r.unit)}–${fmtQty(r.max, r.unit)}` : ` / ${fmtQty(r.valor, r.unit)}`;
     const fill = h('span', {});
@@ -821,8 +828,9 @@ export function mountApp(root, deps) {
         h('button', { type: 'button', class: 'icon meal-add', 'aria-label': `Añadir a ${MEAL_LABEL[meal].toLowerCase()}`, onclick: () => { state.sheet = { meal, date: state.day }; render(); } }, icon(doc, 'plus')),
         h('strong', {}, MEAL_LABEL[meal]), h('span', { class: 'muted' }, c ? fmtKcal(c) : '')),
       (c?.registros ?? []).map((r) => h('div', { class: 'registro', 'data-id': r.id },
-        h('ul', { class: 'lines' }, r.lines.map((l) => h('li', { class: 'line' },
-          h('span', { class: 'line-name' }, l.nombre), h('span', { class: 'sep' }, ' · '),
+        h('ul', { class: 'lines' }, r.lines.map((l, i) => h('li', { class: 'line' },
+          // el nombre abre el detalle del alimento con los gramos de esa línea (si el alimento ya no está en el documento, no hay detalle)
+          h('span', { class: 'line-name' }, byId().has(l.food_id) ? h('button', { type: 'button', class: 'line-open', 'aria-label': `Ver detalle de ${l.nombre}`, onclick: () => abrirDetalle({ foodId: l.food_id, origen: 'diary', record: r.record, lineIndex: i }) }, l.nombre) : l.nombre), h('span', { class: 'sep' }, ' · '),
           h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
           h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
         h('div', { class: 'row between registro-actions' },
@@ -864,8 +872,65 @@ export function mountApp(root, deps) {
     const obj = targetsFor(state.day);
     const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
     return reportScreen({ h, state, deps, rep, parciales: avisoParciales(state.dayMeals, byId(), rep.rows), MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), header,
-      objetivosTexto: obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA',
+      objetivosTexto: objetivosTexto(obj),
       back: () => { state.screen = 'diary'; render(); } });
+  }
+  const objetivosTexto = (obj) => (obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA');
+
+  // ---------- detalle de un alimento y de un nutriente (ui/detalle-*-screen.js; cuentas en core/detalle.js) ----------
+  // Desde una línea del Diario (cantidad = sus gramos; «Guardar» los actualiza) o desde Mi catálogo (100 g o una porción; solo ver).
+  function abrirDetalle({ foodId, origen, record = null, lineIndex = null }) {
+    if (!byId().has(foodId)) return;
+    const gramos = origen === 'diary' ? record.lines[lineIndex].grams : 100;
+    // scrollY: dónde estaba la pantalla de origen, para volver al mismo sitio; plegados: secciones que cierres, que se recuerdan
+    state.detalle = { origen, foodId, record, lineIndex, fecha: origen === 'diary' ? state.day : today(), grams0: gramos, gramos, cantidad: cantidadDeGramos(gramos), porcion: 'g', nutriente: null, scrollY: scrollActual(), scrollDetalle: 0, plegados: {} };
+    state.screen = 'detalle'; state.pendingDelete = null;
+    irA(0); render();
+  }
+  function abrirNutriente(clave) {
+    state.detalle.scrollDetalle = scrollActual();
+    state.detalle.nutriente = clave; state.screen = 'detalle-nutriente';
+    irA(0); render();
+  }
+  const scrollActual = () => doc.scrollingElement?.scrollTop ?? 0;
+  const irA = (y) => { if (doc.scrollingElement) doc.scrollingElement.scrollTop = y; };
+  // «Volver» del detalle de alimento: a Mi catálogo o al Diario, en la posición en que estaban.
+  function cerrarDetalle() {
+    const { origen, scrollY } = state.detalle;
+    state.detalle = null; state.screen = origen === 'diary' ? 'diary' : 'micatalogo'; render(); irA(scrollY);
+  }
+  function volverDeNutriente() {
+    const d = state.detalle;
+    d.nutriente = null; state.screen = 'detalle'; render(); irA(d.scrollDetalle);
+  }
+  // Como fmtQty, pero lo muy pequeño y no nulo se ve «<0,01 g» y no «0 g» (que sería un 0 real).
+  const fmtQtyDet = (v, unit) => cantidadLegible(v, UNIT_LABEL[unit] ?? unit, (x) => fmtQty(x, unit));
+  // «Guardar» del detalle de una línea del Diario: mismos id y guardado que «Editar», solo cambian los gramos de esa línea.
+  function guardarDetalle(gramos) {
+    const d = state.detalle;
+    return track((async () => {
+      await deps.store.addMeal(registroConGramos(d.record, d.lineIndex, gramos, now()));
+      state.detalle = null;
+      await openDay(d.fecha, 'Cambios guardados.');
+    })(), 'No se pudo guardar');
+  }
+  const infoNutrientes = limpiarInfoNutrientes(deps.nutrientesInfo);
+  function detalleCtx() {
+    const d = state.detalle;
+    const obj = targetsFor(d.fecha);
+    // Total del día de un nutriente (o de una suma, EPA + DHA) y lo que aportaba la línea guardada.
+    const suma = (clave) => obj.list.find((t) => t.clave === clave)?.suma ?? null;
+    const sumar = (valores) => { const v = valores.filter((x) => x !== null); return v.length ? v.reduce((a, x) => a + x, 0) : null; };
+    const hoy = (clave) => {
+      const keys = suma(clave) ?? [clave];
+      const dia = dayTotals(state.dayMeals, byId(), keys);
+      const linea = nutrientsForGrams(byId().get(d.foodId), d.grams0, keys);
+      return { total: sumar(keys.map((k) => dia[k].value)), aporteOriginal: sumar(keys.map((k) => linea[k])) };
+    };
+    return { h, doc, state, byId, header, nutrientRow: (r) => nutrientRowCon(r, fmtQtyDet), fmtQty: fmtQtyDet, nf0, nf1, required: req, threshold: thr, catalog: deps.catalog, objetivos: obj, objetivosTexto: objetivosTexto(obj),
+      origenTexto: d.origen === 'diary' ? `${MEAL_LABEL[d.record.meal]} · ${shortDate(d.fecha)}` : '', targets, foods: state.foods, info: infoNutrientes,
+      guardar: guardarDetalle, abrirNutriente, etiquetaHoy: d.fecha === today() ? 'Llevas hoy' : 'Llevas ese día',
+      hoy: d.origen === 'diary' ? hoy : null };
   }
 
   // Formulario en línea del Diario para guardar una comida como plantilla.
@@ -927,7 +992,9 @@ export function mountApp(root, deps) {
       reviewUpdate: () => { state.catBack = 'alimentos'; state.screen = 'catalogo'; render(); }, postponeUpdate: () => postponeCatalogUpdate(),
       pendientes: pendientesView({ h, state, est }),
     });
-    const micatalogo = () => catalogoListScreen({ h, doc, state, incompleteInfo, render, header, back: openAlimentos });
+    const micatalogo = () => catalogoListScreen({ h, doc, state, incompleteInfo, render, header, back: openAlimentos, openDetalle: (foodId) => abrirDetalle({ foodId, origen: 'catalogo' }) });
+    const detalle = () => detalleAlimentoScreen({ ...detalleCtx(), back: cerrarDetalle });
+    const detalleNutriente = () => detalleNutrienteScreen({ ...detalleCtx(), back: volverDeNutriente });
     const abrirSeccion = (section) => () => openDoc('', section);
     const mas = () => masScreen({
       h, doc, state, incompletos: state.foods.filter(incompleteInfo).length,
@@ -941,7 +1008,7 @@ export function mountApp(root, deps) {
     });
     const cenasPantalla = () => cenasScreen({ h, state, byId, header, nf0, nf1, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), actions: cenas, back: () => openDay(state.cenas.fecha) });
     const informe = informeScreen;
-    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas, cenas: cenasPantalla };
+    const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas, cenas: cenasPantalla, detalle, 'detalle-nutriente': detalleNutriente };
     const screen = screens[state.screen]();
     if (state.fail) { // debajo de la cabecera fija, con el recuadro rojo de los avisos (alert-ul)
       const aviso = h('p', { class: 'error alert-ul alert-fail', role: 'alert' }, state.fail, ' ',
@@ -950,7 +1017,7 @@ export function mountApp(root, deps) {
       if (cabecera) cabecera.after(aviso); else screen.prepend(aviso);
     }
     const extras = [];
-    if (!SIN_BARRA.includes(state.screen) && !llevaBarraPropia(screen)) extras.push(bottomNav({ h, doc, active: (state.screen === 'catalogo' && state.catBack === 'cenas' ? 'diary' : TAB_OF[state.screen]) ?? null, go }));
+    if (!sinBarra() && !llevaBarraPropia(screen)) extras.push(bottomNav({ h, doc, active: tabActiva(), go }));
     if (state.menu && state.screen === 'diary') {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },

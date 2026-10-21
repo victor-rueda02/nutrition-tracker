@@ -44,8 +44,10 @@ async function boot() {
     try { recetasBase = JSON.parse(await fetchText('recetas.json')).recetas ?? []; } catch { /* sin recetas publicadas */ }
     let semilla = null; // data/cenas-semilla.json: cenas de Cronometer y roles de ¿Qué ceno? (sin ella, solo tu historial)
     try { semilla = JSON.parse(await fetchText('cenas-semilla.json')); } catch { /* sin semilla */ }
+    let nutrientesInfo = null; // data/nutrientes-info.json: textos del detalle de nutriente (sin él, «Información aún no disponible»)
+    try { nutrientesInfo = JSON.parse(await fetchText('nutrientes-info.json')); } catch { /* sin información de nutrientes */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase, semilla,
+      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase, semilla, nutrientesInfo,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });
