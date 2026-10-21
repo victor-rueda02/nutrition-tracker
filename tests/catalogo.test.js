@@ -89,6 +89,13 @@ test('recetas: filas cocinadas que se dictan en gramos de plato sin aviso ("verd
   }
 });
 
+test('chocolate negro 85: la vitamina D (D2 del cacao) no es un 0 falso; viene de CIQUAL 31074', () => {
+  const c = byId.get('chocolate_negro_85');
+  assert.equal(c.nutrients.vitamina_d_ug, 2.16);
+  assert.equal(c.nutrients.vitamina_b9_ug, 52);
+  assert.match(c.extra.fuente_usda, /vitamina_d_ug = 2\.16.*CIQUAL 31074/);
+});
+
 test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. UU. no declarada queda sin dato', () => {
   const c = byId.get('corn_flakes').nutrients;
   assert.deepEqual([c.energia_kcal, c.proteina_g, c.hidratos_g, c.azucares_g, c.fibra_g, c.sodio_mg], [373, 6.7, 82, 0.9, 4.4, 600]); // sodio = sal 1,5 g ÷ 2,5
