@@ -3,6 +3,7 @@
 // final, sin que lo tape la barra inferior de navegación, el pie fijo de acciones ni la cabecera. jsdom no calcula layout, por
 // eso este test usa Chrome de verdad; sin Chrome (o sin CHROME_PATH) se salta con un aviso y `npm test` sigue en verde.
 // Sirve la app con un servidor local propio (copia temporal de frontend/ y data/, puerto libre, IA y USDA simulados): sin red.
+// Tarda unos 40 s: con NT_SIN_CHROME=1 (p. ej. `NT_SIN_CHROME=1 npm test`; en PowerShell `$env:NT_SIN_CHROME='1'`) se salta con un aviso.
 // Una comprobación estructural sin Chrome (que no dependa del layout) está en tests/ui-navegacion.test.js.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +17,8 @@ import { buildBackup, backupToJSON } from '../frontend/js/core/backup.js';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const chromeRuta = buscarChrome();
-const skip = chromeRuta ? false : 'No hay Chrome, Chromium ni Edge (o CHROME_PATH): prueba de layout omitida';
+const skip = process.env.NT_SIN_CHROME === '1' ? 'NT_SIN_CHROME=1: prueba de layout con Chrome omitida'
+  : chromeRuta ? false : 'No hay Chrome, Chromium ni Edge (o CHROME_PATH): prueba de layout omitida';
 
 // IA simulada: «Estimar con IA» devuelve ingredientes de mi documento; nunca se llama a Gemini ni a USDA.
 const ESTIMACION = JSON.stringify({ plato: 'Plato de prueba', gramos_total: 300, ingredientes: [
@@ -75,7 +77,7 @@ const AYUDA = `window.H = {
     for (const [fx, fy] of [[.5, .5], [.15, .25], [.85, .25], [.15, .75], [.85, .75]]) {
       const x = r.left + r.width * fx; const y = r.top + r.height * fy;
       const e = document.elementFromPoint(x, y);
-      if (!e || !(e === el || el.contains(e))) { motivos.push('el punto (' + Math.round(x) + ', ' + Math.round(y) + ') lo ocupa ' + (e ? e.tagName.toLowerCase() + '.' + e.className : 'nada')); break; }
+      if (!e || !(e === el || el.contains(e))) { motivos.push('el punto (' + Math.round(x) + ', ' + Math.round(y) + ') lo ocupa ' + (e ? e.tagName.toLowerCase() + '.' + (e.getAttribute('class') ?? '') : 'nada')); break; }
     }
     return { ok: motivos.length === 0, motivos, rect: [r.left, r.top, r.width, r.height].map(Math.round) };
   },
@@ -126,6 +128,7 @@ test('layout en Chrome: el botón principal de cada pantalla se ve entero y se p
   const copia = (backupToJSON(buildBackup({ meals: [
     { id: 'copia1', date: '2026-01-05', meal: 'comida', createdAt: '2026-01-05T12:00:00Z', text: '', lines: [{ food_id: 'avena_copos', grams: 50, source_text: '' }] }], now: new Date('2026-10-17T10:00:00Z') })));
   let chrome;
+  const sinZonaSegura = []; // pasadas de 375×812 en las que Chrome no aplicó la zona segura (se avisa, no es un fallo)
   const fallos = []; // se recogen todos para ver de una vez qué pantallas fallan
   try {
     chrome = await lanzarChrome();
@@ -142,6 +145,7 @@ test('layout en Chrome: el botón principal de cada pantalla se ve entero y se p
           await writeFile(f, `${csv}\n${ultima.join(',')}\n`);
         }
         const p = await chrome.abrirPestana({ url, ...tam });
+        if (tam.margenInferior && !p.zonaSegura) sinZonaSegura.push(esc.nombre);
         try {
           await p.evaluar(`(async () => { for (let i = 0; i < 300 && !document.querySelector('nav.tabbar'); i++) await new Promise((r) => setTimeout(r, 30)); })()`); // la app arranca (IndexedDB, datos)
           await p.evaluar(AYUDA);
@@ -160,6 +164,8 @@ test('layout en Chrome: el botón principal de cada pantalla se ve entero y se p
     await new Promise((ok) => servidor.close(ok));
     await rm(tmp, { recursive: true, force: true }).catch(() => {});
   }
+  if (sinZonaSegura.length) t.diagnostic(`AVISO: este Chrome no admite Emulation.setSafeAreaInsetsOverride: ${sinZonaSegura.length} pasada(s) de 375×812 corrieron SIN zona segura (${[...new Set(sinZonaSegura)].join(', ')})`);
+  else t.diagnostic('zona segura de 34 px aplicada en las pasadas de 375×812');
   t.diagnostic(`${ESCENARIOS.length} pantallas en 375×667 y las de pie fijo también en 375×812 con zona segura, con ${chrome?.ruta ?? 'Chrome'}`);
   assert.deepEqual(fallos, [], ['Botones principales tapados o fuera de alcance:', ...fallos].join(String.fromCharCode(10)));
 });

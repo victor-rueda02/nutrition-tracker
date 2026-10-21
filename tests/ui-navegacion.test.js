@@ -145,3 +145,26 @@ test('CSS: el contenido deja hueco bajo la barra de navegación (barra + zona se
   assert.ok(m && Number(m[1]) >= alto + 16, `main deja ${m?.[1]} px bajo el contenido (mínimo ${alto + 16}) más env(safe-area-inset-bottom)`);
   assert.match(css, /\.tabbar\s*\{[^}]*padding:\s*6px 8px calc\(6px \+ env\(safe-area-inset-bottom\)\)/);
 });
+
+// Regresión: la vista previa de «Nueva receta» / «Guardar como receta» mostraba el texto «null» cuando no faltaba ningún dato
+// (replaceChildren no descarta null, a diferencia de `h`).
+test('la vista previa de una receta completa (sin datos que falten ni avisos) no contiene «null»', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m1', '2026-10-16', 'desayuno', [['avena_copos', 80], ['aceite_oliva', 10]])] });
+  await t.act(() => t.btn('Guardar como receta').click());
+  const prev = t.$('.receta-preview');
+  assert.match(prev.textContent, /31\/31 nutrientes obligatorios/); // ingredientes completos: nada que avisar
+  assert.equal(prev.querySelector('.flag'), null);
+  assert.ok(!/null|undefined/.test(prev.textContent), prev.textContent);
+  assert.equal(prev.childNodes.length, 1);
+  // también en «Nueva receta» al añadir un ingrediente
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Alimentos').click());
+  await t.act(() => t.btn('Ver recetas').click());
+  await t.act(() => t.btn('Nueva receta').click());
+  await t.act(() => t.btn('+ Añadir ingrediente').click());
+  t.type(t.$('.overlay input[type=search]'), 'avena');
+  await t.act(() => t.$('.overlay .pick').click());
+  t.type(t.$('main.recetas li.card input.grams'), '100');
+  assert.match(t.$('.receta-preview').textContent, /31\/31/);
+  assert.ok(!/null/.test(t.$('.receta-preview').textContent));
+});

@@ -34,6 +34,9 @@ npm run dev:lan    # además, desde el iPhone en la misma Wi-Fi (te dice la dire
 npm test
 ```
 
+`npm test` incluye una prueba de layout con Chrome headless (Chrome, Chromium o Edge; tarda unos 40 s). Sin Chrome se salta sola;
+con Chrome, para saltarla: `NT_SIN_CHROME=1 npm test` (PowerShell: `$env:NT_SIN_CHROME='1'; npm test`).
+
 En la app: **Documento → Conexión**, Worker = `http://localhost:8080` (o la dirección que te dé `dev:lan`), Token = tu
 `APP_TOKEN` de `.env` (o `local` si no lo pusiste) → Guardar → Probar. Cada «Procesar» es una llamada real a Gemini.
 
