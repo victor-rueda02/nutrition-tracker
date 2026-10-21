@@ -66,7 +66,7 @@ test('resumen: hasta 2 nutrientes por nombre, más como «N micronutrientes»; a
   assert.equal(dos.menor.resumen, 'Totales parciales en vitamina K y colina (faltan datos de A, B, C y 2 más)');
   assert.equal(dos.menor.completo, false); // el resumen recorta los alimentos
   const tres = avisoParciales(comidas, mapa(...muchos), [fila('vitamina_k_ug', 'Vitamina K', ['a']), fila('colina_mg', 'Colina', ['a']), fila('zinc_mg', 'Zinc', ['a'])]);
-  assert.equal(tres.menor.resumen, 'Totales parciales en 3 micronutrientes (faltan datos de A)');
+  assert.equal(tres.menor.resumen, 'Totales parciales en 3 nutrientes (faltan datos de A)');
   assert.equal(tres.menor.completo, false);
   const uno = avisoParciales(comidas, mapa(...muchos), [fila('vitamina_k_ug', 'Vitamina K', ['a'])]);
   assert.equal(uno.menor.resumen, 'Totales parciales en vitamina K (faltan datos de A)');
@@ -102,13 +102,13 @@ test('un alimento sin ningún dato no entra (ya se avisa como «Sin datos nutric
   assert.equal(avisoParciales([comida(['borrado', 100])], mapa(), rows), null); // borrado del documento: tampoco tiene datos
 });
 
-test('nombre_corto si existe; si no, el nombre', () => {
-  const largo = food('chia', 'Semillas de chía', { energia_kcal: 1 }, { nombre_corto: ' chía ' });
-  assert.equal(nombreAlimento(largo, 'chia'), 'chía');
+test('el nombre del documento (nombre_corto es solo de «¿Qué ceno?»); sin alimento, el id', () => {
+  const largo = food('chia', 'Semillas de chía', { energia_kcal: 1 }, { nombre_corto: 'chía' });
+  assert.equal(nombreAlimento(largo, 'chia'), 'Semillas de chía');
   assert.equal(nombreAlimento(food('x', 'Pasta'), 'x'), 'Pasta');
   assert.equal(nombreAlimento(undefined, 'id_raro'), 'id_raro');
   const a = avisoParciales([comida(['chia', 20])], mapa(largo), [fila('colina_mg', 'Colina', ['chia'])]);
-  assert.equal(a.menor.resumen, 'Totales parciales en colina (faltan datos de chía)');
+  assert.equal(a.menor.resumen, 'Totales parciales en colina (faltan datos de Semillas de chía)');
 });
 
 test('sin parciales no hay aviso', () => {

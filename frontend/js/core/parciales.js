@@ -22,10 +22,9 @@ const etiquetas = (nutrientes, resumen = false) => listaEs(nutrientes.map((n, i)
   return i === 0 && !resumen ? t : enFrase(t);
 }));
 
-// Nombre del alimento: el corto si existe (columna nombre_corto), si no el nombre.
+// Nombre del alimento: el del documento (nombre_corto es solo para los títulos de «¿Qué ceno?»), como en «Sin datos nutricionales».
 export function nombreAlimento(food, id) {
-  const corto = typeof food?.extra?.nombre_corto === 'string' ? food.extra.nombre_corto.trim() : '';
-  return corto || food?.nombre || id;
+  return food?.nombre ?? id;
 }
 
 // rows: filas de diaryReport(...).rows (con label, missing, parcial). Devuelve null si no hay nada que avisar o
@@ -60,7 +59,7 @@ export function avisoParciales(meals, foodsById, rows) {
     if (alimentos.length > MAX_ALIMENTOS_RESUMEN) hay.push(`${alimentos.length - MAX_ALIMENTOS_RESUMEN} más`);
     const cuantos = importante || nutrientes.length <= MAX_NUTRIENTES_RESUMEN
       ? etiquetas(nutrientes, true)
-      : `${nutrientes.length} micronutrientes`;
+      : `${nutrientes.length} nutrientes`;
     return {
       nivel: importante ? 'importante' : 'menor',
       grupos,

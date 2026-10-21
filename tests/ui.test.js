@@ -301,7 +301,7 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
   assert.ok(avisos[0].querySelector('strong')); // el estado no depende solo del color: lleva el prefijo «Importante:»
   assert.ok(avisos[1].classList.contains('menor') && avisos[1].classList.contains('muted'));
   assert.equal(avisos[1].tagName, 'DETAILS');
-  assert.match(avisos[1].querySelector('summary').textContent, /^Totales parciales en \d+ micronutrientes \(faltan datos de /);
+  assert.match(avisos[1].querySelector('summary').textContent, /^Totales parciales en \d+ nutrientes \(faltan datos de /);
   assert.match(avisos[1].querySelector('ul').textContent, /Colina: faltan datos de .*Pasta seca sin enriquecer/);
   assert.doesNotMatch(avisos[1].textContent, /Huevo/); // 0 g ese día: no cuenta
   assert.doesNotMatch(t.root.textContent, /Totales parciales: faltan datos/); // el texto antiguo ya no está
@@ -323,8 +323,18 @@ test('Informe diario: el detalle de parciales, agrupado y por gravedad (importan
 test('Diario: un día sin parciales no muestra el aviso', { skip }, async () => {
   const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100]])] });
   await t.act(() => t.btn('Diario').click());
-  assert.equal(t.$$('.parciales').length, t.$$('.parciales').filter((p) => p.classList.contains('menor')).length); // a lo sumo el menor
-  assert.equal(t.$('.parciales.importante'), null);
+  assert.equal(t.$$('.parciales').length, 0);
+});
+
+test('Informe diario: nombra los alimentos sin datos y los borrados del documento (aviso «Sin datos nutricionales»)', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['coca_cola', 330], ['alimento_borrado', 50]])] });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => verInforme(t));
+  const aviso = t.$$('[role=alert]').find((x) => /Sin datos nutricionales/.test(x.textContent));
+  assert.ok(aviso);
+  assert.match(aviso.textContent, /Coca-Cola Classic/);
+  assert.match(aviso.textContent, /alimento_borrado/);
+  assert.match(aviso.textContent, /no son completos/);
 });
 
 test('Objetivos: sin plan, editar kcal y macros crea «Mis objetivos» desde hoy; el diario de hoy los usa y el de ayer no; perfil mujer', { skip }, async () => {
