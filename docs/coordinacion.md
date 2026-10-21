@@ -5,7 +5,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | Fecha | Encargo | Subagente | Rama | Rondas | Estado | Pendiente de Victor |
 |---|---|---|---|---|---|---|
 | 2026-10-21 | Montar modo coordinador (agentes, permisos, CLAUDE.md §8) y limpiar worktrees | coordinador | main | – | integrado | Borrar a mano las carpetas vacías `../nt-catalogo`, `../nt-cenas`, `../nt-estetica` (bloqueadas por otro proceso) |
-| 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 0 | en revisión (ronda 1) | – |
+| 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 1 | integrado | – |
 | 2026-10-21 | B · Aviso de totales parciales con nutrientes afectados (macros vs micros) | desarrollador | dev/b-aviso-parciales | 2 | integrado | – |
 | 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 2 | integrado (falta worker:deploy) | ¿Aprobar que el rol_cena viaje a Gemini en «Más ideas» (regla 6)? ¿Dónde probó: Worker publicado o servidor local? |
 | 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
