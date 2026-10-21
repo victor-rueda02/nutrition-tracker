@@ -17,7 +17,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | J · Icono de la app (anillos + hoja morada) | coordinador | main | – | integrado (sin publicar) | Al reinstalar en el iPhone: al reinstalar, exportar diario y documento antes |
 | 2026-10-21 | K1 · Info de nutrientes: general, hidratos, grasas y aminoácidos (data/nutrientes-info.json) | redactor-salud (emulado) | salud/k1-macros-aminoacidos | 0 | en revisión (ronda 1) | – |
 | 2026-10-21 | K2 · Info de nutrientes: vitaminas y minerales | redactor-salud (emulado) | salud/k2-vitaminas-minerales | 0 | en revisión (ronda 1) | – |
-| 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 0 | en curso | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
+| 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 0 | en revisión (ronda 1: revisor + revisor-estetica) | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
