@@ -1,5 +1,714 @@
 {
   "version": 1,
   "completo": false,
-  "nutrientes": {}
+  "nutrientes": {
+    "vitamina_a_ug": {
+      "resumen": "Vitamina liposoluble para la visión, la inmunidad, el hueso y la división celular. Es preformada (retinol, de alimentos animales y enriquecidos) o provitamina A (carotenoides vegetales).",
+      "necesidades": "EFSA: PRI de 750 µg RAE al día en hombres adultos y 650 en mujeres (1 µg RAE = 1 µg de retinol = 6 µg de betacaroteno = 12 µg de otros carotenoides). UL de 3000 µg al día, solo de retinol preformado.",
+      "deficit": "Rara en países ricos. Leve: cansancio e infecciones. Grave: ceguera nocturna, sequedad ocular (xeroftalmía), piel y pelo secos. Más riesgo con malabsorción o dietas muy limitadas.",
+      "exceso": "El retinol preformado se acumula en el hígado: visión borrosa, dolor óseo, náuseas, piel seca; se ha asociado a pérdida de hueso y malformaciones fetales. El betacaroteno de los alimentos no es tóxico.",
+      "fuentes_alimentos": "Retinol: hígado, huevos, leche, aceites de pescado. Carotenoides: verduras de hoja, zanahoria, boniato, calabaza, tomate, pimiento rojo, melón y mango.",
+      "consejos": "El aceite de hígado de bacalao es muy rico en retinol: no lo sumes a otros suplementos con vitamina A. Los fumadores deben evitar suplementos de betacaroteno en dosis altas (más cáncer de pulmón).",
+      "discrepancias": "La app cuenta RAE total, pero el UL de la EFSA es solo de retinol: puede avisar de más.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin A",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-a/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_c_mg": {
+      "resumen": "Vitamina hidrosoluble y antioxidante, necesaria para fabricar colágeno, cicatrizar y controlar infecciones. Se almacena poco: hay que tomarla a diario.",
+      "necesidades": "EFSA: PRI de 110 mg al día en hombres adultos y 95 en mujeres. Sin UL (datos insuficientes). Fumar aumenta las necesidades.",
+      "deficit": "Rara; aparece con dietas casi sin fruta ni verdura (menos de 10 mg al día durante un mes o más). Escorbuto: encías sangrantes, moratones, mala cicatrización, cansancio, caída del pelo y anemia por absorber peor el hierro no hemo.",
+      "exceso": "Por encima de 1000 mg se absorbe menos de la mitad y el resto se elimina. Con más de 3000 mg al día: diarrea y, si hay antecedentes, cálculos renales, más ácido úrico o sobrecarga de hierro (hemocromatosis).",
+      "fuentes_alimentos": "Cítricos, pimientos, fresas, kiwi, tomate, brócoli, coles de Bruselas, repollo, coliflor y patata.",
+      "consejos": "El calor y la luz la destruyen y pasa al agua de cocción: cocina poco tiempo y con poca agua (salteado, escaldado) o toma crudo. Con las comidas, mejora la absorción del hierro no hemo.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin C",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-c/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_d_ug": {
+      "resumen": "Vitamina liposoluble y hormona que la piel fabrica con los rayos UVB del sol. Ayuda a absorber y retener calcio y fósforo, esenciales para el hueso.",
+      "necesidades": "EFSA: AI de 15 µg al día (600 UI) en adultos, suponiendo mínima síntesis cutánea; con sol, la necesidad dietética es menor o incluso cero. UL de 100 µg al día (opinión de 2023). 1 µg = 40 UI.",
+      "deficit": "Por poco sol y dieta, o por malabsorción de grasa. Raquitismo en niños y osteomalacia (huesos blandos y débiles) en adultos. Más riesgo con obesidad, bypass gástrico o enfermedad inflamatoria intestinal.",
+      "exceso": "Casi siempre por suplementos, no por alimentos ni por sol. Sube el calcio en sangre: anorexia, pérdida de peso, arritmias y endurecimiento de vasos y tejidos, con daño en corazón y riñón.",
+      "fuentes_alimentos": "Pocos alimentos la aportan: pescado azul (salmón, sardinas, atún), aceite de hígado de bacalao, yema de huevo, queso e hígado; lácteos y cereales enriquecidos.",
+      "consejos": "Con el calcio: la vitamina D permite absorberlo en el intestino. El magnesio es necesario para activarla. El protector solar reduce su síntesis más de un 90 % y el cristal de la ventana bloquea los UVB.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin D",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-d/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Magnesium",
+          "url": "https://nutritionsource.hsph.harvard.edu/magnesium/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_e_mg": {
+      "resumen": "Vitamina liposoluble; el cuerpo solo usa el alfa-tocoferol. Antioxidante que protege las células y refuerza la inmunidad.",
+      "necesidades": "EFSA: AI de 13 mg al día de alfa-tocoferol en hombres adultos y 11 en mujeres. UL de 300 mg al día, en revisión.",
+      "deficit": "Rara; por malabsorción de grasa (pancreatitis, fibrosis quística, celiaquía). Neuropatía periférica, falta de coordinación (ataxia), daño en la retina y menor inmunidad.",
+      "exceso": "Los alimentos no son tóxicos. Con suplementos altos hay más riesgo de sangrado, sobre todo con anticoagulantes como la warfarina.",
+      "fuentes_alimentos": "Aceites vegetales (girasol, soja, germen de trigo), pipas de girasol, almendras, cacahuetes, verduras de hoja, calabaza, pimiento rojo, espárragos, mango y aguacate.",
+      "consejos": "Si tomas anticoagulantes, consulta antes de suplementar. Los suplementos de dosis altas no han demostrado prevenir enfermedades del corazón: mejor la dieta.",
+      "discrepancias": "Harvard cita un UL de EE. UU. de 1000 mg; la EFSA usa 300 mg y lo está revisando.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin E",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-e/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_k_ug": {
+      "resumen": "Vitamina liposoluble (filoquinona en vegetales, menaquinonas en alimentos fermentados y animales) necesaria para la coagulación y para proteínas del hueso.",
+      "necesidades": "EFSA: AI de 70 µg al día de filoquinona en adultos (hombres y mujeres). Sin UL (datos insuficientes).",
+      "deficit": "Rara en adultos; con antibióticos prolongados o malabsorción. Coagulación lenta, sangrados y huesos más débiles (osteopenia). Los recién nacidos reciben suplemento.",
+      "exceso": "Se elimina rápido y rara vez alcanza niveles tóxicos, incluso con ingestas altas.",
+      "fuentes_alimentos": "Verduras de hoja (nabos, col rizada, espinacas, lechugas), brócoli, coles de Bruselas, repollo, aceites de soja y colza; natto (menaquinonas); poca en carne, queso y huevos.",
+      "consejos": "Anticoagulantes: con warfarina, mantén una ingesta de vitamina K constante; los cambios grandes y bruscos alteran el efecto del fármaco. Consulta a tu médico. Tómala con algo de grasa (aceite de oliva, aguacate).",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin K",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-k/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b1_mg": {
+      "resumen": "Tiamina: vitamina hidrosoluble clave para sacar energía de los nutrientes y para el cerebro, el corazón y los nervios. Apenas se almacena: hay que tomarla cada día.",
+      "necesidades": "EFSA: PRI de 0,1 mg por MJ de energía (unos 0,8 mg al día con 2000 kcal), igual en ambos sexos. Sin UL (datos insuficientes).",
+      "deficit": "Rara. Beriberi (pérdida muscular, neuropatía, insuficiencia cardiaca) y síndrome de Wernicke-Korsakoff (confusión, descoordinación), sobre todo con alcoholismo, malabsorción o diuréticos. Leve: pérdida de peso, debilidad, confusión.",
+      "exceso": "No se ha descrito toxicidad: el exceso se elimina por la orina.",
+      "fuentes_alimentos": "Cerdo, pescado, legumbres, guisantes, cereales integrales y enriquecidos, pipas de girasol y yogur.",
+      "consejos": "El calor intenso, la cocción larga y el agua de cocción desechada la destruyen. El refinado la elimina del pan y el arroz blancos: prefiere los integrales.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Thiamin (Vitamin B1)",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-b1/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b2_mg": {
+      "resumen": "Riboflavina: vitamina hidrosoluble para producir energía, crecer y descomponer grasas. Las bacterias intestinales fabrican algo, pero no basta.",
+      "necesidades": "EFSA: PRI de 1,6 mg al día en adultos (hombres y mujeres). Sin UL (datos insuficientes).",
+      "deficit": "Muy rara. Labios agrietados, dolor de garganta, lengua inflamada, caída del pelo, erupciones, anemia y, si es grave, cataratas. Más riesgo en vegetarianos estrictos y embarazadas con poca ingesta de lácteos o carne.",
+      "exceso": "No se ha observado toxicidad: el exceso se elimina por la orina y puede teñirla de amarillo intenso.",
+      "fuentes_alimentos": "Leche, yogur, queso, huevos, carne magra, hígado, pechuga de pollo, salmón, almendras, espinacas y cereales enriquecidos.",
+      "consejos": "La luz la inactiva (por eso la leche va en envases opacos): guarda los lácteos fuera de la luz.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Riboflavin (Vitamin B2)",
+          "url": "https://nutritionsource.hsph.harvard.edu/riboflavin-vitamin-b2/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b3_mg": {
+      "resumen": "Niacina: vitamina hidrosoluble (ácido nicotínico y nicotinamida) que usan más de 400 enzimas para obtener energía y reparar el ADN. El cuerpo también la forma a partir del triptófano.",
+      "necesidades": "EFSA: PRI de 1,6 mg de equivalentes de niacina (NE) por MJ (unos 13 mg NE con 2000 kcal); 1 NE = 1 mg de niacina = 60 mg de triptófano. UL solo de suplementos: 900 mg al día de nicotinamida y 10 mg de ácido nicotínico.",
+      "deficit": "Rara. Pelagra: erupción oscura en zonas expuestas al sol, lengua muy roja, diarrea o estreñimiento, depresión, cansancio y pérdida de memoria. Riesgo: dietas muy limitadas, alcoholismo y dietas basadas en maíz.",
+      "exceso": "Por suplementos de ácido nicotínico: rubor con picor en cara, brazos y pecho, mareo, malestar gástrico y más ácido úrico. Dosis muy altas durante meses pueden dañar el hígado.",
+      "fuentes_alimentos": "Carne roja, aves, pescado, frutos secos, legumbres, arroz integral y cereales enriquecidos. En los cereales va unida a la fibra y se absorbe peor.",
+      "consejos": "Tomar dosis muy superiores a las necesarias no da más energía.",
+      "discrepancias": "La app solo suma niacina preformada, mientras que la cifra de la EFSA incluye la que sale del triptófano: tu porcentaje real es mayor.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Niacin (Vitamin B3)",
+          "url": "https://nutritionsource.hsph.harvard.edu/niacin-vitamin-b3/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b5_mg": {
+      "resumen": "Ácido pantoténico: vitamina hidrosoluble que forma la coenzima A, necesaria para construir y descomponer ácidos grasos. Está en casi todos los alimentos.",
+      "necesidades": "EFSA: AI de 5 mg al día en adultos. Sin UL (datos insuficientes).",
+      "deficit": "Muy rara, casi solo con desnutrición grave. Cefalea, cansancio, irritabilidad, sueño alterado, náuseas, calambres y hormigueo o ardor en manos y pies.",
+      "exceso": "No se ha observado toxicidad con alimentos. Con 10 g al día se han descrito molestias de estómago o diarrea leve.",
+      "fuentes_alimentos": "Vacuno, pollo, vísceras, setas, aguacate, frutos secos y semillas, leche, yogur, patata, huevos, arroz integral, avena, brócoli y cereales enriquecidos.",
+      "consejos": "Una dieta variada la cubre; no hay pruebas de que los suplementos ayuden en alergias o artritis, pese a lo que se anuncia.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Pantothenic Acid (Vitamin B5)",
+          "url": "https://nutritionsource.hsph.harvard.edu/pantothenic-acid-vitamin-b5/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b6_mg": {
+      "resumen": "Piridoxina: vitamina hidrosoluble, coenzima de más de 100 enzimas que descomponen proteínas, hidratos y grasas, controlan la homocisteína y apoyan la inmunidad y el cerebro.",
+      "necesidades": "EFSA: PRI de 1,7 mg al día en hombres adultos y 1,6 en mujeres. UL de 12 mg al día (opinión de 2023).",
+      "deficit": "Suele ir con falta de B12 y folato. Anemia microcítica, problemas de piel, depresión, confusión y menos defensas. Más riesgo con enfermedad renal, celiaquía, colitis, Crohn, artritis reumatoide y alcoholismo.",
+      "exceso": "Con alimentos es improbable. Los suplementos en dosis altas y prolongadas causan neuropatía en manos y pies, falta de coordinación y náuseas, que suelen remitir al suspenderlos.",
+      "fuentes_alimentos": "Hígado, atún, salmón, pollo, garbanzos, cereales enriquecidos, verduras de hoja, plátano, papaya, naranja y melón.",
+      "consejos": "Solo los suplementos pueden superar el UL: revisa la etiqueta de multivitamínicos y complejos B.",
+      "discrepancias": "Harvard cita el UL antiguo de EE. UU. (100 mg); la EFSA lo bajó a 12 mg en 2023. Manda la EFSA.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin B6",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-b6/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b9_ug": {
+      "resumen": "Folato: forma natural de la vitamina B9, hidrosoluble. Forma ADN y ARN y ayuda a descomponer la homocisteína. Su falta se asocia a defectos del tubo neural en el feto.",
+      "necesidades": "EFSA: PRI de 330 µg DFE al día en adultos. DFE = µg de folato de alimentos + 1,7 × µg de ácido fólico (el ácido fólico, de enriquecidos y suplementos, se absorbe mejor: 85 % frente a 50 %). UL de 1000 µg solo para ácido fólico añadido.",
+      "deficit": "Rara. Anemia megaloblástica, debilidad, cansancio, latidos irregulares, falta de aire, caída del pelo, palidez y llagas en la boca. Más riesgo con alcohol, embarazo y malabsorción.",
+      "exceso": "El folato de los alimentos no es tóxico. El ácido fólico por encima de 1000 µg al día puede enmascarar un déficit de vitamina B12.",
+      "fuentes_alimentos": "Verduras de hoja verde, espárragos, brócoli, coles de Bruselas, legumbres, cacahuetes, pipas, fruta fresca y zumos, cereales integrales, hígado y huevos.",
+      "consejos": "El alcohol dificulta su absorción y acelera su pérdida.",
+      "discrepancias": "La app mide folato total en DFE, pero el UL solo es del ácido fólico añadido: puede avisar de más.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Folate (Vitamin B9)",
+          "url": "https://nutritionsource.hsph.harvard.edu/folic-acid/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "vitamina_b12_ug": {
+      "resumen": "Cobalamina: vitamina hidrosoluble presente solo en alimentos de origen animal y enriquecidos. Forma glóbulos rojos y ADN y mantiene las neuronas.",
+      "necesidades": "EFSA: AI de 4 µg al día en adultos. Sin efectos adversos definidos, no tiene UL.",
+      "deficit": "Anemia megaloblástica o perniciosa, cansancio, hormigueo y daño nervioso, pérdida de memoria, depresión. Riesgo: dietas sin productos animales, falta de factor intrínseco, poco ácido gástrico, cirugía intestinal, metformina y fármacos que reducen el ácido gástrico.",
+      "exceso": "No se han asociado efectos adversos a la ingesta de alimentos y suplementos en personas sanas; el sobrante se elimina por la orina.",
+      "fuentes_alimentos": "Pescado y marisco, hígado, carne roja, huevos, aves y lácteos; levadura nutricional, cereales y bebidas vegetales enriquecidos.",
+      "consejos": "Quien no come productos animales necesita enriquecidos o suplemento. Las algas nori no son una fuente fiable. La B12 en sangre no es el mejor marcador: el ácido metilmalónico y la homocisteína reflejan mejor el déficit.",
+      "discrepancias": "Harvard recoge la RDA de EE. UU. (2,4 µg); la AI de la EFSA (4 µg) es mayor. Manda la EFSA.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Vitamin B12",
+          "url": "https://nutritionsource.hsph.harvard.edu/vitamin-b12/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "colina_mg": {
+      "resumen": "Nutriente esencial: el hígado fabrica algo, pero no basta. Forma acetilcolina (músculos, memoria) y fosfatidilcolina, que saca la grasa del hígado.",
+      "necesidades": "EFSA: AI de 400 mg al día en adultos. No figura en el resumen de UL de la EFSA.",
+      "deficit": "Rara en personas sanas. Daño muscular o hepático e hígado graso. Más riesgo en el embarazo y con nutrición intravenosa; las mujeres premenopáusicas necesitan menos por los estrógenos.",
+      "exceso": "Dosis muy altas (suplementos): hipotensión, daño hepático, sudoración, olor corporal a pescado, náuseas y más TMAO, un compuesto asociado a riesgo cardiovascular.",
+      "fuentes_alimentos": "Yema de huevo, hígado y vacuno, pollo, pescado, setas shiitake, patata, legumbres, cacahuetes, leche, yogur, crucíferas y pipas de girasol.",
+      "consejos": "Los multivitamínicos no suelen llevarla. También la aportan alimentos con poca grasa saturada: salmón, bacalao, pollo y legumbres.",
+      "discrepancias": "Harvard recoge la AI de EE. UU. (550 mg en hombres); la EFSA da 400 mg. Manda la EFSA.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Choline",
+          "url": "https://nutritionsource.hsph.harvard.edu/choline/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "calcio_mg": {
+      "resumen": "Mineral de huesos y dientes (99 % del calcio corporal); también interviene en la coagulación, la contracción muscular, el ritmo cardiaco y los nervios.",
+      "necesidades": "EFSA: PRI de 950 mg al día desde los 25 años (1000 mg de 18 a 24), igual en hombres y mujeres. UL de 2500 mg al día (alimentos y suplementos).",
+      "deficit": "La sangre mantiene su nivel tomando calcio del hueso, sin síntomas al principio; a largo plazo, osteopenia y osteoporosis. Si baja en sangre (hipocalcemia): calambres, hormigueo en los dedos y arritmias.",
+      "exceso": "Hipercalcemia: debilidad, náuseas, falta de aire, dolor torácico. Con suplementos altos (sobre todo pasados los 50 años), más riesgo de cálculos renales y estreñimiento.",
+      "fuentes_alimentos": "Lácteos y bebidas vegetales enriquecidas, sardinas y salmón en lata con espinas, almendras, tofu con sulfato cálcico, edamame y verduras de hoja (berza, col rizada).",
+      "consejos": "Vitamina D: permite absorber calcio en el intestino. En suplemento, no más de 500 mg de una vez. El exceso de sodio, el alcohol y los refrescos de cola aumentan la necesidad. Mucho calcio reduce la absorción del hierro no hemo.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Calcium",
+          "url": "https://nutritionsource.hsph.harvard.edu/calcium/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Iron",
+          "url": "https://nutritionsource.hsph.harvard.edu/iron/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "hierro_mg": {
+      "resumen": "Componente de la hemoglobina (transporta oxígeno) y de la mioglobina del músculo. Su falta, la carencia nutricional más común del mundo, causa anemia.",
+      "necesidades": "EFSA: PRI de 11 mg al día en hombres adultos y mujeres posmenopáusicas; 16 mg en premenopáusicas (por la menstruación). Sin UL: nivel seguro de suplemento, 40 mg al día.",
+      "deficit": "Cansancio, debilidad, mareo, poca concentración, frío, falta de aire, palidez, caída del pelo y uñas quebradizas; anemia ferropénica si se agotan las reservas. Más riesgo: menstruación abundante, embarazo, vegetarianos y deportistas de resistencia.",
+      "exceso": "Raro con la dieta (el cuerpo regula la absorción); con suplementos innecesarios: estreñimiento, náuseas, vómitos y dolor abdominal. En la hemocromatosis se acumula y daña órganos.",
+      "fuentes_alimentos": "Hemo (se absorbe un 20-30 %): moluscos, hígado, vacuno, aves, sardinas. No hemo: legumbres, frutos secos y semillas, espinacas, cereales enriquecidos, chocolate negro, patata con piel.",
+      "consejos": "La carne y la vitamina C en la misma comida mejoran la absorción del hierro no hemo. La reducen el té, el café, los fitatos (salvado), el calcio (un vaso de leche la baja un 50 %) y algunas especias.",
+      "discrepancias": "En EE. UU. la RDA del hombre es 8 mg y el UL 45 mg. Manda la EFSA.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Guidelines for the control of iron deficiency (OMS, Oficina Regional del Mediterráneo Oriental, 1995)",
+          "url": "https://applications.emro.who.int/docs/who_em_nut_177_e_g_11_96_en.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Iron",
+          "url": "https://nutritionsource.hsph.harvard.edu/iron/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "magnesio_mg": {
+      "resumen": "Mineral que activa más de 300 enzimas: construye proteínas y hueso y regula la glucosa, la tensión y los músculos y nervios. Interviene en activar la vitamina D.",
+      "necesidades": "EFSA: AI de 350 mg al día en hombres adultos y 300 en mujeres. UL de 250 mg al día solo para el magnesio de suplementos, agua o alimentos enriquecidos, no el natural de los alimentos.",
+      "deficit": "Una carencia moderada no suele dar síntomas. La grave: cansancio, debilidad, náuseas, hormigueo, calambres, convulsiones y arritmias. Más riesgo con alcohol, edad avanzada, malabsorción y algunos diuréticos, antibióticos e inhibidores de la bomba de protones.",
+      "exceso": "El de los alimentos se elimina por el riñón. Los suplementos altos dan diarrea, náuseas y calambres; con enfermedad renal hay riesgo de toxicidad (debilidad, tensión baja, arritmia).",
+      "fuentes_alimentos": "Almendras, cacahuetes, anacardos, semillas de calabaza, legumbres, espinacas cocidas, patata con piel, arroz integral, avena, salmón, plátano, chocolate negro, leche y yogur.",
+      "consejos": "El procesado industrial reduce su contenido: prefiere integrales y poco refinados. Los suplementos no alivian los calambres nocturnos según una revisión Cochrane que cita Harvard.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Magnesium",
+          "url": "https://nutritionsource.hsph.harvard.edu/magnesium/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "fosforo_mg": {
+      "resumen": "Mineral de huesos, dientes y membranas celulares; activa enzimas, mantiene el pH de la sangre y regula nervios y músculos, incluido el corazón.",
+      "necesidades": "EFSA: AI de 550 mg al día en adultos (hombres y mujeres). Sin UL (datos insuficientes).",
+      "deficit": "Poco frecuente (problemas renales, hiperparatiroidismo, síndrome de realimentación): inapetencia, anemia, debilidad muscular, dolor óseo, confusión y osteomalacia.",
+      "exceso": "Raro en personas sanas, porque el cuerpo lo regula. En enfermedad renal puede dar calcificaciones y endurecimiento de tejidos blandos, como el riñón.",
+      "fuentes_alimentos": "Lácteos, salmón, vacuno, pollo, cerdo, legumbres, frutos secos, semillas y cereales integrales.",
+      "consejos": "En vegetales va como fitato y se absorbe peor; remojar, germinar y cocinar ayudan. El de los aditivos (fosfatos en fiambres, refrescos, bebidas embotelladas) se absorbe un 90 %, frente a 40-60 % del natural: mira la etiqueta.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Phosphorus",
+          "url": "https://nutritionsource.hsph.harvard.edu/phosphorus/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "potasio_mg": {
+      "resumen": "Electrolito presente en todos los tejidos: mantiene el líquido dentro de las células y activa nervios y músculos. Actúa en sentido opuesto al sodio.",
+      "necesidades": "EFSA: AI de 3500 mg al día en adultos. Sin UL (datos insuficientes).",
+      "deficit": "Casi nunca por la dieta sola: sudor intenso, diuréticos, laxantes, vómitos, diarrea o falta de magnesio. Cansancio, calambres, debilidad, estreñimiento; la grave, arritmias y parálisis muscular.",
+      "exceso": "Hiperpotasemia solo con enfermedad renal avanzada o fármacos que retienen potasio (incluidos los AINE): debilidad, náuseas, falta de aire y dolor torácico. En sanos, el riñón lo elimina.",
+      "fuentes_alimentos": "Legumbres, patata, espinacas, brócoli, calabaza, tomate, aguacate, plátano, melón, naranja, pasas y orejones, lácteos, almendras, pollo y salmón.",
+      "consejos": "Más fruta y verdura y menos procesados mejora la relación potasio/sodio. Las sales sustitutivas con potasio amargan al cocinar; consúltalo si tienes el riñón dañado.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Potassium",
+          "url": "https://nutritionsource.hsph.harvard.edu/potassium/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Salt and Sodium",
+          "url": "https://nutritionsource.hsph.harvard.edu/salt-and-sodium/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "sodio_mg": {
+      "resumen": "Electrolito necesario para los impulsos nerviosos, la contracción muscular y el equilibrio de agua y minerales. La sal (cloruro sódico) es un 40 % sodio.",
+      "necesidades": "EFSA (2019): 2 g de sodio al día son seguros y adecuados en adultos; sin UL. OMS: menos de 2 g de sodio, es decir, menos de 5 g de sal. Equivalencia: sal = sodio × 2,5 (1 g de sal = 400 mg de sodio).",
+      "deficit": "Rara. La hiponatremia (sodio bajo en sangre) afecta sobre todo a mayores con ciertos fármacos o enfermedades: náuseas, cefalea, confusión, letargo y, en casos graves, convulsiones.",
+      "exceso": "Sube la tensión arterial y con ella el riesgo cardiovascular, de cáncer gástrico, osteoporosis y enfermedad renal (OMS). La ingesta media de los adultos duplica la recomendación.",
+      "fuentes_alimentos": "Casi todo viene de procesados (pan, embutidos y fiambres, sopas, quesos, snacks, pizzas), no del salero. Fruta, verdura, carne y legumbres sin procesar aportan poco.",
+      "consejos": "En la etiqueta, la sal se da en gramos: × 0,4 = sodio. Más fruta y verdura (ricas en potasio). El exceso de sodio aumenta las necesidades de calcio.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Updating DRVs: job done, after 10 years and 34 nutrients (4 de septiembre de 2019)",
+          "url": "https://www.efsa.europa.eu/en/press/news/updating-drvs-job-done-after-10-years-and-34-nutrients",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Salt reduction (hoja informativa)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/salt-reduction",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Salt and Sodium",
+          "url": "https://nutritionsource.hsph.harvard.edu/salt-and-sodium/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Calcium",
+          "url": "https://nutritionsource.hsph.harvard.edu/calcium/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "zinc_mg": {
+      "resumen": "Oligoelemento necesario para unas 100 enzimas: ADN, crecimiento celular, proteínas, cicatrización e inmunidad.",
+      "necesidades": "EFSA: PRI de 11,7 mg al día en hombres y 9,3 en mujeres, con ingesta media de fitatos (600 mg al día); con 900-1200 mg de fitatos, 14,0-16,3 mg en hombres. UL de 25 mg al día.",
+      "deficit": "Rara. Pérdida de gusto u olfato, poco apetito, ánimo bajo, defensas bajas, cicatrización lenta, diarrea y caída del pelo. Más riesgo con enfermedad digestiva, vegetarianos, alcohol y embarazo.",
+      "exceso": "Casi siempre por suplementos: náuseas, vómitos, dolor abdominal y cefalea. Con 50-300 mg al día, la EFSA describe cobre bajo, anemia, neutropenia y peor inmunidad.",
+      "fuentes_alimentos": "Marisco (ostras, cangrejo), vacuno, pollo, cerdo, legumbres, frutos secos, semillas y cereales integrales o enriquecidos.",
+      "consejos": "Zinc y cobre: el exceso de zinc bloquea la absorción del cobre y puede causar su déficit; el UL se fijó por ese efecto. También interfiere con el hierro. Los fitatos de integrales y legumbres reducen su absorción.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc",
+          "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Zinc",
+          "url": "https://nutritionsource.hsph.harvard.edu/zinc/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Copper",
+          "url": "https://nutritionsource.hsph.harvard.edu/copper/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "cobre_mg": {
+      "resumen": "Oligoelemento que ayuda a las enzimas que producen energía, absorben hierro y forman glóbulos rojos, colágeno, tejido conectivo y neurotransmisores.",
+      "necesidades": "EFSA: AI de 1,6 mg al día en hombres adultos y 1,3 en mujeres. UL de 5 mg al día.",
+      "deficit": "Rara; por trastornos genéticos, malabsorción (Crohn, celiaquía) o suplementos de zinc. Anemia, colesterol alto, osteoporosis, fracturas, infecciones y pérdida de pigmento en la piel.",
+      "exceso": "Rara: el cuerpo excreta el exceso, salvo en la enfermedad de Wilson (daño hepático, náuseas, vómitos, diarrea, dolor abdominal). El agua de tuberías de cobre viejas puede aportar demasiado.",
+      "fuentes_alimentos": "Hígado, ostras, cangrejo, salmón, chocolate negro, anacardos, semillas de girasol y sésamo, garbanzos, mijo, pasta integral, patata y espinacas.",
+      "consejos": "Zinc y cobre: dosis altas de zinc en suplemento bloquean la absorción del cobre; no suplementes zinc sin necesidad. Si la dieta aporta poco cobre, se absorbe más.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Tolerable Upper Intake Levels for Vitamins and Minerals (2006), apartados de zinc",
+          "url": "https://www.efsa.europa.eu/sites/default/files/efsa_rep/blobserver_assets/ndatolerableuil.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Copper",
+          "url": "https://nutritionsource.hsph.harvard.edu/copper/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "manganeso_mg": {
+      "resumen": "Oligoelemento coenzima de enzimas que descomponen hidratos, proteínas y colesterol, forman hueso y sostienen la inmunidad; forma parte de la superóxido dismutasa, antioxidante.",
+      "necesidades": "EFSA: AI de 3 mg al día en adultos. Sin UL: nivel seguro de 8 mg al día (opinión de 2023).",
+      "deficit": "Muy rara: no se conocen grupos de riesgo ni síntomas bien establecidos.",
+      "exceso": "Sin casos por la dieta; sí por agua muy contaminada o inhalación laboral (minería, soldadura). Daña el sistema nervioso: temblores, espasmos, peor equilibrio, cefalea y depresión.",
+      "fuentes_alimentos": "Moluscos, avellanas, nueces pecanas, arroz integral, avena, legumbres, té negro, pimienta negra, espinacas y piña.",
+      "consejos": "Manganeso y hierro compiten por las mismas proteínas de absorción: con comidas muy ricas en hierro se absorbe menos. El té es una fuente importante en la dieta.",
+      "discrepancias": "Harvard cita un UL de EE. UU. de 11 mg; la EFSA no fija UL y da 8 mg como nivel seguro.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Manganese",
+          "url": "https://nutritionsource.hsph.harvard.edu/manganese/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "selenio_ug": {
+      "resumen": "Oligoelemento de las selenoproteínas, que ayudan a fabricar ADN, proteger las células y regular las hormonas tiroideas y la reproducción.",
+      "necesidades": "EFSA: AI de 70 µg al día en adultos. UL de 255 µg al día (opinión de 2023).",
+      "deficit": "Rara. La carencia grave causa la enfermedad de Keshan (cardiomiopatía) y la de Kashin-Beck (artrosis). Más riesgo con dieta vegetal en regiones de suelo pobre, VIH y diálisis.",
+      "exceso": "Sabor metálico, mal aliento, náuseas, diarrea, caída del pelo, uñas quebradizas, erupciones y cansancio; si persiste, temblores, fallo renal o cardiaco.",
+      "fuentes_alimentos": "Nueces de Brasil, pescado y marisco, vísceras, vacuno, pavo, pollo, cereales enriquecidos, pan integral y legumbres. Varía con el suelo donde se cultivan.",
+      "consejos": "Una sola nuez de Brasil puede superar la ingesta recomendada: no las tomes a diario en cantidad. Selenio y yodo trabajan juntos en el tiroides, y el exceso de uno puede contribuir al déficit del otro.",
+      "discrepancias": "Harvard cita un UL de EE. UU. de 400 µg; la EFSA lo bajó a 255 µg en 2023. Manda la EFSA.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population (versión 4, septiembre de 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Tolerable Upper Intake Levels (versión 11, agosto de 2025)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2024-05/ul-summary-report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "The Nutrition Source: Selenium",
+          "url": "https://nutritionsource.hsph.harvard.edu/selenium/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    }
+  }
 }
