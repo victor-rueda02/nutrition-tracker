@@ -22,3 +22,8 @@ usda/foods.propuesto.csv
 docs/revision-estetica/ronda-*/
 docs/referencia-cronometer/**/*.png
 docs/referencia-cronometer/**/*.PNG
+
+# Coordinador: worktrees de los subagentes, ajustes locales de Claude Code y capturas de scripts/capturas.mjs
+.claude/worktrees/
+.claude/settings.local.json
+capturas/
