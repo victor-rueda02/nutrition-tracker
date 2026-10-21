@@ -153,9 +153,14 @@ test('las filas de receta del catálogo coinciden con data/recetas.json (se reca
     assert.deepEqual([fila.estado, fila.pesoEnCrudo, fila.extra.incluir], ['cocinado', false, 'si'], r.id);
     assert.ok(fila.extra.notas.startsWith(NOTA_RECETA), r.id);
     const res = computeReceta(r, real, keys);
-    for (const k of keys) assert.equal(fila.nutrients[k], res.nutrients[k], `${r.id}.${k}`);
+    // los salteados de Hacendado llevan fijados los valores de su etiqueta (recetas.mjs --aplicar los pisaría)
+    const etiqueta = ETIQUETA_FIJADA.has(r.id) ? ETIQUETA_FIJADA.get(r.id) : [];
+    if (etiqueta.length) assert.match(fila.extra.fuente_usda, /etiqueta Hacendado/, r.id);
+    for (const k of keys.filter((x) => !etiqueta.includes(x))) assert.equal(fila.nutrients[k], res.nutrients[k], `${r.id}.${k}`);
   }
 });
+const KS_ETIQUETA = ['energia_kcal', 'grasa_total_g', 'grasas_saturadas_g', 'hidratos_g', 'azucares_g', 'fibra_g', 'proteina_g', 'sodio_mg'];
+const ETIQUETA_FIJADA = new Map([['salteado_verduras_hacendado', KS_ETIQUETA], ['verduras_asadas_hacendado', KS_ETIQUETA]]);
 
 test('CLI: sin --aplicar no escribe; con --aplicar escribe las recetas y omite el ejemplo (rutas de Windows y Linux)', () => {
   const dir = mkdtempSync(join(tmpdir(), 'recetas-'));

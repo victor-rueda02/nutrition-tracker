@@ -71,15 +71,21 @@ Detalle completo en `usda/informe.md` (regenerado). Alimentos que se envían a l
 Los 12 incompletos restantes tienen `incluir=no` y ningún dato: recetas pendientes (lentejas, repollo al horno,
 crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere activar.
 
+## Salteados de verduras Hacendado (rama cat/f-salteados)
+
+Dos productos ultracongelados, dos filas (grupos distintos, no variantes). Victor: «si no digo nada, el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
+- **Método**: receta en  con las verduras del catálogo a partes iguales (20 g de cada una; la etiqueta dice «proporción variable»: **micros estimados**). Después se sobrescriben con la etiqueta kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio (sal ÷ 2,5 × 1000: 8 y 12 mg). El resto (agua, grasas mono/poli, almidón, vitaminas, minerales, aminoácidos) es de la receta;  y  lo dicen.
+- **** (nueva; judías verdes, brócoli, pimiento rojo, champiñón, cebolla; alias «salteado de verduras»): sin pérdida de agua las kcal calculadas son 29,6 frente a 31 de la etiqueta (diferencia de proporciones, no de agua), así que no hay . 31/31 obligatorios.
+- **** (id conservado; calabacín, cebolla, berenjena, pimiento rojo y amarillo; alias «salteado de verduras asadas» y «verduras asadas»): 27 kcal con verduras crudas →  = 58,7 g por cada 100 g crudos (agua perdida al asar, ~41 %) para que cuadren los 46 kcal. 27/31 (faltan E, K, colina y ALA, del pimiento amarillo).
+- **Estado y peso**: , sin  (lo fija recetas.mjs): Victor pesa el producto tal cual sale de la bolsa (congelado, ya salteado o asado), no hay variante cruda y las verduras crudas son ingredientes. ,  «Salteado de verduras» / «Verduras asadas».
+- **Atención**:  (y «Recalcular todas» en la app) vuelve a escribir TODAS las columnas de nutrientes de estas dos filas y **borraría los valores de la etiqueta**. Tras aplicarlas hay que repetir el volcado de etiqueta (kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína, sodio). El test de recetas lo tiene en cuenta (compara solo lo no fijado por la etiqueta).
+- **Alias**: «salteado de verduras» está contenido en «salteado de verduras asadas». Si la IA elige el normal para «salteado de verduras asadas», el código no avisa (lo dicho contiene el alias del elegido). Riesgo bajo (el alias más largo es del otro y el prompt recibe ambos), pero no hay comprobación; sería una mejora de código (preferir el alias más largo que case).
+
 ## Pendiente con Victor
 
 - **Recetas caseras**: lentejas, repollo al horno, crema de calabacín y tortilla de patata. Victor pasará
   ingredientes en crudo y peso final del plato cuando cocine; entonces se añaden a `data/recetas.json` y
   `node scripts/recetas.mjs --aplicar`.
-- **Salteado de verduras** (judía verde redonda, brócoli, pimiento rojo, champiñón laminado, cebolla): faltan las
-  proporciones (el envase dice "variable"). Los ingredientes ya están en el catálogo.
-- **Verduras de Hacendado**: calculadas con verduras crudas, sin la pérdida de agua del asado. Con las kcal de la
-  etiqueta se podría fijar `peso_final_g` para que cuadren.
 - **Jamón cocido**: USDA ~8 % de grasa; el cocido extra español suele tener menos. Mejor con su etiqueta.
 - **Mayonesa**: USDA es de soja; la española suele ser de girasol (vitamina K probablemente alta, E baja).
 - **Pan de molde**: con su etiqueta se rellenarían B1, B2, B3, B9 y hierro.
