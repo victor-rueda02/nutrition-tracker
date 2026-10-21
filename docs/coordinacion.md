@@ -11,6 +11,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
 | 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 2 | integrado | – |
 | 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 0 | en revisión (ronda 1) | – (etiquetas recibidas) |
+| 2026-10-21 | G · «null» en la vista previa de receta; robustez de chrome-cdp y NT_SIN_CHROME | desarrollador | dev/g-null-receta-cdp | 0 | en curso | – |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
