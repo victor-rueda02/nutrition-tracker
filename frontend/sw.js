@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v18'; // nt-v17 + core/parciales.js (aviso de totales parciales por nutriente y alimento)
+const VERSION = 'nt-v19'; // nt-v18 (parciales) + «Más ideas» envía el rol de cada alimento y explica por qué descarta las ideas
 const ASSETS = [
   './',
   'css/catalogo.css',

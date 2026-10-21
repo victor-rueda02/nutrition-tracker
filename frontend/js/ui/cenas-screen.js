@@ -5,7 +5,7 @@ import { buildCompactList } from '../core/ai-contract.js';
 import { draftFromLines } from '../core/draft.js';
 import { foodSinDatos } from '../core/completeness.js';
 import { proponerCenas, deficitsParaIA, textoDescartados, rolesDe } from '../core/cenas.js';
-import { normalizeCenas } from '../core/cenas-validate.js';
+import { normalizeCenas, textoDescarteCenas } from '../core/cenas-validate.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 
 // ctx: { state, deps, track, render, byId, targetsFor, today, loadTemplates, recetasTodas }
@@ -38,21 +38,32 @@ export function cenasActions(ctx) {
     state.error = ''; state.screen = 'confirm'; ctx.render();
   }
 
+  // Suma los descartes por motivo del Worker y de la app (cada uno cuenta cenas distintas).
+  const sumar = (a = {}, b = {}) => Object.fromEntries([...new Set([...Object.keys(a), ...Object.keys(b)])].map((k) => [k, (a[k] ?? 0) + (b[k] ?? 0)]));
+
   // «Más ideas»: UNA llamada a la IA por pulsación; el botón queda desactivado hasta volver a abrir la pantalla.
   function masIdeas() {
     const c = state.cenas;
     if (!c || c.ideasUsadas || c.busy || c.resultado?.modo !== 'normal') return undefined; // solo se usa en modo normal (regla 10)
+    const roles = rolesDe(ctx.byId());
+    if (!Object.keys(roles).length) { // documento antiguo, sin rol_cena: no se pueden validar las cenas; no se gasta cuota
+      c.error = 'Tu documento aún no tiene la columna rol_cena (el papel de cada alimento en una cena), así que «Más ideas» no puede comprobar las cenas. No se ha llamado a la IA: actualiza el documento y vuelve a pulsar.';
+      c.faltaRoles = true; ctx.render(); return undefined;
+    }
+    c.faltaRoles = false;
     c.ideasUsadas = true; c.busy = true; c.error = ''; c.aviso = ''; ctx.render();
     return ctx.track((async () => {
       try {
-        const alimentos = buildCompactList(state.foods).filter((a) => !foodSinDatos(ctx.byId().get(a.id)));
+        // Solo alimentos con rol_cena (los demás no se proponen) y con él en la lista: es un dato del catálogo, no un nutriente.
+        const alimentos = buildCompactList(state.foods).filter((a) => roles[a.id] && !foodSinDatos(ctx.byId().get(a.id))).map((a) => ({ ...a, rol: roles[a.id] }));
         const deficits = deficitsParaIA(c.resultado.faltan);
         const r = await deps.createAiClient(state.conn).ideasCena({ alimentos, deficits });
-        const v = normalizeCenas({ cenas: r.cenas.map((x) => ({ nombre: x.nombre, lineas: (x.lineas ?? []).map((l) => ({ id: l.food_id ?? l.id, gramos: l.gramos })) })) }, alimentos, { roles: rolesDe(ctx.byId()) });
-        if (!v.ok) { c.error = 'La IA no devolvió ninguna idea válida con tu catálogo.'; return; }
+        const v = normalizeCenas({ cenas: r.cenas.map((x) => ({ nombre: x.nombre, lineas: (x.lineas ?? []).map((l) => ({ id: l.food_id ?? l.id, gramos: l.gramos })) })) }, alimentos, { roles });
+        const nota = textoDescarteCenas({ recibidas: r.recibidas ?? r.cenas.length, descartes: sumar(r.descartes, v.descartes), cenas: v.ok ? v.cenas : [] });
+        if (!v.ok) { c.error = nota; return; }
         c.ideasIA = v.cenas;
         c.resultado = calcular(v.cenas);
-        if (!c.resultado.ideas.length) c.aviso = 'Ninguna de las ideas de la IA encaja con lo que te falta.';
+        c.aviso = [nota, c.resultado.ideas.length ? '' : 'Ninguna de las ideas de la IA encaja con lo que te falta.'].filter(Boolean).join(' ');
       } catch (e) {
         c.error = e.userMessage ?? `Error inesperado: ${e.message}`; // las propuestas de siempre se conservan
       } finally {
@@ -60,7 +71,7 @@ export function cenasActions(ctx) {
       }
     })());
   }
-  return { open, anadir, masIdeas };
+  return { open, anadir, masIdeas, buscarActualizacion: () => ctx.buscarActualizacion?.() };
 }
 
 // ui: { h, state, byId, header, nf0, nf1, dayLabel, actions, back }
@@ -128,6 +139,7 @@ export function cenasScreen(ui) {
       h('div', { class: 'row' }, h('button', { type: 'button', class: 'secondary wide ideas-btn', disabled: c.ideasUsadas || c.busy, onclick: () => ui.actions.masIdeas() }, c.busy ? 'Pensando…' : 'Más ideas')),
       h('p', { class: 'muted small' }, c.ideasUsadas ? 'Una llamada a la IA por visita a esta pantalla.' : 'Pide a la IA hasta 3 ideas más (una llamada). Los gramos y nutrientes los calcula la app con tu documento.'),
       c.error ? h('p', { class: 'error', role: 'alert' }, c.error) : null,
+      c.faltaRoles || r.avisos.some((a) => a.codigo === 'sin_roles') ? h('div', { class: 'row' }, h('button', { type: 'button', class: 'secondary wide actualizar-doc', onclick: () => ui.actions.buscarActualizacion() }, 'Buscar actualización del documento')) : null,
       c.aviso ? h('p', { class: 'muted small', role: 'status' }, c.aviso) : null,
       r.ideas.map((p, i) => tarjeta(p, i, { ia: true }))) : null);
 }

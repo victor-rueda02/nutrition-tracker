@@ -10,7 +10,7 @@
 import { SYSTEM_PROMPT, RESPONSE_SCHEMA, buildUserPrompt, ESTIMATE_SYSTEM_PROMPT, ESTIMATE_SCHEMA, buildEstimatePrompt, CENAS_SYSTEM_PROMPT, CENAS_SCHEMA, buildCenasPrompt } from './prompt.js';
 import { parseModelJson, checkStructure, normalizeAiResponse } from '../../frontend/js/core/ai-validate.js';
 import { checkEstimateStructure, normalizeEstimate, MAX_TERMINO, MAX_INGREDIENTES } from '../../frontend/js/core/estimate-validate.js';
-import { checkCenasStructure, normalizeCenas, checkDeficits } from '../../frontend/js/core/cenas-validate.js';
+import { checkCenasStructure, normalizeCenas, checkDeficits, ROLES_CENA } from '../../frontend/js/core/cenas-validate.js';
 import { findCandidates, fichaUsda, fortificacion, UsdaError } from '../../frontend/js/core/usda-core.js';
 import { callGemini, ProviderError } from './providers/gemini.js';
 import { createUsda } from './providers/usda.js';
@@ -79,7 +79,7 @@ function safeEqual(a, b) {
 }
 
 // Se queda SOLO con los campos permitidos, aunque el cliente envíe más (p. ej. nutrientes).
-function sanitizeFoods(list) {
+function sanitizeFoods(list, { rol = false } = {}) {
   if (!Array.isArray(list) || list.length === 0 || list.length > MAX_FOODS) return null;
   const out = [];
   for (const f of list) {
@@ -92,6 +92,7 @@ function sanitizeFoods(list) {
     if (typeof f.estado === 'string' && f.estado) c.estado = f.estado;
     if (typeof f.grupo === 'string' && f.grupo) { c.grupo = f.grupo; c.defecto = f.defecto === true; }
     if (f.peso_en_crudo === true) c.peso_en_crudo = true;
+    if (rol && ROLES_CENA.includes(f.rol)) c.rol = f.rol; // solo en /cenas: el papel del alimento en una cena (dato del catálogo)
     out.push(c);
   }
   return out;
@@ -132,6 +133,7 @@ export function classifyProviderError(e, env = {}) {
 // Una llamada al modelo y, solo si el JSON es inválido, UN reintento. validate(data) -> { ok, result?, error? }.
 async function askModel(env, callModel, args, validate, cors) {
   let lastError = 'sin intentos';
+  let lastExtra = {};
   for (let attempt = 1; attempt <= 2; attempt++) {
     let rawModel;
     let modelo = env.GEMINI_MODEL;
@@ -147,10 +149,10 @@ async function askModel(env, callModel, args, validate, cors) {
     const parsed = parseModelJson(rawModel);
     if (!parsed.ok) { lastError = parsed.error; continue; }
     const v = validate(parsed.data);
-    if (!v.ok) { lastError = v.error; continue; }
+    if (!v.ok) { lastError = v.error; lastExtra = v.extra ?? {}; continue; }
     return json(200, { ...v.result, model: modelo, attempts: attempt }, cors);
   }
-  return json(502, { error: 'respuesta_invalida', detalle: lastError }, cors);
+  return json(502, { error: 'respuesta_invalida', detalle: lastError, ...lastExtra }, cors);
 }
 
 const parseValidate = (alimentos) => (data) => {
@@ -170,8 +172,8 @@ const estimateValidate = (alimentos, texto) => (data) => {
 const cenasValidate = (alimentos) => (data) => {
   const structure = checkCenasStructure(data);
   if (!structure.ok) return structure;
-  const r = normalizeCenas(data, alimentos) // los roles (rol_cena) los conoce la app, que vuelve a validar;
-  if (!r.ok) return r;
+  const r = normalizeCenas(data, alimentos); // la app vuelve a validar con los roles de su documento (rol_cena)
+  if (!r.ok) return { ok: false, error: r.error, extra: { recibidas: r.recibidas, descartes: r.descartes } }; // la app dice por qué no valió ninguna
   const { ok, ...result } = r;
   return { ok: true, result };
 };
@@ -263,7 +265,7 @@ export async function handleRequest(request, env, { callModel = defaultCallModel
   if (error) return error;
   if (url.pathname === '/cenas') {
     // Solo la lista compacta y los NOMBRES de los nutrientes con déficit (sin cantidades): cualquier otro campo se ignora.
-    const alimentos = sanitizeFoods(body?.alimentos);
+    const alimentos = sanitizeFoods(body?.alimentos, { rol: true });
     if (!alimentos) return json(400, { error: 'alimentos_invalidos' }, cors);
     const deficits = checkDeficits(body?.deficits ?? []);
     if (!deficits) return json(400, { error: 'deficits_invalidos', detalle: 'una lista de hasta 8 nombres cortos, sin números' }, cors);

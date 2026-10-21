@@ -17,6 +17,7 @@
 // El prompt, el esquema de Gemini y la validación viven en el Worker (worker/src/prompt.js): para ajustar el
 // comportamiento de la IA se edita allí y se redespliega el Worker, sin tocar la app. Si cambia este contrato
 // (campos de entrada o salida), es lo único que hay que adaptar aquí.
+import { textoDescarteCenas } from './core/cenas-validate.js';
 export class AiClientError extends Error {
   constructor(code, userMessage, detail) {
     super(`${code}: ${detail ?? userMessage}`);
@@ -68,7 +69,7 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       if (res.status === 403) throw fail('origen');
       if (['limite_usda', 'usda_sin_configurar', 'usda_clave', 'usda'].includes(body?.error)) throw fail(body.error, `HTTP ${res.status}`);
       if (res.status === 429) throw fail('limite_de_uso');
-      if (body?.error === 'respuesta_invalida') throw fail('respuesta_invalida', body.detalle);
+      if (body?.error === 'respuesta_invalida') throw Object.assign(fail('respuesta_invalida', body.detalle), { recibidas: body.recibidas, descartes: body.descartes });
       if (['google_caido', 'modelo_no_disponible', 'clave_ia', 'error_worker'].includes(body?.error)) throw fail(body.error, `HTTP ${res.status} Google ${body.status ?? '-'}`);
       throw fail('proveedor_ia', `HTTP ${res.status} ${body?.error ?? ''}`);
     }
@@ -88,9 +89,18 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       return { plato: b.plato, gramos: b.gramos, total_estimado: b.total_estimado === true, ajustado: b.ajustado === true, ingredientes: b.ingredientes, warnings: Array.isArray(b.warnings) ? b.warnings : [], model: b.model };
     },
     // Una llamada a la IA: cenas (ids del catálogo y gramos típicos). Nunca nutrientes ni nada del diario.
+    // alimentos lleva el `rol` (rol_cena) de cada uno. Devuelve también cuántas cenas mandó la IA y cuántas se descartaron en el Worker.
     async ideasCena({ alimentos, deficits }) {
-      const b = await post('/cenas', { alimentos, deficits }, (x) => Array.isArray(x.cenas));
-      return { cenas: b.cenas, warnings: Array.isArray(b.warnings) ? b.warnings : [], model: b.model };
+      let b;
+      try {
+        b = await post('/cenas', { alimentos, deficits }, (x) => Array.isArray(x.cenas));
+      } catch (e) {
+        if (e.code !== 'respuesta_invalida') throw e;
+        // El Worker no pudo sacar ninguna cena válida (dos intentos): se dice por qué, no "reformula la frase".
+        const quedan = e.descartes ? textoDescarteCenas({ recibidas: e.recibidas ?? 0, descartes: e.descartes }) : '';
+        throw new AiClientError('respuesta_invalida', quedan || 'La IA no devolvió ninguna cena que se pueda usar. Prueba de nuevo.', e.message);
+      }
+      return { cenas: b.cenas, warnings: Array.isArray(b.warnings) ? b.warnings : [], recibidas: b.recibidas ?? b.cenas.length, descartes: b.descartes ?? {}, model: b.model };
     },
     async usdaSearch({ terminos }) {
       const b = await post('/usda/search', { terminos }, (x) => Array.isArray(x.resultados));

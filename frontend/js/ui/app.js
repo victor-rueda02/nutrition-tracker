@@ -872,7 +872,7 @@ export function mountApp(root, deps) {
   const ctx = { state, deps, track, render, byId, persistFoods, now, saveFile, openDay };
   const rec = recetasActions(ctx);
   const est = estimateActions({ ...ctx, guardarReceta: rec.guardarReceta });
-  const cenas = cenasActions({ ...ctx, targetsFor, today, loadTemplates, recetasTodas: () => rec.todas() });
+  const cenas = cenasActions({ ...ctx, targetsFor, today, loadTemplates, recetasTodas: () => rec.todas(), buscarActualizacion: () => checkCatalogUpdate({ manual: true }) });
   const labels = new Map(deps.catalog.keys.map((k) => [k, deps.catalog.byKey.get(k)?.label ?? k]));
 
   // ---------- render ----------
