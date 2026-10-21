@@ -2,7 +2,8 @@
 .detalle .panel, .detalle-nutriente .panel { margin:12px 0; }
 
 /* Cabecera: título en una línea (con puntos suspensivos) y subtítulo de 13 px a 2 px de aire */
-.detalle .top.with-back > *, .detalle-nutriente .top.with-back > * { min-width:0; }
+/* min-width:0 solo en el título (no en el botón «‹»/«×», que mide ≥ 44 px): el título se recorta con elipsis y queda centrado entre dos huecos iguales */
+.detalle .top.with-back > :not(button), .detalle-nutriente .top.with-back > :not(button) { min-width:0; }
 .detalle .top.with-back > strong, .detalle-nutriente .top.with-back > strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .detalle .title-block, .detalle-nutriente .title-block { gap:2px; max-width:100%; }
 .detalle .title-block strong, .detalle-nutriente .title-block strong { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -60,7 +61,8 @@
 .marca-ul .marca-et { color:var(--ul-fg); }
 .marca.n2 .marca-et { top:calc(100% + 22px); }
 /* Aviso de UL superado: texto además del color */
-.ul-aviso { margin:0 -22px 8px; padding:8px 12px; border-radius:12px; background:var(--ul-bg); color:var(--ul-fg); font-size:15px; font-weight:700; text-align:center; }
+.ul-aviso { margin:0 -22px 8px; padding:8px 12px; border-radius:12px; background:var(--ul-bg); color:var(--ul-fg); font-size:15px; font-weight:700; text-align:center; text-wrap:balance; }
+.nota-ul-info { margin:8px 0 0; text-align:center; }
 /* Leyenda en dos líneas, con el color de cada parte como puntito */
 .rango-leyenda { margin:0 0 8px; }
 .rango-leyenda .ley { display:flex; align-items:center; gap:8px; margin:2px 0; color:var(--muted); }

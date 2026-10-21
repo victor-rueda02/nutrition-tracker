@@ -8,6 +8,13 @@ const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 const pos = (x) => typeof x === 'number' && Number.isFinite(x) && x > 0;
 const round2 = (x) => Math.round(x * 100) / 100;
 
+// UL que cuenta de verdad (avisos del Diario y del informe, detalle de nutriente y «¿Qué ceno?»): el `ul` del objetivo, salvo
+// que sea informativo (`ul_informativo` en targets.json: el de la vitamina A es solo de retinol preformado y el del folato,
+// solo de ácido fólico añadido, y el documento lleva el total). Es el único sitio que lo decide. null = no hay UL que vigilar.
+export function ulVigilado(t) {
+  return t && typeof t.ul === 'number' && Number.isFinite(t.ul) && !t.ulInformativo ? t.ul : null;
+}
+
 // Valida targets.json contra el catálogo de nutrientes. Devuelve { targets, warnings }.
 export function loadTargets(raw, catalog) {
   const warnings = [];
@@ -34,7 +41,7 @@ export function loadTargets(raw, catalog) {
     const item = {
       clave, label, unit, tipo: t.tipo, suma: Array.isArray(t.suma) ? [...t.suma] : null,
       valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia),
-      ul: num(t.ul), nota: t.nota ?? '', notaUl: t.nota_ul ?? '', fuente: raw?.fuentes?.[t.fuente] ?? t.fuente ?? '',
+      ul: num(t.ul), ulInformativo: num(t.ul) !== null && t.ul_informativo === true, nota: t.nota ?? '', notaUl: t.nota_ul ?? '', fuente: raw?.fuentes?.[t.fuente] ?? t.fuente ?? '',
     };
     if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null) {
       warnings.push(`${clave}: sin valor (valor, por perfil, por_mj o pct_energia)`);

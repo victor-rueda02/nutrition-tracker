@@ -262,18 +262,33 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
 });
 
 test('Diario: superar un UL es un aviso distinto de "objetivo cumplido"', { skip }, async () => {
-  // Copia congelada del documento: sus corn flakes traen la fortificación de EE. UU. (981 µg de vitamina A por 100 g).
-  const t = await setup({ foods: rulesFoods, meals: [MEAL('m', '2026-10-16', 'cena', [['corn_flakes', 400]])] });
+  // Alimento con 100 mg de zinc por 100 g (UL 25 mg): un UL normal sigue avisando.
+  const zinc = { ...realFoods.find((f) => f.id === 'huevo'), id: 'zinc_extra', nombre: 'Zinc extra', alias: [], nutrients: { energia_kcal: 100, zinc_mg: 100 } };
+  const t = await setup({ foods: [...realFoods, zinc], meals: [MEAL('m', '2026-10-16', 'cena', [['zinc_extra', 100]])] });
   await t.act(() => t.btn('Diario').click());
-  assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado: Vitamina A \(RAE\)/); // el Diario: una línea con el aviso
+  assert.match(t.$('.alert-ul').textContent, /Máximo tolerable \(UL\) superado: Zinc/); // el Diario: una línea con el aviso
   await t.act(() => verInforme(t));
-  assert.match(t.$('.alert-ul').textContent, /Vitamina A \(RAE\) 3924 µg \(UL 3000 µg\)/);
-  const a = fila(t, 'vitamina_a_ug');
-  assert.match(a.textContent, /retinol preformado/); // la nota del UL va en la fila del nutriente
+  assert.match(t.$('.alert-ul').textContent, /Zinc 100 mg \(UL 25 mg\)/);
+  const a = fila(t, 'zinc_mg');
   assert.ok(a.classList.contains('over-ul'));
   assert.match(a.textContent, /Objetivo cumplido/);
-  assert.match(a.textContent, /⚠ Supera el máximo tolerable \(UL 3000 µg\)/);
+  assert.match(a.textContent, /⚠ Supera el máximo tolerable \(UL 25 mg\)/);
   assert.ok(!fila(t, 'vitamina_c_mg').classList.contains('over-ul'));
+});
+
+test('Diario: el UL informativo (vitamina A con 400 g de zanahoria, folato) no avisa ni pinta rojo; el informe lo enseña con su nota', { skip }, async () => {
+  // 400 g de zanahoria: 3340 µg RAE (> 3000), pero ese UL es solo de retinol preformado.
+  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'cena', [['zanahoria', 400]])] });
+  await t.act(() => t.btn('Diario').click());
+  assert.equal(t.$('.alert-ul'), null); // sin tira de UL en el Diario
+  await t.act(() => verInforme(t));
+  assert.equal(t.$('.alert-ul'), null);
+  const a = fila(t, 'vitamina_a_ug');
+  assert.match(a.textContent, /3340 µg/);
+  assert.ok(!a.classList.contains('over-ul'));
+  assert.doesNotMatch(a.textContent, /Supera el máximo tolerable/);
+  assert.match(a.querySelector('.ul-informativo').textContent, /UL 3000 µg \(solo informativo\)/);
+  assert.match(a.querySelector('.ul-informativo').textContent, /solo para retinol preformado/);
 });
 
 test('Diario: un alimento sin datos deja los totales parciales y se dice cuál', { skip }, async () => {

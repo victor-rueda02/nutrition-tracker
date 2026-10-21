@@ -4,6 +4,7 @@ import { sumLines, nutrientsForGrams } from './nutrients.js';
 import { unitOf } from './catalog.js';
 import { MEALS } from './meal-defaults.js';
 import { foodSinDatos } from './completeness.js';
+import { ulVigilado } from './targets.js';
 
 export const RANGO_OBJETIVO = [0.9, 1.1]; // tipo 'objetivo': entre el 90 % y el 110 % cuenta como en objetivo
 
@@ -42,7 +43,7 @@ function limitesDe(target) {
 // estado: sin_dato | sin_objetivo | cumplido | por_debajo (solo min) · dentro | excedido (solo max) ·
 // en_objetivo | por_debajo | por_encima (objetivo y rangos: por debajo de min, o del 90 % del objetivo si no hay min;
 // por encima de max, o del 110 % del objetivo si no hay max). El % es sobre el objetivo (en un rango sin objetivo,
-// sobre el máximo). superaUl va aparte: es un aviso distinto de "objetivo cumplido".
+// sobre el máximo). superaUl va aparte: es un aviso distinto de "objetivo cumplido" (un UL informativo no cuenta, ver ulVigilado).
 export function evaluate(total, target) {
   const value = total.value;
   const parcial = total.missing.length > 0;
@@ -59,7 +60,7 @@ export function evaluate(total, target) {
     const hi = max ?? objetivo * RANGO_OBJETIVO[1];
     estado = value < lo ? 'por_debajo' : value > hi ? 'por_encima' : 'en_objetivo';
   }
-  return { total: value, pct, estado, superaUl: target.ul !== null && target.ul !== undefined && value > target.ul, parcial };
+  return { total: value, pct, estado, superaUl: ulVigilado(target) !== null && value > ulVigilado(target), parcial };
 }
 
 // Todo lo que muestra la pantalla Diario para un día.

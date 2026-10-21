@@ -135,6 +135,23 @@ test('UL ya superado: no descarta por ese UL, avisa y penaliza', () => {
   assert.match(av[0].texto, /Ya has superado el UL de Calcio hoy\./);
 });
 
+test('UL informativo (vitamina A, folato): superarlo con el total no descarta cenas ni avisa; el de calcio sí avisa', () => {
+  // 500 g de zanahoria (≈ 4.175 µg RAE) y 400 g de lentejas secas (≈ 2.000 µg DFE) en la comida: los dos UL informativos "superados"
+  const extra = meal('x', 'comida', [['zanahoria', 500], ['lentejas_secas', 400]]);
+  const comidas = [...DIA_TIPICO, extra];
+  const objetivos = conR(1000, ref, consumidoTipico + kcalDe(extra.lines));
+  const r = proponer({ comidasDelDia: comidas, objetivos });
+  assert.equal(r.propuestas.length, 3);
+  assert.deepEqual(r.avisos.filter((a) => a.codigo === 'ul_superado'), []);
+  // el mismo día con los UL tratados como normales sí avisa (la bandera es la que manda)
+  const normales = { ...objetivos, list: objetivos.list.map((t) => ({ ...t, ulInformativo: false })) };
+  const avisos = proponer({ comidasDelDia: comidas, objetivos: normales }).avisos.filter((a) => a.codigo === 'ul_superado').map((a) => a.nutriente).sort();
+  assert.deepEqual(avisos, ['vitamina_a_ug', 'vitamina_b9_ug']);
+  // un UL normal sigue avisando con el mismo día
+  const conCalcio = { ...objetivos, list: objetivos.list.map((t) => (t.clave === 'calcio_mg' ? { ...t, ul: 100 } : t)) };
+  assert.deepEqual(proponer({ comidasDelDia: comidas, objetivos: conCalcio }).avisos.filter((a) => a.codigo === 'ul_superado').map((a) => a.nutriente), ['calcio_mg']);
+});
+
 // ---------- 6, 9, 10: tamaño, postre, escalado, proteínas distintas ----------
 test('día típico (R ≈ 1.000): 3 propuestas a ±10 % de R y nunca por encima de R + max(50, 5 %)', () => {
   const r = proponer();
