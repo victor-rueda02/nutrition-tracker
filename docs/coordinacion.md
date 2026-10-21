@@ -8,8 +8,8 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 0 | en revisión (ronda 1) | – |
 | 2026-10-21 | B · Aviso de totales parciales con nutrientes afectados (macros vs micros) | desarrollador | dev/b-aviso-parciales | 2 | integrado | – |
 | 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 1 | cambios (ronda 2): botón actualizar silencioso | ¿Aprobar que el rol_cena viaje a Gemini en «Más ideas» (regla 6)? ¿Dónde probó: Worker publicado o servidor local? |
-| 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 1 | en revisión (ronda 2) | – (decidido: solo «lata de atún») |
-| 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 1 | en revisión (ronda 2) | – |
+| 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
+| 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 2 | integrado | – |
 | 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | – | 0 | pendiente (tras D+E, mismas filas) | – (etiquetas recibidas) |
 
 ## Notas
