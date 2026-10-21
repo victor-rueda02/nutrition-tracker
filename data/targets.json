@@ -17,7 +17,7 @@
 
     { "clave": "vitamina_a_ug", "tipo": "min", "hombre": 750, "mujer": 650, "ul": 3000, "fuente": "efsa",
       "ul_informativo": true,
-      "nota_ul": "El UL de la EFSA es solo para retinol preformado (alimentos de origen animal y suplementos); no se aplica al total con carotenos, así que no se compara con tu columna (RAE)." },
+      "nota_ul": "El UL de la EFSA es solo para retinol preformado (alimentos de origen animal, enriquecidos y suplementos); no se aplica al total con carotenos, así que no se compara con tu columna (RAE)." },
     { "clave": "vitamina_c_mg", "tipo": "min", "hombre": 110, "mujer": 95, "fuente": "efsa" },
     { "clave": "vitamina_d_ug", "tipo": "min", "valor": 15, "ul": 100, "fuente": "efsa" },
     { "clave": "vitamina_e_mg", "tipo": "min", "hombre": 13, "mujer": 11, "ul": 300, "fuente": "efsa" },
