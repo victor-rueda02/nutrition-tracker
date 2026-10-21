@@ -10,9 +10,10 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 2 | integrado (falta worker:deploy) | ¿Aprobar regla 6 (rol a Gemini)? Victor vio el fallo con el Worker publicado |
 | 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
 | 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 2 | integrado | – |
-| 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 1 | bloqueado (Victor) | ¿Campo «etiqueta» en recetas.json (código) o sacar los salteados de recetas.json? |
+| 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 1 | espera a I; ronda 2 tras integrar I (etiqueta en recetas.json, peso 58,7, roles) | – (Victor: opción a; roles: jamones y chorizo proteina, pan integral y avena hidrato; sin rol lentejas, muslo, almendras) |
 | 2026-10-21 | G · «null» en la vista previa de receta; robustez de chrome-cdp y NT_SIN_CHROME | desarrollador | dev/g-null-receta-cdp | 1 | integrado | – |
 | 2026-10-21 | H · Aviso «alias más específico» (salteado ⊂ salteado asadas, pan ⊂ pan de molde…) | desarrollador | dev/h-alias-especifico | 0 | en curso | – (aprobado por Victor) |
+| 2026-10-21 | I · Campo «etiqueta» en las recetas (valores de etiqueta que recalcular no pierde) | desarrollador | dev/i-etiqueta-recetas | 0 | en curso | – |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
