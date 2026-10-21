@@ -176,8 +176,8 @@ test('salteados Hacendado: «salteado de verduras» = el normal; «salteado de v
   const ks = ['energia_kcal', 'grasa_total_g', 'grasas_saturadas_g', 'hidratos_g', 'azucares_g', 'fibra_g', 'proteina_g', 'sodio_mg'];
   assert.deepEqual(ks.map((k) => n.nutrients[k]), [31, 0.3, 0.1, 3.8, 3, 2.3, 2, 8]);
   assert.deepEqual(ks.map((k) => a.nutrients[k]), [46, 0.1, 0, 8, 6.6, 2.9, 1.8, 12]);
-  assert.match(n.extra.fuente_usda, /etiqueta Hacendado/);
-  assert.match(a.extra.fuente_usda, /etiqueta Hacendado/);
+  assert.match(n.extra.fuente_usda, /etiqueta: energia_kcal/);
+  assert.match(a.extra.fuente_usda, /etiqueta: energia_kcal/);
   const r = (food_id, source_text, estado_dicho = 'ninguno') => normalizeAiResponse({ items: [{ food_id, cantidad: 200, unidad: 'g', source_text, confidence: 'alta', estado_dicho }], unmatched: [] }, realList);
   for (const [id, texto, estado] of [
     ['salteado_verduras_hacendado', '200 g de salteado de verduras', 'ninguno'],

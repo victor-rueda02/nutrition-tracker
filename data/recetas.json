@@ -49,7 +49,17 @@
           "gramos": 20
         }
       ],
-      "notas": "Hacendado ultracongelado (600 g). ESTIMADO: la etiqueta dice proporción variable, así que 20 g de cada verdura cruda (partes iguales), sin pérdida de agua (las kcal calculadas ya casi cuadran con la etiqueta: 29,6 frente a 31). Kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio son de la etiqueta y se reaplican a mano tras recetas.mjs --aplicar (ver fuente_usda)."
+      "notas": "Hacendado ultracongelado (600 g). ESTIMADO: la etiqueta dice proporción variable, así que 20 g de cada verdura cruda (partes iguales), sin pérdida de agua (las kcal calculadas ya casi cuadran con la etiqueta: 29,6 frente a 31). Kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio: valores de la etiqueta (campo etiqueta).",
+      "etiqueta": {
+        "energia_kcal": 31,
+        "grasa_total_g": 0.3,
+        "grasas_saturadas_g": 0.1,
+        "hidratos_g": 3.8,
+        "azucares_g": 3,
+        "fibra_g": 2.3,
+        "proteina_g": 2,
+        "sodio_mg": 8
+      }
     },
     {
       "id": "verduras_asadas_hacendado",
@@ -80,8 +90,18 @@
           "gramos": 20
         }
       ],
-      "notas": "Hacendado ultracongelado (450 g). ESTIMADO: la etiqueta dice proporción variable, así que 20 g de cada verdura cruda (partes iguales); peso_final_g=58.7 g por cada 100 g crudos (agua perdida al asar) para que las kcal cuadren con la etiqueta (46 kcal). Kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio son de la etiqueta y se reaplican a mano tras recetas.mjs --aplicar (ver fuente_usda).",
-      "peso_final_g": 59
+      "notas": "Hacendado ultracongelado (450 g). ESTIMADO: la etiqueta dice proporción variable, así que 20 g de cada verdura cruda (partes iguales); peso_final_g=58.7 g por cada 100 g crudos (agua perdida al asar) para que las kcal cuadren con la etiqueta (46 kcal). Kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio: valores de la etiqueta (campo etiqueta).",
+      "peso_final_g": 58.7,
+      "etiqueta": {
+        "energia_kcal": 46,
+        "grasa_total_g": 0.1,
+        "grasas_saturadas_g": 0,
+        "hidratos_g": 8,
+        "azucares_g": 6.6,
+        "fibra_g": 2.9,
+        "proteina_g": 1.8,
+        "sodio_mg": 12
+      }
     },
     {
       "id": "parrillada_verduras_hacendado",
