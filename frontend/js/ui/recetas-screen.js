@@ -138,10 +138,11 @@ function formScreen(ui) {
     const n = completitud(res, ui.required);
     const sinDato = ui.required.filter((k) => !(k in res.nutrients));
     const nombre = (id) => ui.byId().get(id)?.nombre ?? id;
-    preview.replaceChildren(
+    // replaceChildren no descarta null (lo pinta como el texto «null»): solo se pasan los nodos que existen.
+    preview.replaceChildren(...[
       h('div', {}, `${res.nutrients.energia_kcal === undefined ? 'sin dato de kcal' : `${ui.nf0.format(res.nutrients.energia_kcal)} kcal`} por 100 g · ${n}/${ui.required.length} nutrientes obligatorios · peso ${fmt(Math.round(res.pesoIngredientes * 10) / 10)} g → ${fmt(Math.round(res.pesoFinal * 10) / 10)} g`),
       sinDato.length ? h('div', { class: 'flag' }, `Sin dato (falta en algún ingrediente): ${sinDato.slice(0, 6).map((k) => `${ui.labels.get(k) ?? k} (${res.sinDato[k].map(nombre).join(', ')})`).join('; ')}${sinDato.length > 6 ? '…' : ''}`) : null,
-      ...res.avisos.map((a) => h('div', { class: 'flag' }, a)));
+      ...res.avisos.map((a) => h('div', { class: 'flag' }, a))].filter(Boolean));
   };
   const nombre = h('input', { type: 'text', 'aria-label': 'Nombre de la receta', value: form.nombre, maxlength: '60', oninput: (e) => set({ nombre: e.target.value }) });
   const alias = h('input', { type: 'text', 'aria-label': 'Alias de la receta', value: form.alias, placeholder: 'lentejas | lentejas caseras', oninput: (e) => set({ alias: e.target.value }) });
