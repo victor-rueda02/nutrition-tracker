@@ -9,10 +9,10 @@ function filaSimple(ui, r) {
   const { h } = ui;
   const sinDato = r.total === null;
   return h('li', { class: `nut nut-simple${sinDato ? ' sin-dato' : ''}`, 'data-clave': r.clave },
+    // el valor va en la misma columna (borde derecho) que el % de las filas con barra
     h('div', { class: 'row between nut-head' },
-      h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), ' ',
-        h('span', { class: 'nut-tail' }, h('span', { class: 'nut-valor' }, sinDato ? h('span', { 'aria-label': 'sin dato' }, '—') : ui.fmtQty(r.total, r.unit)))),
-      h('span', { class: 'nut-pct' }, '')));
+      h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label)),
+      h('span', { class: 'nut-pct nut-simple-valor' }, h('span', { class: 'nut-valor' }, sinDato ? h('span', { 'aria-label': 'sin dato' }, '—') : ui.fmtQty(r.total, r.unit)))));
 }
 
 // ui: { h, doc, state, byId, header, nutrientRow, fmtQty, nf1, required, threshold, catalog, objetivos (targetsForDate), objetivosTexto,
@@ -57,8 +57,15 @@ export function detalleAlimentoScreen(ui) {
     const { resumen, grupos } = filasAlimento({ food, grams: gramos, objetivos: ui.objetivos.list, catalog: ui.catalog });
     const fila = (r) => {
       const li = r.pct !== null && r.total !== null ? ui.nutrientRow(r) : filaSimple(ui, r);
+      if (r.sub) li.classList.add('sub'); // subpartida: sangría y peso normal
       li.append(h('button', { type: 'button', class: 'abre-detalle', 'aria-label': `Ver detalle de ${r.label}`, onclick: () => ui.abrirNutriente(r.clave) }));
       return li;
+    };
+    // Secciones plegables como las del informe diario (abiertas por defecto); lo que cierres se recuerda mientras escribes.
+    const plegable = (id, clase, titulo, hijos) => {
+      const det = h('details', { class: clase, open: d.plegados[id] !== false }, h('summary', {}, titulo), hijos);
+      det.addEventListener('toggle', () => { d.plegados[id] = det.open; });
+      return det;
     };
     const fuente = fuenteDe(food);
     const comp = completitudDe(food, ui.required);
@@ -69,12 +76,9 @@ export function detalleAlimentoScreen(ui) {
         h('p', { class: 'muted small detalle-fuente' }, `Fuente de datos: ${fuente.corto}`),
         h('p', { class: `small detalle-comp${incompleto ? ' warn' : ' muted'}` }, `${comp.filled}/${comp.total} nutrientes obligatorios con dato${incompleto ? ' · pendiente de completar' : ''}`),
         fuente.completo ? h('details', { class: 'detalle-fuente-completa' }, h('summary', {}, 'Fuente completa'), h('p', { class: 'small muted' }, fuente.completo)) : null),
-      h('section', { class: 'panel detalle-resumen', 'aria-label': 'Resumen de energía y macros' },
-        h('h2', { class: 'caps' }, 'Resumen de energía y macros'),
-        h('ul', { class: 'nuts' }, resumen.map(fila))),
-      h('section', { class: 'panel detalle-todos', 'aria-label': 'Todos los nutrientes' },
-        h('h2', { class: 'caps' }, 'Todos los nutrientes'),
-        grupos.map((g) => h('div', { class: 'grupo', 'data-grupo': g.id }, h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(fila))))),
+      plegable('resumen', 'panel plegable detalle-resumen', h('h2', {}, 'Resumen de energía y macros'), h('ul', { class: 'nuts' }, resumen.map(fila))),
+      plegable('todos', 'panel plegable detalle-todos', h('h2', {}, 'Todos los nutrientes'),
+        grupos.map((g) => { const det = plegable(`grupo-${g.id}`, 'grupo', h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(fila))); det.dataset.grupo = g.id; return det; })),
       ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
       h('p', { class: 'muted small aviso-sanitario' }, AVISO_SANITARIO),
     ];

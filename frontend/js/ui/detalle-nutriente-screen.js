@@ -4,7 +4,7 @@
 import { AVISO_SANITARIO, SECCIONES_INFO, filasAlimento, rangoNutriente, referenciaDe, topCatalogo } from '../core/detalle.js';
 
 // ui: { h, state, byId, header, fmtQty, nf0, nf1, catalog, objetivos (targetsForDate), objetivosTexto, targets, foods,
-//       info (limpiarInfoNutrientes), hoy(clave) -> { total, aporteOriginal } | null, back }
+//       info (limpiarInfoNutrientes), etiquetaHoy, hoy(clave) -> { total, aporteOriginal } | null, back }
 export function detalleNutrienteScreen(ui) {
   const { h, state } = ui;
   const d = state.detalle;
@@ -13,28 +13,31 @@ export function detalleNutrienteScreen(ui) {
   const fila = filasAlimento({ food, grams: d.gramos, objetivos: ui.objetivos.list, catalog: ui.catalog }).filas.get(clave);
   const hoy = ui.hoy?.(clave) ?? null;
   const referencia = referenciaDe(ui.targets, clave, ui.objetivos.perfil);
-  const rango = rangoNutriente({ fila, hoy: hoy?.total ?? null, aporteOriginal: hoy?.aporteOriginal ?? null, referencia });
+  const rango = rangoNutriente({ fila, hoy: hoy?.total ?? null, aporteOriginal: hoy?.aporteOriginal ?? null, referencia, etiquetaHoy: ui.etiquetaHoy });
   const q = (v) => ui.fmtQty(v, fila.unit);
 
-  // Barra con marcas: lo que llevas (gris), lo que aporta este alimento y una marca por cada valor del rango. Las etiquetas
-  // cercanas se escalonan en dos niveles para que no se pisen.
+  // Barra con marcas: lo que llevas (gris), lo que aporta este alimento y una marca por cada valor del rango (las que valen lo
+  // mismo comparten etiqueta). Las etiquetas cercanas se escalonan en dos niveles para que no se pisen. Superar el UL se dice
+  // además con texto (nunca solo con el color).
   const barra = () => {
     if (!rango.barra) return h('p', { class: 'muted small' }, 'Sin objetivo ni aporte que dibujar para este nutriente.');
     const orden = [...rango.marcas].sort((a, b) => a.pos - b.pos);
     let previa = -1; let nivel = 0;
     const niveles = new Map();
-    for (const m of orden) { nivel = previa >= 0 && m.pos - previa < 0.15 ? 1 - nivel : 0; niveles.set(m.id, nivel); previa = m.pos; }
-    const pct = fila.pct !== null && fila.total !== null ? ` · ${ui.nf0.format(fila.pct * 100)} % del objetivo de ese día` : '';
-    const resumen = `${fila.label}: este alimento aporta ${fila.total === null ? 'sin dato' : q(fila.total)}${pct}`;
+    for (const m of orden) { nivel = previa >= 0 && m.pos - previa < 0.22 ? 1 - nivel : 0; niveles.set(m.id, nivel); previa = m.pos; }
+    const conPct = fila.pct !== null && fila.total !== null;
+    const pct = conPct ? `${ui.nf0.format(fila.pct * 100)} % del objetivo` : fila.total === null ? 'sin dato' : q(fila.total);
+    const resumen = `${fila.label}: este alimento aporta ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`;
     const otros = rango.barra.otros;
     return h('div', { class: 'rango-caja' },
       h('div', { class: 'rango-barra', role: 'img', 'aria-label': resumen },
         otros > 0 ? h('span', { class: 'rango-otros', style: `width:${(otros * 100).toFixed(2)}%` }) : null,
         rango.barra.aporte > 0 ? h('span', { class: `rango-aporte ${rango.barra.superaUl || ['excedido', 'por_encima'].includes(rango.barra.estado) ? 'sobre' : ''}`, style: `left:${(otros * 100).toFixed(2)}%;width:${(rango.barra.aporte * 100).toFixed(2)}%` }) : null,
-        rango.marcas.map((m) => h('span', { class: `marca marca-${m.id}${niveles.get(m.id) ? ' n2' : ''}`, style: `left:${(m.pos * 100).toFixed(2)}%` }, h('span', { class: 'marca-et' }, m.etiqueta)))),
-      h('p', { class: 'small muted rango-leyenda' },
-        otros > 0 ? [h('span', { class: 'leyenda-otros' }, 'Llevas hoy (sin este alimento)'), ' · '] : null,
-        h('span', { class: 'leyenda-aporte' }, 'Este alimento'), pct));
+        rango.marcas.map((m) => h('span', { class: `marca marca-${m.ids.includes('ul') ? 'ul' : m.id}${niveles.get(m.id) ? ' n2' : ''}`, style: `left:${(m.pos * 100).toFixed(2)}%` }, h('span', { class: 'marca-et' }, m.etiqueta)))),
+      rango.barra.superaUl ? h('p', { class: 'ul-aviso', role: 'alert' }, `⚠ Supera el máximo tolerable (UL: ${q(fila.ul)})`) : null,
+      h('div', { class: 'rango-leyenda small' },
+        rango.leyenda.otros && otros > 0 ? h('p', { class: 'ley ley-otros' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), rango.leyenda.otros.etiqueta) : null,
+        h('p', { class: 'ley ley-aporte' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), `Este alimento · ${pct}`)));
   };
 
   const tabla = h('table', { class: 'rango-tabla' }, h('tbody', {}, rango.filas.map((r) => h('tr', { 'data-fila': r.id },
@@ -51,7 +54,7 @@ export function detalleNutrienteScreen(ui) {
     : seccion('Información', h('p', { class: 'muted info-no-disponible' }, 'Información aún no disponible'));
 
   const objetivoDia = fila.objetivo ?? fila.valor ?? fila.min ?? fila.max;
-  const top = topCatalogo({ foods: ui.foods, clave, objetivo: objetivoDia });
+  const top = topCatalogo({ foods: ui.foods, clave, suma: fila.suma ?? null, objetivo: objetivoDia });
 
   return h('main', { class: 'detalle-nutriente' },
     ui.header(fila.label, ui.back, { close: true, sub: food.nombre }),

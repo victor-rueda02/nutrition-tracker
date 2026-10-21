@@ -7,7 +7,7 @@ import { loadTargets } from '../frontend/js/core/targets.js';
 import { targetsForDate } from '../frontend/js/core/targets-plan.js';
 import {
   opcionesPorcion, gramosDeCantidad, cantidadDeGramos, filasAlimento, grupoDetalle, GRUPOS_DETALLE, fuenteDe, completitudDe, registroConGramos,
-  racionHabitual, topCatalogo, referenciaDe, rangoNutriente, limpiarInfoNutrientes,
+  racionHabitual, topCatalogo, referenciaDe, rangoNutriente, limpiarInfoNutrientes, cantidadLegible,
 } from '../frontend/js/core/detalle.js';
 
 const targets = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog).targets;
@@ -43,7 +43,7 @@ test('sin dato es null (nunca 0, sin % ni barra) y un 0 escrito es un 0 real', (
 test('los grupos salen en el orden de la pantalla, con todos los nutrientes del catálogo una sola vez', () => {
   const { grupos } = filasAlimento({ food: rojo, grams: 100, objetivos: obj.list, catalog });
   assert.deepEqual(grupos.map((g) => g.id), GRUPOS_DETALLE.map((g) => g.id));
-  assert.equal(grupos.flatMap((g) => g.filas).length, catalog.list.length);
+  assert.equal(grupos.flatMap((g) => g.filas).length, catalog.list.length + 1); // + la fila EPA + DHA
   assert.equal(grupos.find((g) => g.id === 'proteinas').filas[0].clave, 'proteina_g');
   assert.ok(grupos.find((g) => g.id === 'proteinas').filas.some((f) => f.clave === 'leucina_g'));
   assert.ok(grupos.find((g) => g.id === 'hidratos').filas.some((f) => f.clave === 'fibra_g'));
@@ -128,9 +128,12 @@ test('referencia de targets.json con el perfil, y rango del nutriente (marcas, b
   const o = targetsForDate('2026-10-16', { plan: null, targets, catalog });
   const fila = filasAlimento({ food: food('v', { vitamina_a_ug: 1500 }), grams: 100, objetivos: o.list, catalog }).filas.get('vitamina_a_ug');
   const r = rangoNutriente({ fila, hoy: 2100, aporteOriginal: 500, referencia: referenciaDe(targets, 'vitamina_a_ug', o.perfil) });
-  assert.deepEqual(r.filas.map((x) => x.id), ['alimento', 'hoy', 'min', 'referencia', 'ul']);
+  assert.deepEqual(r.filas.map((x) => x.id), ['alimento', 'hoy', 'min', 'ul']); // la referencia (750) se funde con el mínimo (750)
+  assert.equal(r.filas.find((x) => x.id === 'min').etiqueta, 'Mínimo (referencia)');
+  assert.equal(r.filas.find((x) => x.id === 'hoy').etiqueta, 'Llevas hoy (con esta cantidad)');
+  assert.equal(r.filas.find((x) => x.id === 'hoy').valor, 3100); // otros 1600 + este alimento 1500
+  assert.deepEqual(r.marcas.map((m) => m.etiqueta), ['Mín. y ref.', 'UL']); // una sola marca para dos valores iguales
   assert.equal(r.filas.find((x) => x.id === 'alimento').valor, 1500);
-  assert.equal(r.filas.find((x) => x.id === 'referencia').nota, 'mínimo');
   assert.equal(r.escala, 3100 * 1.15); // lo más grande es el total de la barra (1600 + 1500)
   assert.equal(r.barra.otros, 1600 / r.escala); // 2100 de hoy − 500 que ya aportaba la línea
   assert.ok(Math.abs(r.barra.aporte - 1500 / r.escala) < 1e-9);
@@ -159,4 +162,53 @@ test('información de nutrientes: se limpian textos y solo quedan enlaces https'
   assert.equal(info.ok.referencias.length, 1);
   assert.deepEqual(limpiarInfoNutrientes(null), {});
   assert.deepEqual(limpiarInfoNutrientes({ nutrientes: {} }), {});
+});
+
+test('«Llevas hoy» / «Llevas ese día»: coherente con la cantidad (sin cambios, el total del día; con otra cantidad, lo de otros + lo nuevo)', () => {
+  const o = targetsForDate('2026-10-15', { plan: null, targets, catalog });
+  const f = (g) => filasAlimento({ food: food('v', { calcio_mg: 100 }), grams: g, objetivos: o.list, catalog }).filas.get('calcio_mg');
+  // el día suma 300 mg y esta línea (200 g = 200 mg) es parte de ellos
+  const igual = rangoNutriente({ fila: f(200), hoy: 300, aporteOriginal: 200, etiquetaHoy: 'Llevas ese día' });
+  assert.equal(igual.filas.find((x) => x.id === 'hoy').etiqueta, 'Llevas ese día');
+  assert.equal(igual.filas.find((x) => x.id === 'hoy').valor, 300);
+  assert.equal(igual.leyenda.otros.etiqueta, 'Llevas ese día (sin este alimento)');
+  assert.equal(igual.leyenda.otros.valor, 100);
+  // con 50 g: 100 de otros + 50 = 150, y la tabla lo dice
+  const otra = rangoNutriente({ fila: f(50), hoy: 300, aporteOriginal: 200, etiquetaHoy: 'Llevas ese día' });
+  assert.equal(otra.filas.find((x) => x.id === 'hoy').etiqueta, 'Llevas ese día (con esta cantidad)');
+  assert.equal(otra.filas.find((x) => x.id === 'hoy').valor, 150);
+  assert.equal(otra.leyenda.otros.valor + otra.leyenda.aporte.valor, 150); // la leyenda cuadra con la fila
+  assert.equal(rangoNutriente({ fila: f(50) }).leyenda.otros, null); // desde Alimentos no hay «Llevas hoy»
+});
+
+test('lo muy pequeño pero no nulo se muestra «<0,01» y no «0»; un 0 real sigue siendo 0', () => {
+  const fmt = (v) => `${v} g`;
+  assert.equal(cantidadLegible(0.00246, 'g', fmt), '<0,01 g');
+  assert.equal(cantidadLegible(0, 'g', fmt), '0 g');
+  assert.equal(cantidadLegible(0.01, 'g', fmt), '0.01 g');
+  assert.equal(cantidadLegible(null, 'g', () => 'sin dato'), 'sin dato');
+});
+
+test('EPA + DHA: fila de suma tras DHA, como `combine` del informe (null si ninguna parte tiene dato)', () => {
+  const suma = (f, g = 50) => { const { grupos, filas } = filasAlimento({ food: f, grams: g, objetivos: obj.list, catalog }); return { fila: filas.get('epa_dha'), lipidos: grupos.find((x) => x.id === 'lipidos').filas }; };
+  const a = suma(food('p', { epa_g: 0.2, dha_g: 0.3 }));
+  assert.equal(a.fila.total, 0.25);
+  assert.equal(a.fila.pct, 1);
+  assert.equal(a.fila.label, 'EPA + DHA');
+  const claves = a.lipidos.map((r) => r.clave);
+  assert.equal(claves[claves.indexOf('dha_g') + 1], 'epa_dha');
+  assert.equal(suma(food('p', { epa_g: 0.2 })).fila.total, 0.1); // una parte con dato basta
+  assert.equal(suma(food('p', { epa_g: 0, dha_g: 0 })).fila.total, 0); // 0 real
+  assert.equal(suma(food('p', { calcio_mg: 5 })).fila.total, null); // sin dato
+  assert.equal(suma(food('p', { calcio_mg: 5 })).fila.estado, 'sin_dato');
+  // y el top del catálogo de la suma
+  const top = topCatalogo({ foods: [food('a', { epa_g: 0.1, dha_g: 0.2 }, { cantidad_habitual_g: '100' }), food('b', { epa_g: 0.1 }, { cantidad_habitual_g: '100' }), food('c', {})], clave: 'epa_dha', suma: ['epa_g', 'dha_g'] });
+  assert.deepEqual(top.map((t) => [t.id, Math.round(t.aporte * 100) / 100]), [['a', 0.3], ['b', 0.1]]);
+});
+
+test('subpartidas marcadas para la sangría', () => {
+  const { grupos } = filasAlimento({ food: rojo, grams: 100, objetivos: obj.list, catalog });
+  const sub = (k) => grupos.flatMap((g) => g.filas).find((r) => r.clave === k).sub;
+  for (const k of ['grasas_saturadas_g', 'grasas_monoinsaturadas_g', 'ala_g', 'epa_g', 'dha_g', 'azucares_g', 'fibra_g', 'almidon_g']) assert.equal(sub(k), true, k);
+  for (const k of ['grasa_total_g', 'omega3_g', 'hidratos_g', 'proteina_g', 'calcio_mg']) assert.equal(sub(k), false, k);
 });

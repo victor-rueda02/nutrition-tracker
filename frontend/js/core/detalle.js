@@ -44,6 +44,9 @@ export const GRUPOS_DETALLE = [
   { id: 'vitaminas', titulo: 'Vitaminas' },
   { id: 'minerales', titulo: 'Minerales' },
 ];
+// Subpartidas (se muestran con sangría y peso normal): las grasas bajo la grasa total, ALA/EPA/DHA bajo omega-3 y fibra,
+// azúcares y almidón bajo hidratos.
+const SUBPARTIDAS = new Set(['grasas_saturadas_g', 'grasas_monoinsaturadas_g', 'grasas_poliinsaturadas_g', 'grasas_trans_g', 'ala_g', 'epa_g', 'dha_g', 'fibra_g', 'azucares_g', 'almidon_g']);
 export function grupoDetalle(n) {
   if (n.key === 'proteina_g' || n.group === 'aminoácidos') return 'proteinas';
   if (n.group === 'hidratos y proteína') return 'hidratos';
@@ -61,13 +64,25 @@ export function filasAlimento({ food, grams, objetivos, catalog }) {
     const t = porClave.get(n.key) ?? { clave: n.key, label: n.label, unit: unitOf(n.key), min: null, objetivo: null, max: null, valor: null, ul: null };
     filas.set(n.key, { ...t, clave: n.key, label: t.label ?? n.label, unit: t.unit ?? unitOf(n.key), ...evaluate(sums[n.key], t), missing: sums[n.key].missing });
   }
+  // Objetivos que son suma de varios nutrientes (EPA + DHA): como `combine` del informe, null si ninguno tiene dato.
+  const sumas = (objetivos ?? []).filter((t) => Array.isArray(t.suma) && t.suma.length && t.suma.every((k) => sums[k]));
+  for (const t of sumas) {
+    const partes = t.suma.map((k) => sums[k].value).filter((v) => v !== null);
+    const total = { value: partes.length ? partes.reduce((a, v) => a + v, 0) : null, missing: [...new Set(t.suma.flatMap((k) => sums[k].missing))] };
+    filas.set(t.clave, { ...t, ...evaluate(total, t), missing: total.missing });
+  }
   const resumen = MACROS_RESUMEN.map((k) => filas.get(k)).filter(Boolean);
   const grupos = [];
-  for (const n of catalog.list) {
-    const id = grupoDetalle(n);
+  const grupoDe = (id) => {
     let g = grupos.find((x) => x.id === id);
     if (!g) { g = { id, titulo: GRUPOS_DETALLE.find((x) => x.id === id)?.titulo ?? 'Otros', filas: [] }; grupos.push(g); }
-    g.filas.push(filas.get(n.key));
+    return g;
+  };
+  for (const n of catalog.list) {
+    const g = grupoDe(grupoDetalle(n));
+    g.filas.push({ ...filas.get(n.key), sub: SUBPARTIDAS.has(n.key) });
+    // la suma va justo detrás de su última parte (EPA + DHA, tras DHA)
+    for (const t of sumas) if (t.suma[t.suma.length - 1] === n.key) g.filas.push({ ...filas.get(t.clave), sub: false });
   }
   grupos.sort((a, b) => { const ia = GRUPOS_DETALLE.findIndex((x) => x.id === a.id); const ib = GRUPOS_DETALLE.findIndex((x) => x.id === b.id); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
   return { filas, resumen, grupos };
@@ -118,11 +133,13 @@ export function racionHabitual(food) {
 
 // Los `n` alimentos del documento (sin incluir=no, con dato de ese nutriente y distinto de 0) que más aportan por ración
 // habitual. objetivo = valor del día para el %, o null. Orden: más aporte primero; empates por nombre.
-export function topCatalogo({ foods, clave, objetivo = null, n = 5 }) {
+// suma: claves de un objetivo que es suma (EPA + DHA): se suman las que tienen dato.
+export function topCatalogo({ foods, clave, suma = null, objetivo = null, n = 5 }) {
   const filas = [];
   for (const f of foods) {
     if (isExcluded(f)) continue;
-    const per100 = f.nutrients?.[clave];
+    const partes = (suma ?? [clave]).map((k) => f.nutrients?.[k]).filter(esNum);
+    const per100 = partes.length ? partes.reduce((a, v) => a + v, 0) : null;
     if (!esNum(per100) || per100 === 0) continue;
     const racion = racionHabitual(f);
     const aporte = (per100 * racion.gramos) / 100;
@@ -145,33 +162,56 @@ const TIPO_TEXTO = { min: 'mínimo', max: 'máximo', objetivo: 'objetivo' };
 //   fila: la del nutriente en filasAlimento (aporte = fila.total, con la cantidad elegida; null = sin dato)
 //   hoy: total del día (o null si no hay), aporteOriginal: lo que aportaba la línea guardada (para no contarla dos veces)
 //   referencia: { valor, tipo } de referenciaDe. Solo se incluye lo que existe.
-export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, referencia = null }) {
+//   etiquetaHoy: «Llevas hoy» o «Llevas ese día» (si el día no es hoy)
+// «Llevas hoy» de la tabla es el total del día CON la cantidad elegida (lo de otros alimentos + este alimento); la leyenda
+// de la barra da las dos partes por separado: `leyenda.otros` (el día sin este alimento) y `leyenda.aporte`.
+export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, referencia = null, etiquetaHoy = 'Llevas hoy' }) {
   const aporte = fila.total;
-  const marcas = [];
-  const marca = (id, etiqueta, valor) => { if (esNum(valor)) marcas.push({ id, etiqueta, valor }); };
+  const hayHoy = esNum(hoy);
+  const otros = hayHoy ? Math.max(0, hoy - (esNum(aporteOriginal) ? aporteOriginal : 0)) : 0;
+  const total = otros + (aporte ?? 0);
+  // Marcas: las que tienen el mismo valor (mínimo y referencia, por ejemplo) comparten una sola con una etiqueta unida.
+  const bruto = [];
+  const marca = (id, etiqueta, valor) => { if (esNum(valor)) bruto.push({ id, etiqueta, valor }); };
   marca('min', 'Mín.', fila.min); marca('objetivo', 'Objetivo', fila.objetivo); marca('max', 'Máx.', fila.max);
   marca('referencia', 'Ref.', referencia?.valor); marca('ul', 'UL', fila.ul);
-  const otros = esNum(hoy) ? Math.max(0, hoy - (esNum(aporteOriginal) ? aporteOriginal : 0)) : 0;
-  const total = otros + (aporte ?? 0);
-  const tope = Math.max(...marcas.map((m) => m.valor), total, esNum(hoy) ? hoy : 0);
+  const marcas = [];
+  for (const m of bruto) {
+    const igual = marcas.find((x) => Math.abs(x.valor - m.valor) <= 1e-9 * Math.max(1, Math.abs(m.valor)));
+    if (igual) { igual.ids.push(m.id); igual.etiquetas.push(m.etiqueta); } else marcas.push({ id: m.id, ids: [m.id], etiquetas: [m.etiqueta], valor: m.valor });
+  }
+  for (const m of marcas) m.etiqueta = m.etiquetas.map((e, i) => (i === 0 || e === 'UL' ? e : e.charAt(0).toLowerCase() + e.slice(1))).join(' y ');
+  const tope = Math.max(...marcas.map((m) => m.valor), total, hayHoy ? hoy : 0);
   const escala = tope > 0 ? tope * 1.15 : null;
   const pos = (v) => Math.min(1, Math.max(0, v / escala));
-  const filas = [];
-  filas.push({ id: 'alimento', etiqueta: 'Este alimento', valor: aporte });
-  if (esNum(hoy)) filas.push({ id: 'hoy', etiqueta: 'Llevas hoy', valor: hoy });
-  if (esNum(fila.min)) filas.push({ id: 'min', etiqueta: 'Mínimo', valor: fila.min });
-  if (esNum(fila.objetivo)) filas.push({ id: 'objetivo', etiqueta: 'Objetivo', valor: fila.objetivo });
-  if (esNum(fila.max)) filas.push({ id: 'max', etiqueta: 'Máximo', valor: fila.max });
-  if (esNum(referencia?.valor)) filas.push({ id: 'referencia', etiqueta: 'Referencia', valor: referencia.valor, nota: TIPO_TEXTO[referencia.tipo] ?? '' });
+  // Tabla: «Referencia» se funde con el mínimo, el objetivo o el máximo si vale lo mismo («Mínimo (referencia)»).
+  const filas = [{ id: 'alimento', etiqueta: 'Este alimento', valor: aporte }];
+  const cambiado = esNum(aporte) !== esNum(aporteOriginal) || (esNum(aporte) && Math.abs(aporte - aporteOriginal) > 1e-9);
+  if (hayHoy) filas.push({ id: 'hoy', etiqueta: `${etiquetaHoy}${cambiado ? ' (con esta cantidad)' : ''}`, valor: total });
+  const refValor = referencia?.valor;
+  let refFundida = false;
+  for (const [id, etiqueta, valor] of [['min', 'Mínimo', fila.min], ['objetivo', 'Objetivo', fila.objetivo], ['max', 'Máximo', fila.max]]) {
+    if (!esNum(valor)) continue;
+    const funde = !refFundida && esNum(refValor) && Math.abs(valor - refValor) <= 1e-9 * Math.max(1, Math.abs(valor));
+    if (funde) refFundida = true;
+    filas.push({ id, etiqueta: funde ? `${etiqueta} (referencia)` : etiqueta, valor });
+  }
+  if (esNum(refValor) && !refFundida) filas.push({ id: 'referencia', etiqueta: 'Referencia', valor: refValor, nota: TIPO_TEXTO[referencia.tipo] ?? '' });
   if (esNum(fila.ul)) filas.push({ id: 'ul', etiqueta: 'UL', valor: fila.ul });
   // Estado del total de la barra (lo de otros + este alimento) frente al objetivo del día, con la misma lógica del informe.
-  const ev = escala ? evaluate({ value: total > 0 || aporte !== null || esNum(hoy) ? total : null, missing: [] }, fila) : null;
+  const ev = escala ? evaluate({ value: total > 0 || aporte !== null || hayHoy ? total : null, missing: [] }, fila) : null;
   return {
     filas,
     marcas: escala ? marcas.map((m) => ({ ...m, pos: pos(m.valor) })) : [],
     escala,
+    leyenda: { otros: hayHoy ? { etiqueta: `${etiquetaHoy} (sin este alimento)`, valor: otros } : null, aporte: { etiqueta: 'Este alimento', valor: aporte } },
     barra: escala ? { otros: pos(otros), aporte: aporte === null ? 0 : Math.min(pos(otros + aporte) - pos(otros), 1), total, estado: ev?.estado ?? 'sin_dato', superaUl: Boolean(ev?.superaUl) } : null,
   };
+}
+
+// Número para estas pantallas: lo muy pequeño pero no nulo («<0,01») no se confunde con un 0 real. fmt = formato normal.
+export function cantidadLegible(v, unitLabel, fmt) {
+  return esNum(v) && v > 0 && v < 0.01 ? `<0,01 ${unitLabel}` : fmt(v);
 }
 
 // ---------- información estática de cada nutriente (data/nutrientes-info.json) ----------

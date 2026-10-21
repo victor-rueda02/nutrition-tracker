@@ -58,7 +58,7 @@ test('desde Mi catálogo: 100 g por defecto, fuente, completitud, resumen de mac
   assert.deepEqual(t.$$('.detalle-resumen .nut').map((x) => x.dataset.clave), ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']);
   // todos los nutrientes, por grupos
   assert.deepEqual(t.$$('.detalle-todos .grupo h3').map((x) => x.textContent), ['General', 'Hidratos de carbono', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
-  assert.equal(t.$$('.detalle-todos .nut').length, catalog.list.length);
+  assert.equal(t.$$('.detalle-todos .nut').length, catalog.list.length + 1); // + EPA + DHA
   assert.equal(t.$('.aviso-sanitario').textContent, 'Información general; no sustituye al consejo de un profesional sanitario.');
   // solo ver: sin «Guardar» y con la barra inferior
   assert.equal(t.btn('Guardar'), undefined);
@@ -129,7 +129,8 @@ test('detalle de un nutriente: rango, información, fuentes, «En tu catálogo»
   const filas = t.$$('.rango-tabla tr').map((r) => r.dataset.fila);
   assert.deepEqual(filas.slice(0, 1), ['alimento']);
   assert.ok(!filas.includes('hoy')); // desde Alimentos no hay «Llevas hoy»
-  assert.ok(filas.includes('referencia'));
+  assert.ok(filas.includes('min') && !filas.includes('referencia')); // mínimo y referencia valen lo mismo (950): una fila
+  assert.equal(t.$('.rango-tabla tr[data-fila="min"] th').textContent, 'Mínimo (referencia)');
   assert.match(t.$('.rango-tabla tr[data-fila="alimento"] td').textContent, /0,38 mg/); // 1 mg × 37,5 / 100
   assert.ok(t.$('.rango-barra .marca'));
   // información del fixture
@@ -221,7 +222,10 @@ test('desde el Diario: «Volver» sin guardar deja la comida como estaba; el nut
   t.type(t.$('input.detalle-cantidad'), '50');
   await t.act(() => t.ver('Calcio').click());
   const hoy = t.$('.rango-tabla tr[data-fila="hoy"] td').textContent;
-  assert.match(hoy, /122 mg/); // avena 80 g (41,6) + almendras 30 g (80,7), lo guardado
+  assert.match(hoy, /107 mg/); // otros alimentos 80,7 (almendras 30 g) + este alimento con la cantidad nueva (50 g = 26)
+  assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (con esta cantidad)');
+  assert.equal(t.$('.ley-otros').textContent, 'Llevas hoy (sin este alimento)');
+  assert.match(t.$('.ley-aporte').textContent, /^Este alimento · \d+ % del objetivo$/);
   assert.match(t.$('.rango-tabla tr[data-fila="alimento"] td').textContent, /26 mg/); // 52 × 50 / 100
   assert.ok(t.$('.rango-barra .rango-otros'));
   assert.ok(t.$('.rango-barra .rango-aporte'));
@@ -249,4 +253,113 @@ test('un fallo al guardar se muestra y no pierde la cantidad escrita', { skip },
   assert.match(t.$('.alert-fail').textContent, /No se pudo guardar: disco lleno/);
   assert.equal(t.$('input.detalle-cantidad').value, '60');
   assert.ok(t.$('footer.bar'));
+});
+
+test('UL superado en el detalle de nutriente: aviso con texto (no solo color) y marca UL; sin superarlo, no hay aviso', { skip }, async () => {
+  const t = await setup();
+  await t.alCatalogo();
+  await t.act(() => t.ver('Queso tierno en lonchas').click());
+  t.type(t.$('input.detalle-cantidad'), '100'); // 731 mg de calcio: dentro del UL (2500 mg)
+  await t.act(() => t.ver('Calcio').click());
+  assert.equal(t.$('.ul-aviso'), null);
+  await t.act(() => t.btn('‹ Volver').click());
+  t.type(t.$('input.detalle-cantidad'), '400'); // 2924 mg > 2500 mg
+  await t.act(() => t.ver('Calcio').click());
+  const aviso = t.$('.ul-aviso');
+  assert.ok(aviso);
+  assert.equal(aviso.textContent, '⚠ Supera el máximo tolerable (UL: 2500 mg)');
+  assert.equal(aviso.getAttribute('role'), 'alert');
+  assert.ok(t.$('.rango-aporte.sobre'));
+  assert.ok(t.$('.marca-ul .marca-et'));
+  assert.equal(t.$('.marca-ul .marca-et').textContent, 'UL');
+  // mínimo y referencia valen lo mismo: una sola marca con una sola etiqueta
+  assert.deepEqual(t.$$('.marca-et').map((x) => x.textContent), ['Mín. y ref.', 'UL']);
+});
+
+test('secciones plegables como el informe (abiertas) y grupos plegables; lo cerrado se recuerda al cambiar la cantidad', { skip }, async () => {
+  const t = await setup();
+  await t.alCatalogo();
+  await t.act(() => t.ver('Aceite de oliva').click());
+  for (const s of ['.detalle-resumen', '.detalle-todos']) {
+    const det = t.$(s);
+    assert.equal(det.tagName, 'DETAILS'); assert.ok(det.classList.contains('plegable')); assert.ok(det.open);
+    assert.equal(det.querySelector(':scope > summary > h2').tagName, 'H2');
+  }
+  const grupos = t.$$('.detalle-todos details.grupo');
+  assert.deepEqual(grupos.map((g) => g.querySelector('summary h3').textContent), ['General', 'Hidratos de carbono', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
+  assert.ok(grupos.every((g) => g.open));
+  const lip = t.$('.grupo[data-grupo="lipidos"]');
+  lip.open = false; lip.dispatchEvent(new t.root.ownerDocument.defaultView.Event('toggle'));
+  t.type(t.$('input.detalle-cantidad'), '50');
+  assert.equal(t.$('.grupo[data-grupo="lipidos"]').open, false);
+  assert.equal(t.$('.grupo[data-grupo="vitaminas"]').open, true);
+});
+
+test('filas sin objetivo: el valor va en la columna del % (borde derecho); subpartidas con sangría; fila EPA + DHA con barra', { skip }, async () => {
+  const t = await setup();
+  await t.alCatalogo();
+  await t.act(() => t.ver('Salmón del Atlántico de piscifactoría crudo').click());
+  const mono = fila(t, 'grasas_monoinsaturadas_g');
+  assert.ok(mono.classList.contains('nut-simple'));
+  assert.ok(mono.querySelector('.nut-head > .nut-pct .nut-valor'), 'valor en la columna del %');
+  assert.equal(mono.querySelector('.nut-head > .nut-main .nut-valor'), null);
+  for (const k of ['grasas_saturadas_g', 'grasas_monoinsaturadas_g', 'epa_g', 'dha_g', 'azucares_g']) assert.ok(fila(t, k).classList.contains('sub'), k);
+  assert.ok(!fila(t, 'grasa_total_g').classList.contains('sub'));
+  const suma = t.$('.detalle-todos [data-clave="epa_dha"]');
+  assert.ok(suma, 'fila EPA + DHA');
+  assert.match(suma.querySelector('.nut-label').textContent, /EPA \+ DHA/);
+  assert.ok(suma.querySelector('.meter'));
+  assert.match(suma.querySelector('.nut-pct').textContent, /\d+ %/);
+  // y se abre su detalle
+  await t.act(() => t.ver('EPA + DHA').click());
+  assert.equal(t.$('header.top strong').textContent, 'EPA + DHA');
+  assert.ok(t.$('.rango-tabla'));
+  assert.ok(t.$$('.top-lista li').length > 0);
+});
+
+test('lo muy pequeño no se confunde con un 0: EPA del chorizo a 123 g (0,00246 g) se ve «<0,01 g»', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m0', '2026-10-16', 'comida', [['chorizo', 123]])] });
+  await t.act(() => t.ver('Chorizo').click());
+  assert.equal(fila(t, 'epa_g').querySelector('.nut-valor').textContent, '<0,01 g');
+  assert.equal(fila(t, 'dha_g').querySelector('.nut-valor').textContent, '<0,01 g');
+  assert.equal(fila(t, 'vitamina_b12_ug').querySelector('.nut-valor').textContent.startsWith('<'), false);
+  // un 0 real sigue siendo 0
+  const aceite = await setup();
+  await aceite.alCatalogo();
+  await aceite.act(() => aceite.ver('Aceite de oliva').click());
+  assert.match(fila(aceite, 'vitamina_b12_ug').querySelector('.nut-valor').textContent, /^0 µg/);
+});
+
+test('un día pasado dice «Llevas ese día» (y hoy, «Llevas hoy»)', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m0', '2026-10-15', 'cena', [['avena_copos', 80]])] });
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  await t.act(() => t.ver('Avena (copos/molida)').click());
+  await t.act(() => t.ver('Calcio').click());
+  assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas ese día');
+  assert.equal(t.$('.ley-otros'), null); // sin otros alimentos ese día: solo «Este alimento»
+  assert.ok(t.$('.ley-aporte'));
+});
+
+test('«Volver» restaura la posición de scroll en la que estaba el Diario o Mi catálogo', { skip }, async () => {
+  const t = await setup({ meals: [MEAL('m0', '2026-10-16', 'desayuno', [['avena_copos', 80]])] });
+  const doc = t.root.ownerDocument;
+  let y = 0;
+  Object.defineProperty(doc, 'scrollingElement', { configurable: true, value: { get scrollTop() { return y; }, set scrollTop(v) { y = v; } } });
+  y = 420; // el Diario, desplazado
+  await t.act(() => t.ver('Avena (copos/molida)').click());
+  assert.equal(y, 0, 'el detalle empieza arriba');
+  y = 900;
+  await t.act(() => t.ver('Calcio').click());
+  assert.equal(y, 0);
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(y, 900, 'del nutriente vuelve a donde estaba el detalle');
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(y, 420, 'del detalle vuelve a donde estaba el Diario');
+  // y desde Mi catálogo
+  await t.alCatalogo();
+  y = 640;
+  await t.act(() => t.ver('Aceite de oliva').click());
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.equal(y, 640);
+  assert.ok(t.$('main.catalogo-lista'));
 });

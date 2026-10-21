@@ -10,7 +10,7 @@ import { parseFoodsDocument, parseFoodsCSV, formatIssue, foodsToCSV } from '../c
 import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
-import { cantidadDeGramos, registroConGramos, limpiarInfoNutrientes } from '../core/detalle.js';
+import { cantidadDeGramos, registroConGramos, limpiarInfoNutrientes, cantidadLegible } from '../core/detalle.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
 import { loadTargets } from '../core/targets.js';
@@ -782,7 +782,8 @@ export function mountApp(root, deps) {
   };
 
   // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
-  function nutrientRow(r) {
+  const nutrientRow = (r) => nutrientRowCon(r, fmtQty);
+  function nutrientRowCon(r, fmtQty) { // fmtQty propio: el detalle usa uno que no confunde lo muy pequeño con un 0
     const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
     const objetivo = r.valor === null ? '' : r.objetivo === null && r.min != null && r.max != null ? ` / ${fmtNum(r.min, r.unit)}–${fmtQty(r.max, r.unit)}` : ` / ${fmtQty(r.valor, r.unit)}`;
     const fill = h('span', {});
@@ -881,16 +882,29 @@ export function mountApp(root, deps) {
   function abrirDetalle({ foodId, origen, record = null, lineIndex = null }) {
     if (!byId().has(foodId)) return;
     const gramos = origen === 'diary' ? record.lines[lineIndex].grams : 100;
-    state.detalle = { origen, foodId, record, lineIndex, fecha: origen === 'diary' ? state.day : today(), grams0: gramos, gramos, cantidad: cantidadDeGramos(gramos), porcion: 'g', nutriente: null };
+    // scrollY: dónde estaba la pantalla de origen, para volver al mismo sitio; plegados: secciones que cierres, que se recuerdan
+    state.detalle = { origen, foodId, record, lineIndex, fecha: origen === 'diary' ? state.day : today(), grams0: gramos, gramos, cantidad: cantidadDeGramos(gramos), porcion: 'g', nutriente: null, scrollY: scrollActual(), scrollDetalle: 0, plegados: {} };
     state.screen = 'detalle'; state.pendingDelete = null;
-    if (doc.scrollingElement) doc.scrollingElement.scrollTop = 0;
-    render();
+    irA(0); render();
   }
   function abrirNutriente(clave) {
+    state.detalle.scrollDetalle = scrollActual();
     state.detalle.nutriente = clave; state.screen = 'detalle-nutriente';
-    if (doc.scrollingElement) doc.scrollingElement.scrollTop = 0;
-    render();
+    irA(0); render();
   }
+  const scrollActual = () => doc.scrollingElement?.scrollTop ?? 0;
+  const irA = (y) => { if (doc.scrollingElement) doc.scrollingElement.scrollTop = y; };
+  // «Volver» del detalle de alimento: a Mi catálogo o al Diario, en la posición en que estaban.
+  function cerrarDetalle() {
+    const { origen, scrollY } = state.detalle;
+    state.detalle = null; state.screen = origen === 'diary' ? 'diary' : 'micatalogo'; render(); irA(scrollY);
+  }
+  function volverDeNutriente() {
+    const d = state.detalle;
+    d.nutriente = null; state.screen = 'detalle'; render(); irA(d.scrollDetalle);
+  }
+  // Como fmtQty, pero lo muy pequeño y no nulo se ve «<0,01 g» y no «0 g» (que sería un 0 real).
+  const fmtQtyDet = (v, unit) => cantidadLegible(v, UNIT_LABEL[unit] ?? unit, (x) => fmtQty(x, unit));
   // «Guardar» del detalle de una línea del Diario: mismos id y guardado que «Editar», solo cambian los gramos de esa línea.
   function guardarDetalle(gramos) {
     const d = state.detalle;
@@ -904,10 +918,19 @@ export function mountApp(root, deps) {
   function detalleCtx() {
     const d = state.detalle;
     const obj = targetsFor(d.fecha);
-    return { h, doc, state, byId, header, nutrientRow, fmtQty, nf0, nf1, required: req, threshold: thr, catalog: deps.catalog, objetivos: obj, objetivosTexto: objetivosTexto(obj),
+    // Total del día de un nutriente (o de una suma, EPA + DHA) y lo que aportaba la línea guardada.
+    const suma = (clave) => obj.list.find((t) => t.clave === clave)?.suma ?? null;
+    const sumar = (valores) => { const v = valores.filter((x) => x !== null); return v.length ? v.reduce((a, x) => a + x, 0) : null; };
+    const hoy = (clave) => {
+      const keys = suma(clave) ?? [clave];
+      const dia = dayTotals(state.dayMeals, byId(), keys);
+      const linea = nutrientsForGrams(byId().get(d.foodId), d.grams0, keys);
+      return { total: sumar(keys.map((k) => dia[k].value)), aporteOriginal: sumar(keys.map((k) => linea[k])) };
+    };
+    return { h, doc, state, byId, header, nutrientRow: (r) => nutrientRowCon(r, fmtQtyDet), fmtQty: fmtQtyDet, nf0, nf1, required: req, threshold: thr, catalog: deps.catalog, objetivos: obj, objetivosTexto: objetivosTexto(obj),
       origenTexto: d.origen === 'diary' ? `${MEAL_LABEL[d.record.meal]} · ${shortDate(d.fecha)}` : '', targets, foods: state.foods, info: infoNutrientes,
-      guardar: guardarDetalle, abrirNutriente,
-      hoy: d.origen === 'diary' ? (clave) => ({ total: dayTotals(state.dayMeals, byId(), [clave])[clave].value, aporteOriginal: nutrientsForGrams(byId().get(d.foodId), d.grams0, [clave])[clave] }) : null };
+      guardar: guardarDetalle, abrirNutriente, etiquetaHoy: d.fecha === today() ? 'Llevas hoy' : 'Llevas ese día',
+      hoy: d.origen === 'diary' ? hoy : null };
   }
 
   // Formulario en línea del Diario para guardar una comida como plantilla.
@@ -970,8 +993,8 @@ export function mountApp(root, deps) {
       pendientes: pendientesView({ h, state, est }),
     });
     const micatalogo = () => catalogoListScreen({ h, doc, state, incompleteInfo, render, header, back: openAlimentos, openDetalle: (foodId) => abrirDetalle({ foodId, origen: 'catalogo' }) });
-    const detalle = () => detalleAlimentoScreen({ ...detalleCtx(), back: () => { const o = state.detalle.origen; state.detalle = null; state.screen = o === 'diary' ? 'diary' : 'micatalogo'; render(); } });
-    const detalleNutriente = () => detalleNutrienteScreen({ ...detalleCtx(), back: () => { state.detalle.nutriente = null; state.screen = 'detalle'; render(); } });
+    const detalle = () => detalleAlimentoScreen({ ...detalleCtx(), back: cerrarDetalle });
+    const detalleNutriente = () => detalleNutrienteScreen({ ...detalleCtx(), back: volverDeNutriente });
     const abrirSeccion = (section) => () => openDoc('', section);
     const mas = () => masScreen({
       h, doc, state, incompletos: state.foods.filter(incompleteInfo).length,

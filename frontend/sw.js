@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v25'; // nt-v24 + detalle de alimento y de nutriente (data/nutrientes-info.json); nt-v23 + aviso «alias más específico» (pan de molde, lata de atún...); nt-v22 + icono nuevo (anillos con hoja morada; fuente en docs/icono-app.svg); nt-v21 + recetas con valores de etiqueta (campo "etiqueta"); nt-v20 + vista previa de recetas sin el texto «null»; nt-v19 + sin barra de navegación bajo el pie fijo de acciones (Guardar receta visible)
+const VERSION = 'nt-v26'; // nt-v25 + detalle: aviso de UL, secciones plegables, EPA + DHA, scroll al volver; nt-v24 + detalle de alimento y de nutriente (data/nutrientes-info.json); nt-v23 + aviso «alias más específico» (pan de molde, lata de atún...); nt-v22 + icono nuevo (anillos con hoja morada; fuente en docs/icono-app.svg); nt-v21 + recetas con valores de etiqueta (campo "etiqueta"); nt-v20 + vista previa de recetas sin el texto «null»; nt-v19 + sin barra de navegación bajo el pie fijo de acciones (Guardar receta visible)
 const ASSETS = [
   './',
   'css/catalogo.css',
