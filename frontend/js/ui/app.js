@@ -15,6 +15,7 @@ import { MAX_GRAMS } from '../core/ai-contract.js';
 import { loadTargets } from '../core/targets.js';
 import { targetsForDate, planFromLegacy, validatePlan } from '../core/targets-plan.js';
 import { diaryReport, shiftDate } from '../core/diary.js';
+import { avisoParciales } from '../core/parciales.js';
 import { createRepeat, validateRepeat, toRecords, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
 import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTemplate, templateAsMeals, mergeTemplates } from '../core/templates.js';
@@ -30,7 +31,7 @@ import { cleanRecetas, mergeRecetasImport } from '../core/recetas.js';
 import { objetivosScreen } from './objetivos-screen.js';
 import { foodSinDatos, detectarPlatos, tratarComoPlato, lineaAEstimar, deshacerPlato } from '../core/sin-datos.js';
 import { bottomNav, sheet, popMenu, icon } from './nav.js';
-import { reportScreen, energySummary } from './report-screen.js';
+import { reportScreen, energySummary, parcialesDiario } from './report-screen.js';
 import { alimentosScreen, catalogoListScreen } from './foods-screen.js';
 import { masScreen } from './more-screen.js';
 import { cenasActions, cenasScreen } from './cenas-screen.js';
@@ -840,7 +841,7 @@ export function mountApp(root, deps) {
           h('h2', { class: 'caps' }, 'Resumen de energía'),
           energySummary({ h, nf0 }, rep),
           rep.sinDatos.length ? h('p', { class: 'warn small', role: 'alert' }, `Sin datos nutricionales: ${rep.sinDatos.join(', ')}. Los totales de este día no incluyen su aporte y no son completos.`) : null,
-          rep.parciales.length ? h('p', { class: 'warn small parciales' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
+          parcialesDiario({ h }, avisoParciales(state.dayMeals, byId(), rep.rows)),
           h('ul', { class: 'nuts' }, macros.map(nutrientRow)))],
       ordinarias.map((m) => mealCard(rep.comidas.find((c) => c.meal === m), m)),
       rep.comidas.find((c) => c.meal === 'otro') ? mealCard(rep.comidas.find((c) => c.meal === 'otro'), 'otro') : null);
@@ -849,7 +850,7 @@ export function mountApp(root, deps) {
   function informeScreen() {
     const obj = targetsFor(state.day);
     const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
-    return reportScreen({ h, state, deps, rep, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), header,
+    return reportScreen({ h, state, deps, rep, parciales: avisoParciales(state.dayMeals, byId(), rep.rows), MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), header,
       objetivosTexto: obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA',
       back: () => { state.screen = 'diary'; render(); } });
   }

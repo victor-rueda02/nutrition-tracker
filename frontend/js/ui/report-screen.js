@@ -47,6 +47,32 @@ export function energySummary(ui, rep) {
   return h('div', { class: 'rings' }, consumido, objetivo, restante);
 }
 
+// Aviso de totales parciales (lógica en core/parciales.js). En el Diario, una línea por gravedad: el importante en negrita
+// y con --warn, el menor discreto; si el resumen no lo dice todo, la línea abre el detalle agrupado (<details>).
+const prefijo = (a) => (a.nivel === 'importante' ? 'Importante:' : null);
+export function parcialesDiario(ui, aviso) {
+  const { h } = ui;
+  return [aviso?.importante, aviso?.menor].filter(Boolean).map((a) => {
+    const clase = `${a.nivel === 'importante' ? 'warn' : 'muted'} small parciales ${a.nivel}`;
+    const texto = a.nivel === 'importante' ? [h('strong', {}, prefijo(a)), a.resumen.slice(prefijo(a).length)] : a.resumen;
+    if (a.completo) return h('p', { class: clase }, texto);
+    return h('details', { class: clase }, h('summary', {}, texto), h('ul', {}, a.grupos.map((g) => h('li', {}, `${g.texto}.`))));
+  });
+}
+
+// Informe diario: todo el detalle, agrupado por gravedad.
+export function parcialesInforme(ui, aviso) {
+  const { h } = ui;
+  if (!aviso) return null;
+  const bloque = (a, titulo) => a && h('div', { class: `parciales ${a.nivel}` },
+    h('p', { class: a.nivel === 'importante' ? 'warn' : 'muted small' }, h('strong', {}, titulo)),
+    h('ul', { class: a.nivel === 'importante' ? 'warn' : 'muted small' }, a.grupos.map((g) => h('li', {}, `${g.texto}.`))));
+  return h('section', { class: 'panel parciales-informe', 'aria-label': 'Totales parciales' },
+    h('h2', {}, 'Totales parciales'),
+    bloque(aviso.importante, 'Importante: afecta a kcal o a proteína, hidratos o grasa'),
+    bloque(aviso.menor, 'Menor: no afecta a kcal ni a proteína, hidratos o grasa'));
+}
+
 const GRUPO_TITULO = (g) => g.charAt(0).toUpperCase() + g.slice(1);
 
 // ui: { h, state, deps, rep, obj, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel, header, back }
@@ -78,7 +104,8 @@ export function reportScreen(ui) {
     h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto),
     rep.avisosUl.length ? h('section', { class: 'alert-ul alert-strip', role: 'alert' }, h('strong', {}, '⚠ Máximo tolerable (UL) superado: '),
       rep.avisosUl.map((r) => `${r.label} ${ui.fmtQty(r.total, r.unit)} (UL ${ui.fmtQty(r.ul, r.unit)})`).join(' · ')) : null,
-    rep.parciales.length ? h('p', { class: 'warn small' }, `Totales parciales: faltan datos de ${rep.parciales.join(', ')}.`) : null,
+    rep.sinDatos.length ? h('p', { class: 'warn small', role: 'alert' }, `Sin datos nutricionales: ${rep.sinDatos.join(', ')}. Los totales de este día no incluyen su aporte y no son completos.`) : null,
+    parcialesInforme(ui, ui.parciales),
     ui.state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
       h('section', { class: 'panel consumido' },
         h('div', { class: 'ring-row' },

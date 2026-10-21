@@ -195,7 +195,10 @@ test('UI: el Diario avisa de los alimentos sin datos y no da el día por complet
   const t = await setup(DICTADO, { meals: [COMIDA] });
   await aDiario(t);
   assert.match(t.$('[role=alert]').textContent, /Sin datos nutricionales: Lentejas caseras/);
-  assert.match(t.root.textContent, /Totales parciales: faltan datos de Lentejas caseras/);
+  // el alimento sin ningún dato se avisa aparte; el aviso de parciales solo habla de los que tienen datos a medias (chorizo, con datos a medias)
+  const parciales = t.$('.parciales').textContent;
+  assert.doesNotMatch(parciales, /Lentejas caseras/);
+  assert.match(parciales, /^Totales parciales en .*\(faltan datos de Chorizo\)$/);
 });
 
 test('UI: las etiquetas de macros son «Hidratos» y «Grasa» en el Diario, el anillo y el informe', { skip }, async () => {
