@@ -38,12 +38,14 @@ export function checkCenasStructure(data) {
 // saca de la columna rol_cena del documento. Sin `roles` (el Worker no los conoce) no se comprueba).
 // -> { ok, cenas: [{ nombre, lineas: [{ food_id, gramos }] }], warnings, recibidas, descartes } o { ok: false, error, recibidas, descartes }.
 // `recibidas`: cenas que mandó la IA; `descartes`: cuántas se descartaron por cada motivo principal
-// ({ fuera_catalogo, gramos, sin_proteina }); `ids_fuera`: algunos ids que no están en el catálogo (para el diagnóstico).
-export function normalizeCenas(data, compactList, { roles = null } = {}) {
+// ({ fuera_catalogo, no_enviado, gramos, sin_proteina }); `ids_fuera`: algunos ids que no se pudieron usar (para el diagnóstico).
+// `existentes` (opcional, con .has(id): los alimentos del documento) distingue un id que no existe (fuera_catalogo) de uno que
+// existe pero no se le envió a la IA (no_enviado: sin rol_cena, sin datos o excluido).
+export function normalizeCenas(data, compactList, { roles = null, existentes = null } = {}) {
   const ids = new Set(compactList.map((f) => f.id));
   const warnings = [];
   const cenas = [];
-  const descartes = { fuera_catalogo: 0, gramos: 0, sin_proteina: 0 };
+  const descartes = { fuera_catalogo: 0, no_enviado: 0, gramos: 0, sin_proteina: 0 };
   const idsFuera = new Set();
   const brutas = Array.isArray(data?.cenas) ? data.cenas : [];
   for (const raw of brutas) {
@@ -51,16 +53,22 @@ export function normalizeCenas(data, compactList, { roles = null } = {}) {
     const nombre = texto(raw?.nombre, MAX_NOMBRE) || `Cena ${cenas.length + 1}`;
     const porId = new Map();
     let fuera = 0;
+    let noEnviado = 0;
     let malGramos = 0;
     for (const l of Array.isArray(raw?.lineas) ? raw.lineas : []) {
       const id = typeof l?.id === 'string' ? l.id.trim() : '';
-      if (!ids.has(id)) { fuera++; idsFuera.add(id || '?'); warnings.push(`«${nombre}»: el alimento "${id || '?'}" no está en tu catálogo, se quita`); continue; }
+      if (!ids.has(id)) {
+        idsFuera.add(id || '?');
+        if (id && existentes?.has(id)) { noEnviado++; warnings.push(`«${nombre}»: el alimento "${id}" no se le envió a la IA (sin rol_cena o sin datos), se quita`); } else { fuera++; warnings.push(`«${nombre}»: el alimento "${id || '?'}" no está en tu catálogo, se quita`); }
+        continue;
+      }
       if (typeof l.gramos !== 'number' || !Number.isFinite(l.gramos) || l.gramos <= 0 || l.gramos > MAX_GRAMS) { malGramos++; warnings.push(`«${nombre}»: gramos no válidos en "${id}", se quita`); continue; }
       porId.set(id, (porId.get(id) ?? 0) + l.gramos); // el mismo alimento dos veces: se suman
     }
     const lineas = [...porId].slice(0, MAX_LINEAS_CENA).map(([food_id, gramos]) => ({ food_id, gramos: Math.round(gramos * 10) / 10 })).filter((l) => l.gramos <= MAX_GRAMS);
     if (!lineas.length) {
-      descartes[fuera >= malGramos ? 'fuera_catalogo' : 'gramos']++;
+      const mayor = Math.max(fuera, noEnviado, malGramos);
+      descartes[fuera === mayor ? 'fuera_catalogo' : noEnviado === mayor ? 'no_enviado' : 'gramos']++;
       warnings.push(`«${nombre}»: sin alimentos válidos, se descarta`);
       continue;
     }
@@ -78,6 +86,7 @@ export function normalizeCenas(data, compactList, { roles = null } = {}) {
 const MOTIVOS_TEXTO = [
   ['sin_proteina', (n) => `${n} sin proteína ni plato`],
   ['fuera_catalogo', (n) => `${n} con alimentos que no están en tu catálogo`],
+  ['no_enviado', (n) => `${n} con alimentos que no se le enviaron a la IA (sin rol_cena o sin datos)`],
   ['gramos', (n) => `${n} con gramos no válidos`],
 ];
 export function textoDescarteCenas({ recibidas = 0, descartes = {}, cenas = [] } = {}) {
@@ -86,8 +95,8 @@ export function textoDescarteCenas({ recibidas = 0, descartes = {}, cenas = [] }
   const lista = partes.length > 1 ? `${partes.slice(0, -1).join(', ')} y ${partes.at(-1)}` : (partes[0] ?? '');
   if (!cenas.length) {
     if (!recibidas) return 'La IA no propuso ninguna cena.';
-    return `La IA propuso ${cuenta(recibidas)}, pero ninguna vale${lista ? `: ${lista}` : ''}.`;
+    return `La IA propuso ${cuenta(recibidas)}, pero ${recibidas === 1 ? 'no vale' : 'ninguna vale'}${lista ? `: ${lista}` : ''}.`;
   }
   const quitadas = Object.values(descartes).reduce((a, b) => a + b, 0);
-  return quitadas ? `La IA propuso ${cuenta(recibidas)} y se descartaron ${quitadas}${lista ? `: ${lista}` : ''}.` : '';
+  return quitadas ? `La IA propuso ${cuenta(recibidas)} y ${quitadas === 1 ? 'se descartó 1' : `se descartaron ${quitadas}`}${lista ? `: ${lista}` : ''}.` : '';
 }

@@ -7,6 +7,7 @@ import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { createAiClient } from '../frontend/js/ai-client.js';
 import { realFoods, catalog, settings, readFile } from './helpers.js';
 import { foodSinDatos } from '../frontend/js/core/completeness.js';
+import { hashText } from '../frontend/js/core/catalog-update.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 const SEMILLA = JSON.parse(readFile('../data/cenas-semilla.json'));
@@ -27,14 +28,14 @@ const IDEAS = { cenas: [
 
 const sinRolCena = realFoods.map((f) => { const { rol_cena, ...extra } = f.extra ?? {}; return { ...f, extra }; }); // un documento antiguo, sin la columna
 
-async function setup({ meals = DIA_AYER, createAiClient: crear = () => ({}), semilla = SEMILLA, foods = realFoods, fetchPublished } = {}) {
+async function setup({ meals = DIA_AYER, createAiClient: crear = () => ({}), semilla = SEMILLA, foods = realFoods, fetchPublished, recetasBase = [] } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
   const store = createMemoryStore();
   for (const m of meals) await store.addMeal(m);
   const app = mountApp(root, {
-    store, createAiClient: crear, catalog, settings, targets: TARGETS, objetivos: {}, semilla, recetasBase: [],
+    store, createAiClient: crear, catalog, settings, targets: TARGETS, objetivos: {}, semilla, recetasBase,
     ...(fetchPublished ? { fetchPublished } : {}),
     initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW,
     idGen: (() => { let n = 0; return () => `m${++n}`; })(), readFile: (f) => f.text(), saveFile: async () => 'compartido',
@@ -224,7 +225,7 @@ test('«Más ideas» con una respuesta sin ninguna cena válida: lo dice y no in
   await t.ayer();
   await t.act(() => t.$('.que-ceno').click());
   await t.act(() => t.$('.ideas-btn').click());
-  assert.equal(t.$('[role=alert]').textContent, 'La IA propuso 1 cena, pero ninguna vale: 1 con alimentos que no están en tu catálogo.');
+  assert.equal(t.$('[role=alert]').textContent, 'La IA propuso 1 cena, pero no vale: 1 con alimentos que no están en tu catálogo.');
   assert.equal(t.$$('.cena-ia').length, 0);
   assert.equal(t.$$('.cena-prop').length, 3);
 });
@@ -282,6 +283,92 @@ test('«Más ideas» con un documento sin rol_cena: no llama a la IA, lo dice y 
   assert.equal(t.app.state.screen, 'catalogo');
   assert.ok(t.app.state.catUpdate.plan.actualizados.length > 0);
   assert.equal(llamadas.length, 0);
+  // la revisión es parte del Diario (no de Alimentos) y «‹ Volver» regresa a ¿Qué ceno?, no a Documento
+  assert.equal(t.$('nav.tabbar button.tab.active').textContent, 'Diario');
+  await t.act(() => t.btn('‹ Volver').click());
+  assert.ok(t.$('main.cenas'));
+  // «Ahora no» también regresa aquí
+  await t.act(() => t.$('.actualizar-doc').click());
+  await t.act(() => t.btn('Ahora no').click());
+  assert.ok(t.$('main.cenas'));
+});
+
+// El botón sale con el aviso, también en modo ligero (donde no hay sección «Más ideas»).
+test('el botón «Buscar actualización del documento» está junto a los avisos y también en modo ligero y cubierto', { skip }, async () => {
+  const t0 = await setup({ foods: sinRolCena });
+  await t0.ayer();
+  await t0.act(() => t0.$('.que-ceno').click());
+  const { meta, consumidas } = t0.app.state.cenas.resultado.resumen.kcal;
+  const kcalAceite = realFoods.find((f) => f.id === 'aceite_oliva').nutrients.energia_kcal;
+  for (const R of [250, 100]) {
+    const t = await setup({ foods: sinRolCena, meals: [...DIA_AYER, MEAL('extra', AYER, 'otro', [['aceite_oliva', ((meta - consumidas - R) / kcalAceite) * 100]])] });
+    await t.ayer();
+    await t.act(() => t.$('.que-ceno').click());
+    assert.equal(t.$('.ideas-btn'), null, `R=${R}`);
+    assert.ok(t.$('.actualizar-doc'), `R=${R}`);
+    assert.equal(t.$('.actualizar-doc').closest('.cenas-ideas'), null);
+  }
+});
+
+// Regresión «ningún error es silencioso»: el resultado de buscar la actualización se dice en ¿Qué ceno?, no solo en Documento.
+test('«Buscar actualización» desde ¿Qué ceno?: al día pero sin rol_cena lo explica; sin conexión lo dice; nunca llama a la IA', { skip }, async () => {
+  const llamadas = [];
+  const csv = readFile('./fixtures/alimentos_iniciales.csv');
+  let modo = 'igual';
+  const t = await setup({
+    foods: sinRolCena,
+    createAiClient: () => ({ ideasCena: async (a) => { llamadas.push(a); return IDEAS; } }),
+    fetchPublished: async () => { if (modo === 'falla') throw new Error('sin red'); return csv; },
+  });
+  await t.store.setSetting('catalogo_base', { hash: hashText(csv), text: csv }); // lo publicado es justo lo que copió el dispositivo
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.actualizar-doc').click());
+  assert.ok(t.$('main.cenas')); // sigue aquí
+  assert.equal(t.$('[data-doc-msg]').textContent, 'Tu documento está al día con el publicado pero no tiene la columna rol_cena (¿importaste un CSV sin ella?): importa el foods.csv publicado desde Documento o añade la columna.');
+  // sin conexión
+  modo = 'falla';
+  await t.act(() => t.$('.actualizar-doc').click());
+  assert.ok(t.$('main.cenas'));
+  assert.equal(t.$('[data-doc-msg]').textContent, 'No se pudo consultar el documento publicado (¿sin conexión?).');
+  assert.equal(t.app.state.catMsg, ''); // no se queda escondido en Documento
+  assert.equal(llamadas.length, 0);
+});
+
+test('«Más ideas»: una receta sin rol_cena viaja como plato (igual que en el motor) y su idea no se descarta', { skip }, async () => {
+  const foods = realFoods.map((f) => { if (f.id !== 'lentejas_caseras') return f; const { rol_cena, ...extra } = f.extra; return { ...f, extra }; });
+  const cuerpos = [];
+  const ideas = { cenas: [{ nombre: 'Lentejas', lineas: [{ food_id: 'lentejas_caseras', gramos: 300 }, { food_id: 'yogur_griego_natural', gramos: 125 }] }], warnings: [] };
+  const t = await setup({ foods, recetasBase: [{ id: 'lentejas_caseras', nombre: 'Lentejas caseras', peso_final_g: 1000, ingredientes: [{ food_id: 'lentejas_secas', gramos: 300 }] }], createAiClient: () => ({ ideasCena: async (a) => { cuerpos.push(a); return ideas; } }) });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.equal(cuerpos.length, 1);
+  assert.equal(cuerpos[0].alimentos.find((a) => a.id === 'lentejas_caseras')?.rol, 'plato');
+  assert.equal(t.$('[role=alert]'), null);
+  assert.equal(t.$$('.cena-ia').length, 1);
+});
+
+test('«Más ideas» sin ningún alimento que enviar: no llama a la IA y lo explica', { skip }, async () => {
+  const llamadas = [];
+  // solo un alimento con rol y sin datos
+  const foods = sinRolCena.map((f) => (f.id === 'huevo' ? { ...f, extra: { ...f.extra, rol_cena: 'proteina' }, nutrients: {} } : f));
+  const t = await setup({ foods, createAiClient: () => ({ ideasCena: async (a) => { llamadas.push(a); return IDEAS; } }) });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.equal(llamadas.length, 0);
+  assert.match(t.$('[role=alert]').textContent, /No hay ningún alimento con rol_cena y con datos.*no se ha llamado a la IA/);
+  assert.equal(t.$('.ideas-btn').disabled, false);
+});
+
+test('«Más ideas» con una idea de un alimento que existe pero no se envió: dice «no se le enviaron», no «no están en tu catálogo»', { skip }, async () => {
+  const cenas = [{ nombre: 'Lentejas', lineas: [{ food_id: 'lentejas_secas', gramos: 80 }] }];
+  const t = await setup({ createAiClient: () => ({ ideasCena: async () => ({ cenas, warnings: [] }) }) });
+  await t.ayer();
+  await t.act(() => t.$('.que-ceno').click());
+  await t.act(() => t.$('.ideas-btn').click());
+  assert.equal(t.$('[role=alert]').textContent, 'La IA propuso 1 cena, pero no vale: 1 con alimentos que no se le enviaron a la IA (sin rol_cena o sin datos).');
 });
 
 test('sin cenas que usar: la pantalla funciona sin IA; si no hay nada que proponer, lo dice y «Más ideas» sigue disponible', { skip }, async () => {

@@ -115,7 +115,17 @@ export function rolesDe(foodsById) {
   return roles;
 }
 
-const claveConjunto = (lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
+// Los roles que usa el motor: los de rol_cena y, para una receta sin rol, 'plato' (CLAUDE.md §4). `recetas`: ids u objetos con id.
+export function rolesConRecetas(foodsById, recetas = []) {
+  const roles = rolesDe(foodsById);
+  for (const r of recetas) {
+    const id = typeof r === 'string' ? r : r?.id;
+    if (id && foodsById?.has(id) && !roles[id]) roles[id] = 'plato';
+  }
+  return roles;
+}
+
+const claveConjunto =(lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
 
 function contexto({ fecha, comidasDelDia, historial, plantillas, recetas, semilla, foodsById, objetivos, catalog, settings, hoy }) {
   const keys = [...new Set([...MACROS, ...(objetivos?.list ?? []).flatMap((t) => (Array.isArray(t.suma) ? t.suma : [t.clave]))])].filter((k) => catalog.byKey.has(k));

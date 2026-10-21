@@ -116,10 +116,16 @@ test('/cenas: si ninguna cena vale, el 502 dice cuántas llegaron y por qué (la
   const r = await handleRequest(req(cuerpo), env, { callModel: malo });
   const b = await r.json();
   assert.equal(r.status, 502);
-  assert.deepEqual([b.error, b.recibidas, b.descartes], ['respuesta_invalida', 2, { fuera_catalogo: 1, gramos: 1, sin_proteina: 0 }]);
+  assert.deepEqual([b.error, b.recibidas, b.descartes], ['respuesta_invalida', 2, { fuera_catalogo: 1, no_enviado: 0, gramos: 1, sin_proteina: 0 }]);
   const fetchImpl = async () => ({ ok: false, status: 502, json: async () => b });
   const ai = createAiClient({ endpoint: 'https://w', token: 'tk', fetchImpl, isOnline: () => true });
   await assert.rejects(ai.ideasCena(cuerpo), (e) => e.code === 'respuesta_invalida' && e.userMessage === 'La IA propuso 2 cenas, pero ninguna vale: 1 con alimentos que no están en tu catálogo y 1 con gramos no válidos.');
+});
+
+test('cliente: un Worker publicado sin /cenas (404 no_encontrado) dice que hay que desplegarlo, no «el servicio de IA ha fallado»', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 404, json: async () => ({ error: 'no_encontrado' }) });
+  const ai = createAiClient({ endpoint: 'https://w', token: 'tk', fetchImpl, isOnline: () => true });
+  await assert.rejects(ai.ideasCena(cuerpo), (e) => e.code === 'worker_antiguo' && e.userMessage === 'El Worker publicado aún no tiene esta función: hay que desplegarlo (npm run worker:deploy).');
 });
 
 test('/cenas lo atiende también el servidor local, con el mismo código del Worker y el modelo simulado', async () => {
