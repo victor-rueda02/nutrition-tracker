@@ -125,7 +125,7 @@ export function rolesConRecetas(foodsById, recetas = []) {
   return roles;
 }
 
-const claveConjunto =(lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
+const claveConjunto = (lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
 
 function contexto({ fecha, comidasDelDia, historial, plantillas, recetas, semilla, foodsById, objetivos, catalog, settings, hoy }) {
   const keys = [...new Set([...MACROS, ...(objetivos?.list ?? []).flatMap((t) => (Array.isArray(t.suma) ? t.suma : [t.clave]))])].filter((k) => catalog.byKey.has(k));
