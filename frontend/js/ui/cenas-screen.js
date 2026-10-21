@@ -4,8 +4,8 @@
 import { buildCompactList } from '../core/ai-contract.js';
 import { draftFromLines } from '../core/draft.js';
 import { foodSinDatos } from '../core/completeness.js';
-import { proponerCenas, deficitsParaIA, textoDescartados, rolesDe } from '../core/cenas.js';
-import { normalizeCenas } from '../core/cenas-validate.js';
+import { proponerCenas, deficitsParaIA, textoDescartados, rolesDe, rolesConRecetas } from '../core/cenas.js';
+import { normalizeCenas, textoDescarteCenas } from '../core/cenas-validate.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
 
 // ctx: { state, deps, track, render, byId, targetsFor, today, loadTemplates, recetasTodas }
@@ -38,21 +38,33 @@ export function cenasActions(ctx) {
     state.error = ''; state.screen = 'confirm'; ctx.render();
   }
 
+  // Suma los descartes por motivo del Worker y de la app (cada uno cuenta cenas distintas).
+  const sumar = (a = {}, b = {}) => Object.fromEntries([...new Set([...Object.keys(a), ...Object.keys(b)])].map((k) => [k, (a[k] ?? 0) + (b[k] ?? 0)]));
+
   // «Más ideas»: UNA llamada a la IA por pulsación; el botón queda desactivado hasta volver a abrir la pantalla.
   function masIdeas() {
     const c = state.cenas;
     if (!c || c.ideasUsadas || c.busy || c.resultado?.modo !== 'normal') return undefined; // solo se usa en modo normal (regla 10)
+    if (!Object.keys(rolesDe(ctx.byId())).length) { // documento antiguo, sin rol_cena: no se pueden validar las cenas; no se gasta cuota
+      c.error = 'Tu documento aún no tiene la columna rol_cena (el papel de cada alimento en una cena), así que «Más ideas» no puede comprobar las cenas. No se ha llamado a la IA: actualiza el documento y vuelve a pulsar.';
+      c.faltaRoles = true; ctx.render(); return undefined;
+    }
+    c.faltaRoles = false;
+    // Los mismos roles que usa el motor: rol_cena y, sin él, una receta cuenta como plato. Solo viajan los que tienen rol y datos.
+    const roles = rolesConRecetas(ctx.byId(), c.entrada?.recetas);
+    const alimentos = buildCompactList(state.foods).filter((a) => roles[a.id] && !foodSinDatos(ctx.byId().get(a.id))).map((a) => ({ ...a, rol: roles[a.id] }));
+    if (!alimentos.length) { c.error = 'No hay ningún alimento con rol_cena y con datos que enviar a la IA: no se ha llamado a la IA. Revisa la columna rol_cena de tu documento.'; ctx.render(); return undefined; }
     c.ideasUsadas = true; c.busy = true; c.error = ''; c.aviso = ''; ctx.render();
     return ctx.track((async () => {
       try {
-        const alimentos = buildCompactList(state.foods).filter((a) => !foodSinDatos(ctx.byId().get(a.id)));
         const deficits = deficitsParaIA(c.resultado.faltan);
         const r = await deps.createAiClient(state.conn).ideasCena({ alimentos, deficits });
-        const v = normalizeCenas({ cenas: r.cenas.map((x) => ({ nombre: x.nombre, lineas: (x.lineas ?? []).map((l) => ({ id: l.food_id ?? l.id, gramos: l.gramos })) })) }, alimentos, { roles: rolesDe(ctx.byId()) });
-        if (!v.ok) { c.error = 'La IA no devolvió ninguna idea válida con tu catálogo.'; return; }
+        const v = normalizeCenas({ cenas: r.cenas.map((x) => ({ nombre: x.nombre, lineas: (x.lineas ?? []).map((l) => ({ id: l.food_id ?? l.id, gramos: l.gramos })) })) }, alimentos, { roles, existentes: ctx.byId() });
+        const nota = textoDescarteCenas({ recibidas: r.recibidas ?? r.cenas.length, descartes: sumar(r.descartes, v.descartes), cenas: v.ok ? v.cenas : [] });
+        if (!v.ok) { c.error = nota; return; }
         c.ideasIA = v.cenas;
         c.resultado = calcular(v.cenas);
-        if (!c.resultado.ideas.length) c.aviso = 'Ninguna de las ideas de la IA encaja con lo que te falta.';
+        c.aviso = [nota, c.resultado.ideas.length ? '' : 'Ninguna de las ideas de la IA encaja con lo que te falta.'].filter(Boolean).join(' ');
       } catch (e) {
         c.error = e.userMessage ?? `Error inesperado: ${e.message}`; // las propuestas de siempre se conservan
       } finally {
@@ -60,7 +72,24 @@ export function cenasActions(ctx) {
       }
     })());
   }
-  return { open, anadir, masIdeas };
+  // «Buscar actualización del documento» desde aquí: la revisión vuelve a esta pantalla y, si no hay nada que revisar, el
+  // resultado se dice AQUÍ (no en Documento).
+  function buscarActualizacion() {
+    const c = state.cenas;
+    if (c) { c.docMsg = ''; ctx.render(); }
+    return ctx.buscarActualizacion?.({
+      volver: 'cenas',
+      alTerminar: (msg, estado) => {
+        if (state.screen !== 'cenas' || !state.cenas) return;
+        const sinRoles = !Object.keys(rolesDe(ctx.byId())).length;
+        state.cenas.docMsg = estado === 'al_dia' && sinRoles
+          ? 'Tu documento está al día con el publicado pero no tiene la columna rol_cena (¿importaste un CSV sin ella?): importa el foods.csv publicado desde Documento o añade la columna.'
+          : msg;
+        ctx.render();
+      },
+    });
+  }
+  return { open, anadir, masIdeas, buscarActualizacion };
 }
 
 // ui: { h, state, byId, header, nf0, nf1, dayLabel, actions, back }
@@ -121,6 +150,10 @@ export function cenasScreen(ui) {
     ui.header('¿Qué ceno?', ui.back, { sub: ui.dayLabel(c.fecha) }),
     falta(),
     avisos.length ? h('ul', { class: 'warnlist cenas-avisos', 'aria-label': 'Avisos' }, avisos.map((a) => h('li', { 'data-aviso': a.codigo }, a.texto))) : null,
+    // Sin rol_cena en el documento (visible en cualquier modo): botón para buscar la versión nueva y el resultado, aquí mismo.
+    r.avisos.some((a) => a.codigo === 'sin_roles') ? h('div', { class: 'row cenas-actualizar' },
+      h('button', { type: 'button', class: 'secondary wide actualizar-doc', onclick: () => ui.actions.buscarActualizacion() }, 'Buscar actualización del documento')) : null,
+    c.docMsg ? h('p', { class: 'error', role: 'alert', 'data-doc-msg': '1' }, c.docMsg) : null,
     descartados.length ? h('ul', { class: 'muted small cenas-descartados' }, descartados.map((t) => h('li', {}, t))) : null,
     sinCandidatos ? h('p', { class: 'warn', 'data-aviso': 'sin_candidatos', role: 'status' }, sinCandidatos.texto) : null,
     r.propuestas.map((p, i) => tarjeta(p, i)),

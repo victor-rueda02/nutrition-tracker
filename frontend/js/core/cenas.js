@@ -7,6 +7,7 @@ import { sumLines } from './nutrients.js';
 import { dayTotals, shiftDate } from './diary.js';
 import { foodSinDatos, foodCompleteness, isIncomplete } from './completeness.js';
 import { isExcluded } from './excluded.js';
+import { ROLES_CENA } from './cenas-validate.js';
 
 export const DIAS_PARA_HISTORIAL = 21; // con menos días con cena en la app, se usa también la semilla de Cronometer
 export const DIAS_HISTORIAL = 60; // ventana del historial real
@@ -34,7 +35,7 @@ const ESCALA = { proteina: 'p', hidrato: 'h', plato: 'h', salsa: 'h' }; // qué 
 const QUITABLES = [['chocolate_negro_85'], ['nueces'], ['fruta']]; // extras de la cena de origen que se quitan, en este orden, si no cabe (nunca el yogur ni la chía)
 const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-export const ROLES = ['proteina', 'hidrato', 'verdura', 'plato', 'grasa', 'salsa', 'postre_base', 'postre_extra', 'fruta', 'otro'];
+export const ROLES = ROLES_CENA; // rol_cena: ver core/cenas-validate.js
 
 // Nombres de nutriente que sí viajan a la IA (sin dígitos: la regla del Worker es /\d/). Las etiquetas con número
 // ("Vitamina B12") se cambian por su nombre propio; el resto, la etiqueta sin el paréntesis ("Vitamina A (RAE)").
@@ -114,7 +115,17 @@ export function rolesDe(foodsById) {
   return roles;
 }
 
-const claveConjunto = (lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
+// Los roles que usa el motor: los de rol_cena y, para una receta sin rol, 'plato' (CLAUDE.md §4). `recetas`: ids u objetos con id.
+export function rolesConRecetas(foodsById, recetas = []) {
+  const roles = rolesDe(foodsById);
+  for (const r of recetas) {
+    const id = typeof r === 'string' ? r : r?.id;
+    if (id && foodsById?.has(id) && !roles[id]) roles[id] = 'plato';
+  }
+  return roles;
+}
+
+const claveConjunto =(lineas) => [...new Set(lineas.map((l) => l.food_id))].sort(porId).join('+');
 
 function contexto({ fecha, comidasDelDia, historial, plantillas, recetas, semilla, foodsById, objetivos, catalog, settings, hoy }) {
   const keys = [...new Set([...MACROS, ...(objetivos?.list ?? []).flatMap((t) => (Array.isArray(t.suma) ? t.suma : [t.clave]))])].filter((k) => catalog.byKey.has(k));

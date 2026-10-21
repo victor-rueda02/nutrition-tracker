@@ -2,8 +2,8 @@
 // Catálogo y semilla reales (data/foods.csv copiado en tests/fixtures y data/cenas-semilla.json).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { proponerCenas, rolesDe, deficitsParaIA, nombreParaIA, textoDescartados, fechaCorta, DIAS_PARA_HISTORIAL, R_NORMAL, R_LIGERO } from '../frontend/js/core/cenas.js';
-import { checkCenasStructure, normalizeCenas, checkDeficits, MAX_CENAS_IA } from '../frontend/js/core/cenas-validate.js';
+import { proponerCenas, rolesDe, rolesConRecetas, deficitsParaIA, nombreParaIA, textoDescartados, fechaCorta, DIAS_PARA_HISTORIAL, R_NORMAL, R_LIGERO } from '../frontend/js/core/cenas.js';
+import { checkCenasStructure, normalizeCenas, checkDeficits, textoDescarteCenas, MAX_CENAS_IA } from '../frontend/js/core/cenas-validate.js';
 import { draftFromLines, validateDraft, toMealRecord } from '../frontend/js/core/draft.js';
 import { sumLines } from '../frontend/js/core/nutrients.js';
 import { foodSinDatos } from '../frontend/js/core/completeness.js';
@@ -386,6 +386,81 @@ test('cenas-validate: descarta ids inventados, gramos inválidos y cenas sin pro
   // un alimento que no se envió (excluido o sin datos) es un id inventado
   const sinTortilla = buildCompactList(realFoods).filter((a) => a.id !== 'huevo');
   assert.equal(normalizeCenas({ cenas: [{ nombre: 'h', lineas: [{ id: 'huevo', gramos: 100 }] }] }, sinTortilla, { roles }).ok, false);
+});
+
+// Regresión «La IA no devolvió ninguna idea válida con tu catálogo»: respuestas REALES de Gemini (tests/fixtures/cenas-gemini-real.json).
+// Con los roles de rol_cena del documento valen las 5 cenas de cada respuesta; con un documento sin rol_cena (roles = {}),
+// la comprobación de proteína descarta TODAS: el motivo es siempre «sin proteína» y antes no se decía.
+const GEMINI_REAL = JSON.parse(readFile('./fixtures/cenas-gemini-real.json')).respuestas.map((x) => JSON.parse(x.cruda));
+test('cenas-validate con respuestas reales de Gemini: valen con rol_cena y se descartan todas sin él (el motivo queda dicho)', () => {
+  const lista = buildCompactList(realFoods).filter((a) => !foodSinDatos(foodsById.get(a.id)));
+  const roles = rolesDe(foodsById);
+  assert.ok(Object.keys(roles).length > 30);
+  for (const data of GEMINI_REAL) {
+    const bien = normalizeCenas(data, lista, { roles });
+    assert.equal(bien.ok, true);
+    assert.equal(bien.cenas.length, 5);
+    assert.equal(bien.recibidas, 5);
+    assert.equal(textoDescarteCenas(bien), '');
+    const sinRoles = normalizeCenas(data, lista, { roles: rolesDe(new Map(realFoods.map((f) => [f.id, { ...f, extra: {} }]))) });
+    assert.equal(sinRoles.ok, false);
+    assert.deepEqual(sinRoles.descartes, { fuera_catalogo: 0, no_enviado: 0, gramos: 0, sin_proteina: 5 });
+    assert.equal(textoDescarteCenas(sinRoles), 'La IA propuso 5 cenas, pero ninguna vale: 5 sin proteína ni plato.');
+  }
+});
+
+test('cenas-validate: cuenta las cenas descartadas por motivo y el texto los agrupa', () => {
+  const lista = buildCompactList(realFoods);
+  const roles = rolesDe(foodsById);
+  const data = { cenas: [
+    { nombre: 'a', lineas: [{ id: 'lentejas_secas', gramos: 80 }, { id: 'jamon_curado', gramos: 30 }] }, // ids del catálogo, sin rol de proteína
+    { nombre: 'b', lineas: [{ id: 'arroz_blanco_crudo', gramos: 80 }] },
+    { nombre: 'c', lineas: [{ id: 'no_existe', gramos: 80 }, { id: 'tampoco', gramos: 10 }] },
+    { nombre: 'd', lineas: [{ id: 'huevo', gramos: -5 }] },
+  ] };
+  const r = normalizeCenas(data, lista, { roles });
+  assert.equal(r.ok, false);
+  assert.equal(r.recibidas, 4);
+  assert.deepEqual(r.descartes, { fuera_catalogo: 1, no_enviado: 0, gramos: 1, sin_proteina: 2 });
+  assert.deepEqual(r.ids_fuera, ['no_existe', 'tampoco']);
+  assert.equal(textoDescarteCenas(r), 'La IA propuso 4 cenas, pero ninguna vale: 2 sin proteína ni plato, 1 con alimentos que no están en tu catálogo y 1 con gramos no válidos.');
+  // con una válida: avisa de las descartadas; sin descartes, nada
+  const mixta = normalizeCenas({ cenas: [...data.cenas, { nombre: 'e', lineas: [{ id: 'huevo', gramos: 100 }] }] }, lista, { roles });
+  assert.equal(mixta.ok, true);
+  assert.equal(textoDescarteCenas(mixta), 'La IA propuso 5 cenas y se descartaron 4: 2 sin proteína ni plato, 1 con alimentos que no están en tu catálogo y 1 con gramos no válidos.');
+  assert.equal(textoDescarteCenas({ recibidas: 1, descartes: { sin_proteina: 1 }, cenas: [] }), 'La IA propuso 1 cena, pero no vale: 1 sin proteína ni plato.');
+  assert.equal(textoDescarteCenas({ recibidas: 0, descartes: {}, cenas: [] }), 'La IA no propuso ninguna cena.');
+});
+
+test('textoDescarteCenas: singular y plural correctos («se descartó 1», «no vale»)', () => {
+  const ok = [{ nombre: 'a', lineas: [] }];
+  assert.equal(textoDescarteCenas({ recibidas: 2, descartes: { sin_proteina: 1 }, cenas: ok }), 'La IA propuso 2 cenas y se descartó 1: 1 sin proteína ni plato.');
+  assert.equal(textoDescarteCenas({ recibidas: 1, descartes: { gramos: 1 }, cenas: [] }), 'La IA propuso 1 cena, pero no vale: 1 con gramos no válidos.');
+  assert.equal(textoDescarteCenas({ recibidas: 2, descartes: { gramos: 2 }, cenas: [] }), 'La IA propuso 2 cenas, pero ninguna vale: 2 con gramos no válidos.');
+});
+
+test('cenas-validate: distingue un id que no existe de uno que existe pero no se le envió a la IA (existentes)', () => {
+  const enviados = buildCompactList(realFoods).filter((a) => a.id !== 'lentejas_secas');
+  const roles = rolesDe(foodsById);
+  const data = { cenas: [
+    { nombre: 'no enviado', lineas: [{ id: 'lentejas_secas', gramos: 80 }] },
+    { nombre: 'inventado', lineas: [{ id: 'lubina_a_la_sal', gramos: 80 }] },
+  ] };
+  const con = normalizeCenas(data, enviados, { roles, existentes: foodsById });
+  assert.deepEqual(con.descartes, { fuera_catalogo: 1, no_enviado: 1, gramos: 0, sin_proteina: 0 });
+  assert.equal(textoDescarteCenas(con), 'La IA propuso 2 cenas, pero ninguna vale: 1 con alimentos que no están en tu catálogo y 1 con alimentos que no se le enviaron a la IA (sin rol_cena o sin datos).');
+  // sin `existentes` (el Worker) todo id desconocido cuenta como fuera del catálogo
+  assert.deepEqual(normalizeCenas(data, enviados, { roles }).descartes, { fuera_catalogo: 2, no_enviado: 0, gramos: 0, sin_proteina: 0 });
+});
+
+test('rolesConRecetas: como el motor, una receta sin rol_cena es plato; el rol explícito manda; los ids que no están en el documento no cuentan', () => {
+  const f = foodsById;
+  const roles = rolesConRecetas(f, [{ id: 'lentejas_caseras' }, 'lentejas_secas', { id: 'salmon_atlantico' }, { id: 'no_existe' }]);
+  assert.equal(roles.lentejas_caseras, 'plato');
+  assert.equal(roles.lentejas_secas, 'plato'); // sin rol_cena y es receta
+  assert.equal(roles.salmon_atlantico, 'proteina'); // el explícito manda
+  assert.ok(!('no_existe' in roles));
+  assert.deepEqual(rolesConRecetas(f, []), rolesDe(f));
 });
 
 test('checkDeficits: solo nombres cortos, sin dígitos, hasta 8', () => {

@@ -119,10 +119,11 @@ export const CENAS_SYSTEM_PROMPT = `Eres un asistente que propone cenas español
 REGLAS
 1. Propón 5 cenas distintas entre sí (con proteína principal distinta cuando sea posible). Cada una es una cena española típica de proteína + hidrato + verdura (+ postre de yogur griego), con gramos típicos en CRUDO (el peso que se pesa antes de cocinar y sin hueso).
 2. Usa SOLO "id" que existan en el catálogo. No inventes ids ni alimentos. Un alimento solo una vez por cena y como mucho 8 líneas por cena.
-3. NO calcules calorías ni nutrientes: eso lo hace el código con los datos del usuario. Solo eliges alimentos y gramos.
-4. Da preferencia a los alimentos ricos en los nutrientes que se indican como déficit, sin dejar de ser una cena normal.
-5. "nombre": nombre corto de la cena en español ("Salmón con arroz y calabacín").
-6. Responde únicamente con el JSON del esquema.`;
+3. Algunos alimentos traen "rol" (su papel en una cena: proteina, hidrato, verdura, plato, grasa, salsa, postre_base, postre_extra, fruta u otro). Cada cena DEBE llevar al menos un alimento con rol "proteina" (o un "plato" completo), y normalmente un "hidrato" y una "verdura". Usa solo alimentos que traigan "rol"; los que no lo traen no se pueden usar (si ninguno trae "rol", ignora esta regla).
+4. NO calcules calorías ni nutrientes: eso lo hace el código con los datos del usuario. Solo eliges alimentos y gramos.
+5. Da preferencia a los alimentos ricos en los nutrientes que se indican como déficit, sin dejar de ser una cena normal.
+6. "nombre": nombre corto de la cena en español ("Salmón con arroz y calabacín").
+7. Responde únicamente con el JSON del esquema.`;
 
 export function buildCenasPrompt(compactList, deficits = []) {
   return `CATÁLOGO (JSON):\n${JSON.stringify(compactList)}\n\nPropón 5 cenas españolas típicas de proteína + hidrato + verdura (+ postre de yogur griego) usando solo ids del catálogo, con gramos típicos en crudo; da preferencia a alimentos ricos en estos nutrientes: ${deficits.length ? deficits.join(', ') : '(ninguno en especial)'}.`;

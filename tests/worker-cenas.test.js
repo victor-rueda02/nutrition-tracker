@@ -96,6 +96,38 @@ test('/cenas: reintenta UNA vez si el JSON es inválido o ninguna cena es válid
   assert.equal((await r.json()).error, 'respuesta_invalida');
 });
 
+test('/cenas: el rol de cada alimento (rol_cena) viaja a la IA en la lista compacta, solo en /cenas y solo si es un rol válido; el prompt lo explica', async () => {
+  const conRol = lista.map((f, i) => ({ ...f, ...(i % 2 ? { rol: 'proteina' } : { rol: 'inventado' }) }));
+  const cm = model(CENAS);
+  await handleRequest(req({ alimentos: conRol, deficits: ['Fibra'] }), env, { callModel: cm });
+  const enviada = JSON.parse(cm.calls[0].user.split('CATÁLOGO (JSON):\n')[1].split('\n\n')[0]);
+  assert.equal(enviada.length, lista.length);
+  enviada.forEach((f, i) => assert.equal(f.rol, i % 2 ? 'proteina' : undefined));
+  assert.match(CENAS_SYSTEM_PROMPT, /"rol"/);
+  assert.match(CENAS_SYSTEM_PROMPT, /al menos un alimento con rol "proteina"/);
+  // /parse ignora el rol aunque lo envíen
+  const parse = model(JSON.stringify({ items: [], unmatched: [] }));
+  await handleRequest(new Request('https://worker.example/parse', { method: 'POST', headers: { 'content-type': 'application/json', Origin: ORIGIN, 'X-App-Token': 'tok-123' }, body: JSON.stringify({ texto: 'huevo', alimentos: conRol }) }), env, { callModel: parse });
+  assert.ok(!parse.calls[0].user.includes('"rol"'));
+});
+
+test('/cenas: si ninguna cena vale, el 502 dice cuántas llegaron y por qué (la app lo muestra en vez de «reformula la frase»)', async () => {
+  const malo = model(JSON.stringify({ cenas: [{ nombre: 'x', lineas: [{ id: 'inventado', gramos: 5 }] }, { nombre: 'y', lineas: [{ id: 'huevo', gramos: -1 }] }] }));
+  const r = await handleRequest(req(cuerpo), env, { callModel: malo });
+  const b = await r.json();
+  assert.equal(r.status, 502);
+  assert.deepEqual([b.error, b.recibidas, b.descartes], ['respuesta_invalida', 2, { fuera_catalogo: 1, no_enviado: 0, gramos: 1, sin_proteina: 0 }]);
+  const fetchImpl = async () => ({ ok: false, status: 502, json: async () => b });
+  const ai = createAiClient({ endpoint: 'https://w', token: 'tk', fetchImpl, isOnline: () => true });
+  await assert.rejects(ai.ideasCena(cuerpo), (e) => e.code === 'respuesta_invalida' && e.userMessage === 'La IA propuso 2 cenas, pero ninguna vale: 1 con alimentos que no están en tu catálogo y 1 con gramos no válidos.');
+});
+
+test('cliente: un Worker publicado sin /cenas (404 no_encontrado) dice que hay que desplegarlo, no «el servicio de IA ha fallado»', async () => {
+  const fetchImpl = async () => ({ ok: false, status: 404, json: async () => ({ error: 'no_encontrado' }) });
+  const ai = createAiClient({ endpoint: 'https://w', token: 'tk', fetchImpl, isOnline: () => true });
+  await assert.rejects(ai.ideasCena(cuerpo), (e) => e.code === 'worker_antiguo' && e.userMessage === 'El Worker publicado aún no tiene esta función: hay que desplegarlo (npm run worker:deploy).');
+});
+
 test('/cenas lo atiende también el servidor local, con el mismo código del Worker y el modelo simulado', async () => {
   assert.ok(RUTAS_WORKER.includes('/cenas'));
   let llamadas = 0;

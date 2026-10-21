@@ -270,25 +270,30 @@ export function mountApp(root, deps) {
 
   // ¿Hay una versión nueva del foods.csv publicado? (deps.fetchPublished; sin conexión no pasa nada).
   // manual = desde Documento: dice siempre el resultado y abre la revisión si hay cambios.
-  function checkCatalogUpdate({ manual = false } = {}) {
-    if (!deps.fetchPublished) return Promise.resolve();
-    const decir = (msg) => { if (manual) { state.catMsg = msg; render(); } };
+  // volver = a qué pantalla regresa la revisión («Volver», «Ahora no»); alTerminar(msg, estado) = quién dice el resultado
+  // cuando no hay nada que revisar (por defecto, Documento): estado 'al_dia' | 'sin_conexion' | 'errores' | 'sin_publicado'.
+  function checkCatalogUpdate({ manual = false, volver = 'doc', alTerminar = null } = {}) {
+    if (!deps.fetchPublished) {
+      if (manual && alTerminar) alTerminar('Esta versión de la app no puede consultar el documento publicado.', 'sin_publicado');
+      return Promise.resolve();
+    }
+    const decir = (msg, estado) => { if (manual) { if (alTerminar) alTerminar(msg, estado); else { state.catMsg = msg; render(); } } };
     return track((async () => {
       let text;
-      try { text = await deps.fetchPublished(); } catch { decir('No se pudo consultar el documento publicado (¿sin conexión?).'); return; }
+      try { text = await deps.fetchPublished(); } catch { decir('No se pudo consultar el documento publicado (¿sin conexión?).', 'sin_conexion'); return; }
       const hash = hashText(text);
       const base = await deps.store.getSetting('catalogo_base');
-      if (base?.hash === hash) { decir('Tu documento está al día con el publicado.'); return; }
+      if (base?.hash === hash) { decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
       const remote = parseFoodsCSV(text, { catalog: deps.catalog });
-      if (!remote.report.ok || !remote.foods.length) { decir('El documento publicado tiene errores: no se ofrece.'); return; }
+      if (!remote.report.ok || !remote.foods.length) { decir('El documento publicado tiene errores: no se ofrece.', 'errores'); return; }
       const baseFoods = base?.text ? parseFoodsCSV(base.text, { catalog: deps.catalog }).foods : null;
       const plan = planCatalogUpdate({ local: state.foods, remote: remote.foods, base: baseFoods, catalog: deps.catalog });
-      if (!plan.hayCambios) { await deps.store.setSetting('catalogo_base', { hash, text }); decir('Tu documento está al día con el publicado.'); return; }
+      if (!plan.hayCambios) { await deps.store.setSetting('catalogo_base', { hash, text }); decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
       const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === hash;
       state.catUpdate = { hash, text, remote, plan, ignorado };
       state.catEleccion = {};
       state.catMsg = '';
-      if (manual) { state.catBack = 'doc'; state.screen = 'catalogo'; }
+      if (manual) { state.catBack = volver; state.screen = 'catalogo'; }
       render();
     })(), 'No se pudo comprobar el documento publicado');
   }
@@ -872,7 +877,7 @@ export function mountApp(root, deps) {
   const ctx = { state, deps, track, render, byId, persistFoods, now, saveFile, openDay };
   const rec = recetasActions(ctx);
   const est = estimateActions({ ...ctx, guardarReceta: rec.guardarReceta });
-  const cenas = cenasActions({ ...ctx, targetsFor, today, loadTemplates, recetasTodas: () => rec.todas() });
+  const cenas = cenasActions({ ...ctx, targetsFor, today, loadTemplates, recetasTodas: () => rec.todas(), buscarActualizacion: (o) => checkCatalogUpdate({ manual: true, ...o }) });
   const labels = new Map(deps.catalog.keys.map((k) => [k, deps.catalog.byKey.get(k)?.label ?? k]));
 
   // ---------- render ----------
@@ -937,7 +942,7 @@ export function mountApp(root, deps) {
       if (cabecera) cabecera.after(aviso); else screen.prepend(aviso);
     }
     const extras = [];
-    if (!SIN_BARRA.includes(state.screen)) extras.push(bottomNav({ h, doc, active: TAB_OF[state.screen] ?? null, go }));
+    if (!SIN_BARRA.includes(state.screen)) extras.push(bottomNav({ h, doc, active: (state.screen === 'catalogo' && state.catBack === 'cenas' ? 'diary' : TAB_OF[state.screen]) ?? null, go }));
     if (state.menu && state.screen === 'diary') {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },

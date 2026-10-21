@@ -1,0 +1,27 @@
+{
+  "nota": "Respuestas reales de Gemini (dev-server, 21-10-2026) a /cenas con la lista compacta de data/foods.csv (57 alimentos con datos, sin rol) y estos déficits. Sin claves.",
+  "respuestas": [
+    {
+      "deficits": [
+        "Vitamina D",
+        "Magnesio",
+        "Fibra",
+        "Omega tres"
+      ],
+      "cruda": "{\n  \"cenas\": [\n    {\n      \"nombre\": \"Salmón con patata y brócoli\",\n      \"lineas\": [\n        { \"id\": \"salmon_atlantico\", \"gramos\": 150 },\n        { \"id\": \"patata_cruda\", \"gramos\": 200 },\n        { \"id\": \"brocoli\", \"gramos\": 150 },\n        { \"id\": \"aceite_oliva\", \"gramos\": 13.5 },\n        { \"id\": \"yogur_griego_natural\", \"gramos\": 125 }\n      ]\n    },\n    {\n      \"nombre\": \"Sardinas con arroz y calabacín\",\n      \"lineas\": [\n        { \"id\": \"sardina_lata_aceite\", \"gramos\": 100 },\n        { \"id\": \"arroz_blanco_crudo\", \"gramos\": 60 },\n        { \"id\": \"calabacin\", \"gramos\": 200 },\n        { \"id\": \"yogur_griego_natural\", \"gramos\": 125 },\n        { \"id\": \"nueces\", \"gramos\": 20 }\n      ]\n    },\n    {\n      \"nombre\": \"Tortilla de champiñones con pan integral\",\n      \"lineas\": [\n        { \"id\": \"huevo\", \"gramos\": 100 },\n        { \"id\": \"champinon\", \"gramos\": 150 },\n        { \"id\": \"pan_integral\", \"gramos\": 50 },\n        { \"id\": \"aceite_oliva\", \"gramos\": 13.5 },\n        { \"id\": \"yogur_griego_natural\", \"gramos\": 125 },\n        { \"id\": \"semillas_chia\", \"gramos\": 6 }\n      ]\n    },\n    {\n      \"nombre\": \"Merluza con judías verdes y patata\",\n      \"lineas\": [\n        { \"id\": \"merluza_cruda\", \"gramos\": 150 },\n        { \"id\": \"judias_verdes\", \"gramos\": 200 },\n        { \"id\": \"patata_cruda\", \"gramos\": 150 },\n        { \"id\": \"aceite_oliva\", \"gramos\": 13.5 },\n        { \"id\": \"yogur_griego_natural\", \"gramos\": 125 }\n      ]\n    },\n    {\n      \"nombre\": \"Pechuga de pollo con berenjena y avena\",\n      \"lineas\": [\n        { \"id\": \"pechuga_pollo_cruda\", \"gramos\": 150 },\n        { \"id\": \"berenjena\", \"gramos\": 200 },\n        { \"id\": \"avena_copos\", \"gramos\": 40 },\n        { \"id\": \"aceite_oliva\", \"gramos\": 13.5 },\n        { \"id\": \"yogur_griego_natural\", \"gramos\": 125 },\n        { \"id\": \"almendras_crudas\", \"gramos\": 15 }\n      ]\n    }\n  ]\n}"
+    },
+    {
+      "deficits": [
+        "Fibra",
+        "Magnesio",
+        "Potasio",
+        "Vitamina E",
+        "Calcio",
+        "Folato",
+        "Vitamina C",
+        "Zinc"
+      ],
+      "cruda": "{\"cenas\":[{\"nombre\":\"Pechuga de pollo con patata y calabacín\",\"lineas\":[{\"id\":\"pechuga_pollo_cruda\",\"gramos\":150},{\"id\":\"patata_cruda\",\"gramos\":200},{\"id\":\"calabacin\",\"gramos\":150},{\"id\":\"aceite_oliva\",\"gramos\":15},{\"id\":\"yogur_griego_natural\",\"gramos\":125},{\"id\":\"nueces\",\"gramos\":15}]},{\"nombre\":\"Salmón con arroz y brócoli\",\"lineas\":[{\"id\":\"salmon_atlantico\",\"gramos\":160},{\"id\":\"arroz_blanco_crudo\",\"gramos\":70},{\"id\":\"brocoli\",\"gramos\":150},{\"id\":\"aceite_oliva\",\"gramos\":10},{\"id\":\"yogur_griego_natural\",\"gramos\":125},{\"id\":\"almendras_crudas\",\"gramos\":10}]},{\"nombre\":\"Merluza con pasta y pimiento rojo\",\"lineas\":[{\"id\":\"merluza_cruda\",\"gramos\":180},{\"id\":\"pasta_seca\",\"gramos\":70},{\"id\":\"pimiento_rojo\",\"gramos\":120},{\"id\":\"aceite_oliva\",\"gramos\":15},{\"id\":\"yogur_griego_natural\",\"gramos\":125},{\"id\":\"pistachos_crudos\",\"gramos\":15}]},{\"nombre\":\"Solomillo de ternera con pan integral y judías verdes\",\"lineas\":[{\"id\":\"solomillo_ternera\",\"gramos\":150},{\"id\":\"pan_integral\",\"gramos\":80},{\"id\":\"judias_verdes\",\"gramos\":150},{\"id\":\"aceite_oliva\",\"gramos\":10},{\"id\":\"yogur_griego_natural\",\"gramos\":125},{\"id\":\"semillas_chia\",\"gramos\":10}]},{\"nombre\":\"Tortilla francesa con patata y espinacas o champiñón\",\"lineas\":[{\"id\":\"huevo\",\"gramos\":100},{\"id\":\"patata_cruda\",\"gramos\":150},{\"id\":\"champinon\",\"gramos\":150},{\"id\":\"aceite_oliva\",\"gramos\":10},{\"id\":\"yogur_griego_natural\",\"gramos\":125},{\"id\":\"nueces\",\"gramos\":15}]}]}"
+    }
+  ]
+}
