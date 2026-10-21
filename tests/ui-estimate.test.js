@@ -215,6 +215,39 @@ test('Diario -> «Guardar como receta»: formulario con los ingredientes, cálcu
   assert.match(t.$('[role=alert]').textContent, /es una receta \(no se anidan/);
 });
 
+// Regresión: los valores de la etiqueta de un producto (campo "etiqueta") se perdían al recalcular todas las recetas y
+// al editar y guardar la receta; ahora se conservan en la fila (nutrientes y fuente_usda) y en la definición.
+test('recetas con «etiqueta»: «Recalcular todas» y Editar → Guardar mantienen los valores de la etiqueta y la fuente', { skip }, async () => {
+  const ETI = { id: 'salteado_prueba', nombre: 'Salteado de prueba', alias: ['salteado de prueba'], ingredientes: [{ food_id: 'calabacin', gramos: 20 }, { food_id: 'cebolla', gramos: 20 }], etiqueta: { energia_kcal: 36, grasa_total_g: 1.2, fibra_g: 2.5 } };
+  const t = await setup({ recetasBase: [ETI] });
+  const fila = async () => (await t.store.getCatalogRecord()).foods.find((f) => f.id === ETI.id);
+  const comprueba = async (nombre) => {
+    const f = await fila();
+    assert.deepEqual([f.nutrients.energia_kcal, f.nutrients.grasa_total_g, f.nutrients.fibra_g], [36, 1.2, 2.5], nombre);
+    assert.match(f.extra.fuente_usda, /; etiqueta: energia_kcal, grasa_total_g, fibra_g; resto calculado de la receta$/, nombre);
+    assert.ok(f.nutrients.proteina_g > 0, `${nombre}: el resto sigue calculado de los ingredientes`);
+  };
+  await t.act(() => t.btn('Alimentos').click());
+  await t.act(() => t.btn('Ver recetas').click());
+  await t.act(() => t.btn('Recalcular todas').click());
+  assert.match(t.root.textContent, /Recalculadas 1 receta\./);
+  await comprueba('recalcular todas');
+  // Editar -> Guardar: la línea discreta avisa de que la etiqueta no se recalcula y el guardado la conserva
+  await t.act(() => t.$('li.receta button.link').click());
+  assert.match(t.$('.receta-etiqueta').textContent, /^Valores de etiqueta: .*Energía.*Grasa.*Fibra.*No se recalculan/);
+  assert.match(t.$('.receta-preview').textContent, /^36 kcal por 100 g/); // la vista previa ya usa la etiqueta
+  t.type(t.$('input[aria-label="Peso final del plato en gramos"]'), '30');
+  await t.act(() => t.btn('Guardar receta').click());
+  assert.match(t.root.textContent, /Receta «Salteado de prueba» guardada \(36 kcal por 100 g\)/);
+  await comprueba('editar y guardar');
+  const guardada = (await t.store.getSetting('recetas')).find((r) => r.id === ETI.id);
+  assert.deepEqual(guardada.etiqueta, ETI.etiqueta);
+  assert.equal(guardada.peso_final_g, 30);
+  // y una receta sin etiqueta no muestra la línea
+  await t.act(() => t.btn('Nueva receta').click());
+  assert.equal(t.$('.receta-etiqueta'), null);
+});
+
 test('ingrediente que la IA manda a USDA y ya tienes («leche entera»): preseleccionado el tuyo, sin buscarlo; USDA como alternativa', { skip }, async () => {
   const leche = { origen: 'usda', termino: 'Milk, whole, 3.25% milkfat', nombre: 'leche entera', estado: 'procesado', gramos: 35 };
   const t = await setup({
