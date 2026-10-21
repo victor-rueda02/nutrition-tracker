@@ -155,3 +155,12 @@ test('registro de frases: anota el aviso con el alimento más específico (tambi
   const csv = logToCSV([e], byId);
   assert.match(csv, /Hay un alimento más específico;más específico: Pan de molde blanco;Pan blanco de barra;/);
 });
+
+// Optimización del Worker (10 ms de CPU): sameWord y spansIn dan lo mismo que la versión con cadenas.
+test('sameWord rápido equivale a la comparación con sufijos y spansIn/termSpans coinciden', async () => {
+  const { sameWord, spansIn, words } = await import('../frontend/js/core/text.js');
+  const vieja = (a, b) => a === b || a === `${b}s` || b === `${a}s` || a === `${b}es` || b === `${a}es`;
+  const palabras = ['pan', 'panes', 'pane', 'ore', 'ores', 'or', 'es', 's', 'lentejas', 'lenteja', 'macarron', 'macarrones', 'huevo', 'huevos', 'x', 'atun', 'atunes', 'ao', 'aos', 'aoes', 'lunes', 'lune'];
+  for (const a of palabras) for (const b of palabras) assert.equal(sameWord(a, b), vieja(a, b), `${a} ~ ${b}`);
+  assert.deepEqual(spansIn(words('Pan de molde y pan'), words('pan')), termSpans('Pan de molde y pan', 'pan'));
+});

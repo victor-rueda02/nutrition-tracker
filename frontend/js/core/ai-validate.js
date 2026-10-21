@@ -1,7 +1,7 @@
 // Validación en código de la respuesta de la IA + elección determinista de variante crudo/cocinado.
 // La IA propone; aquí se descarta lo inválido y se aplican las reglas de variantes.
 import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectEstado, detectVolumen, detectPeso, cantidadDicha } from './ai-contract.js';
-import { normalizeText, containsTerm, removeTerms, termSpans } from './text.js';
+import { normalizeText, containsTerm, removeTerms, words, spansIn } from './text.js';
 
 const CONF = ['alta', 'media', 'baja'];
 const lower = (c) => CONF[Math.min(CONF.indexOf(c) + 1, CONF.length - 1)];
@@ -57,21 +57,40 @@ const nameTerms = (f) => [f.nombre, ...(f.alias ?? [])];
 // y tolerando plurales por palabra ("tomates fritos" ~ "tomate frito", "macarrones" ~ "macarrón").
 export const mentionsFood = (text, foods) => foods.some((f) => nameTerms(f).some((term) => containsTerm(text, term)));
 
+// Rendimiento (el Worker tiene 10 ms de CPU por petición): las palabras de cada nombre/alias se calculan una vez por
+// petición (wordsIndex) y se guardan entre peticiones (el isolate se reutiliza; tope de tamaño); el texto dicho se
+// tokeniza una vez por línea. En caliente no se normaliza ningún alias.
+const PALABRAS = new Map();
+const palabras = (term) => {
+  let w = PALABRAS.get(term);
+  if (!w) {
+    if (PALABRAS.size > 5000) PALABRAS.clear();
+    PALABRAS.set(term, w = words(term));
+  }
+  return w;
+};
+// Map id -> [palabras de cada nombre/alias] de la lista compacta.
+export const wordsIndex = (list) => new Map(list.map((f) => [f.id, nameTerms(f).map(palabras).filter((w) => w.length)]));
+
 // Alias más específico: lo dicho nombra al alimento elegido ("pan"), pero esa mención queda DENTRO de un alias o nombre más
 // largo de OTRO alimento ("pan de molde" -> pan de molde blanco) que también está en lo dicho. Es el hueco de mentionsFood:
 // una equivocación de la IA pasaría sin aviso. Solo cuenta si el otro alimento está en la lista (incluir=si), es de otro
 // grupo (las variantes del grupo ya las trata resolveVariant) y la mención del elegido no cubre ya ese alias largo.
-// Devuelve el alimento más específico (el de la mención más larga) o null.
-export function masEspecifico(text, chosenFoods, chosen, list) {
-  const propios = chosenFoods.flatMap((f) => nameTerms(f).flatMap((t) => termSpans(text, t)));
+// Devuelve el alimento más específico (el de la mención más larga) o null. `terminos` = wordsIndex(list) (opcional).
+export function masEspecifico(text, chosenFoods, chosen, list, terminos = wordsIndex(list)) {
+  const tw = words(text);
+  const propios = chosenFoods.flatMap((f) => (terminos.get(f.id) ?? wordsIndex([f]).get(f.id)).flatMap((ws) => spansIn(tw, ws)));
   if (!propios.length) return null;
   const dentro = (a, b) => a[0] >= b[0] && a[1] <= b[1];
+  const minPropio = Math.min(...propios.map((p) => p[1] - p[0])); // un alias de menos palabras que eso no puede contener al del elegido
   const nuestros = new Set(chosenFoods.map((f) => f.id));
   let best = null;
   for (const f of list) {
     if (nuestros.has(f.id) || (f.grupo && f.grupo === chosen.grupo)) continue;
-    for (const term of nameTerms(f)) {
-      for (const s of termSpans(text, term)) {
+    for (const ws of terminos.get(f.id)) {
+      if (ws.length <= minPropio || ws.length > tw.length) continue;
+      if (best && ws.length <= best.len) continue; // no puede mejorar la mención más larga ya encontrada
+      for (const s of spansIn(tw, ws)) {
         const len = s[1] - s[0];
         if (best && len <= best.len) continue;
         if (propios.some((p) => dentro(s, p))) continue; // el propio elegido ya casa con el alias largo
@@ -154,6 +173,7 @@ export function resolveVariant(item, index) {
 // Valida y normaliza la salida del modelo. Devuelve { items, unmatched, warnings }.
 export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } = {}) {
   const index = buildVariantIndex(compactList);
+  const terminos = wordsIndex(compactList); // palabras de nombres y alias, una vez por petición
   const items = [];
   const unmatched = [];
   const warnings = [];
@@ -213,7 +233,7 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
       warnings.push(`${v.food_id}: "${text}" no coincide con tus alias`);
     }
     // Lo dicho contiene un alias más largo de otro alimento que incluye al del elegido ("pan de molde" -> pan de molde blanco).
-    const especifico = flags.includes('sin_alias') ? null : masEspecifico(text, foods, index.byId.get(v.food_id), compactList);
+    const especifico = flags.includes('sin_alias') ? null : masEspecifico(text, foods, index.byId.get(v.food_id), compactList, terminos);
     if (especifico) {
       flags.push('alias_mas_especifico');
       confidence = 'baja';

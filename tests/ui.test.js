@@ -392,7 +392,7 @@ test('alias más específico: aviso, botón «Cambiar a …» y Guardar desactiv
   const t = await setup({ responses: [MAS_ESPECIFICO()] });
   t.type(t.$('textarea'), 'x');
   await t.act(() => t.btn('Procesar').click());
-  assert.match(t.root.textContent, /Dijiste algo más específico que este alimento/);
+  assert.doesNotMatch(t.root.textContent, /Dijiste algo más específico que este alimento/); // un solo aviso, no dos casi iguales
   assert.match(t.root.textContent, /Dijiste «60 g de pan de molde»: ¿es «Pan de molde blanco»\?/);
   assert.ok(t.btn('Cambiar a «Pan de molde blanco»'));
   assert.ok(t.btn('Sí, es «Pan blanco de barra»'));

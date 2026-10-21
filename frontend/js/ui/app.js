@@ -595,7 +595,8 @@ export function mountApp(root, deps) {
     return est.start(0);
   }
 
-  function flagsFor(line) { return line.flags.filter((f) => FLAG_TEXT[f]).map((f) => h('div', { class: 'flag' }, FLAG_TEXT[f])); }
+  // alias_mas_especifico se pinta aparte («¿es …?») mientras la línea espera confirmación y el otro alimento sigue en el documento.
+  function flagsFor(line) { const aparte = line.needsReview && line.masEspecifico && byId().has(line.masEspecifico); return line.flags.filter((f) => FLAG_TEXT[f] && !(aparte && f === 'alias_mas_especifico')).map((f) => h('div', { class: 'flag' }, FLAG_TEXT[f])); }
 
   function confirmScreen() {
     const d = state.draft;
@@ -644,7 +645,7 @@ export function mountApp(root, deps) {
       gramsIn.addEventListener('input', (e) => { state.draft = setGrams(state.draft, line.key, e.target.value); paint(); paintFooter(); });
       const masEspecifico = line.masEspecifico ? byId().get(line.masEspecifico) : null; // alimento del alias más largo que dijiste
       const sinDatos = foodSinDatos(food);
-      const inc =sinDatos ? null : incompleteInfo(food);
+      const inc = sinDatos ? null : incompleteInfo(food);
       const card = h('li', { class: 'card', 'data-key': line.key },
         h('div', { class: 'row between' },
           h('button', { class: 'name', 'aria-label': `Cambiar alimento: ${food.nombre}`, onclick: () => openPicker({ title: 'Cambiar alimento', onPick: (f) => { state.draft = changeFood(state.draft, line.key, f.id); render(); } }) }, food.nombre),
