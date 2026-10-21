@@ -92,6 +92,11 @@ const ESCENARIOS = [
   { nombre: 'preparar: guardar una comida a mano', fases: [{ pasos: NUEVA_COMIDA, boton: 'Guardar', despues: `await H.click('Guardar', true); await H.w(500);` }] },
   { nombre: 'confirmación de un dictado (comida con varias líneas)', fases: [{ pasos: NUEVA_COMIDA, boton: 'Guardar' }] },
   { nombre: 'confirmación: editar una comida guardada', fases: [{ pasos: `await H.click('Editar', true);`, boton: 'Guardar cambios' }] },
+  // Detalle de alimento y de nutriente: «Guardar» (pie fijo, sin barra inferior) al cambiar los gramos de una línea del Diario;
+  // desde Mi catálogo, que la última fila (Selenio) queda por encima de la barra inferior y es pulsable. El detalle de un nutriente
+  // no tiene botones de acción (solo enlaces y la barra inferior): se revisa con capturas.
+  { nombre: 'detalle de una línea del Diario: cambiar la cantidad', fases: [{ pasos: `document.querySelector('button.line-open').click(); await H.w(80); await H.escribir('input.detalle-cantidad', '37.5');`, boton: 'Guardar' }] },
+  { nombre: 'detalle de un alimento desde Mi catálogo', fases: [{ pasos: `await H.click('Alimentos', true); await H.click('Ver catálogo'); await H.click('Ver detalle de Aceite de oliva');`, boton: 'Ver detalle de Selenio' }] },
   { nombre: 'receta nueva (vacía)', fases: [{ pasos: `${RECETAS} await H.click('Nueva receta');`, boton: 'Guardar receta' }] },
   { nombre: 'receta nueva (con ingredientes)', fases: [{ pasos: `${RECETAS} await H.click('Nueva receta'); await H.anadirAlimentos('+ Añadir ingrediente', 'avena', 'kiwi', 'leche entera', 'huevo'); await H.ponerGramos('100');`, boton: 'Guardar receta' }] },
   { nombre: 'receta: editar una existente', fases: [{ pasos: `${RECETAS} await H.click('Editar', true);`, boton: 'Guardar receta' }] },
@@ -116,7 +121,7 @@ const ESCENARIOS = [
 // 375×667 (iPhone SE) con todas las pantallas; 375×812 con la zona segura de abajo (34 px, iPhone con barra de inicio) solo con las
 // que llevan pie fijo o acaban en su botón, que son las que dependen de ese margen.
 const TAMANOS = [{ ancho: 375, alto: 667, margenInferior: 0, todas: true }, { ancho: 375, alto: 812, margenInferior: 34, todas: false }];
-const CON_MARGEN = ['confirmación de un dictado', 'receta nueva (con ingredientes)', 'receta: editar', 'Repetir esta comida', 'Estimar con IA', 'copia de seguridad', 'objetivos', 'actualizar documento'];
+const CON_MARGEN = ['detalle de', 'confirmación de un dictado', 'receta nueva (con ingredientes)', 'receta: editar', 'Repetir esta comida', 'Estimar con IA', 'copia de seguridad', 'objetivos', 'actualizar documento'];
 
 test('layout en Chrome: el botón principal de cada pantalla se ve entero y se puede pulsar (375×667 y 375×812 con zona segura)', { skip, timeout: 240000 }, async (t) => {
   const tmp = await mkdtemp(join(tmpdir(), 'nt-layout-'));

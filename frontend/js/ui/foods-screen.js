@@ -33,7 +33,8 @@ export function alimentosScreen(ui) {
     ui.pendientes);
 }
 
-// Lista del catálogo: buscador, filtros (Todos · Incompletos · Excluidos) y una fila por alimento. Solo lectura.
+// Lista del catálogo: buscador, filtros (Todos · Incompletos · Excluidos) y una fila por alimento; al pulsarla se abre su
+// detalle (ui.openDetalle). Solo lectura.
 export function catalogoListScreen(ui) {
   const { h, doc, state } = ui;
   const FILTROS = [['todos', 'Todos'], ['incompletos', 'Incompletos'], ['excluidos', 'Excluidos']];
@@ -57,7 +58,8 @@ export function catalogoListScreen(ui) {
         h('div', { class: 'food-main' }, h('strong', {}, x.nombre), x.alias.length ? h('small', { class: 'muted' }, x.alias.slice(0, 3).join(' · ')) : null),
         h('div', { class: 'food-side' },
           typeof x.nutrients?.energia_kcal === 'number' ? h('span', { class: 'food-kcal' }, `${Math.round(x.nutrients.energia_kcal)} kcal`, h('small', { class: 'muted' }, '/100 g')) : h('span', { class: 'food-kcal muted' }, 'sin dato'),
-          isExcluded(x) ? h('span', { class: 'food-tag' }, 'excluido') : inc ? h('span', { class: 'food-tag warn' }, 'pendiente de completar') : null)));
+          isExcluded(x) ? h('span', { class: 'food-tag' }, 'excluido') : inc ? h('span', { class: 'food-tag warn' }, 'pendiente de completar') : null),
+        ui.openDetalle ? h('button', { type: 'button', class: 'abre-detalle', 'aria-label': `Ver detalle de ${x.nombre}`, onclick: () => ui.openDetalle(x.id) }) : null));
     }
   }
   fill();

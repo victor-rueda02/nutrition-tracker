@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "completo": false,
+  "nutrientes": {
+    "calcio_mg": {
+      "resumen": "Texto de prueba: qué es el calcio.",
+      "necesidades": "Texto de prueba: cuánto calcio se necesita.",
+      "deficit": "Texto de prueba: si falta calcio.",
+      "exceso": "Texto de prueba: si sobra calcio.",
+      "fuentes_alimentos": "Texto de prueba: dónde está el calcio.",
+      "consejos": "Texto de prueba: consejos sobre el calcio.",
+      "discrepancias": "Texto de prueba: las fuentes no coinciden en este punto.",
+      "referencias": [
+        { "organismo": "EFSA", "titulo": "Referencia de prueba del calcio", "url": "https://www.efsa.europa.eu/es", "consultado": "2026-10-20" },
+        { "organismo": "NIH ODS", "titulo": "Otra referencia de prueba", "url": "https://ods.od.nih.gov/factsheets/Calcium-DatosEnEspanol/", "consultado": "2026-10-20" }
+      ]
+    },
+    "vitamina_b12_ug": {
+      "resumen": "Texto de prueba: qué es la vitamina B12.",
+      "necesidades": "Texto de prueba: cuánta B12 se necesita.",
+      "deficit": "Texto de prueba: si falta B12.",
+      "exceso": "Texto de prueba: si sobra B12.",
+      "fuentes_alimentos": "Texto de prueba: dónde está la B12.",
+      "consejos": "Texto de prueba: consejos sobre la B12.",
+      "referencias": [
+        { "organismo": "AESAN", "titulo": "Referencia de prueba de la B12", "url": "https://www.aesan.gob.es/", "consultado": "2026-10-20" }
+      ]
+    }
+  }
+}

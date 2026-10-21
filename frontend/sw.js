@@ -1,11 +1,12 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v24'; // nt-v23 + aviso «alias más específico» (pan de molde, lata de atún...); nt-v22 + icono nuevo (anillos con hoja morada; fuente en docs/icono-app.svg); nt-v21 + recetas con valores de etiqueta (campo "etiqueta"); nt-v20 + vista previa de recetas sin el texto «null»; nt-v19 + sin barra de navegación bajo el pie fijo de acciones (Guardar receta visible)
+const VERSION = 'nt-v25'; // nt-v24 + detalle de alimento y de nutriente (data/nutrientes-info.json); nt-v23 + aviso «alias más específico» (pan de molde, lata de atún...); nt-v22 + icono nuevo (anillos con hoja morada; fuente en docs/icono-app.svg); nt-v21 + recetas con valores de etiqueta (campo "etiqueta"); nt-v20 + vista previa de recetas sin el texto «null»; nt-v19 + sin barra de navegación bajo el pie fijo de acciones (Guardar receta visible)
 const ASSETS = [
   './',
   'css/catalogo.css',
   'css/cenas.css',
+  'css/detalle.css',
   'css/frases.css',
   'css/ia-recetas.css',
   'css/navegacion.css',
@@ -29,6 +30,7 @@ const ASSETS = [
   'js/core/completeness.js',
   'js/core/sin-datos.js',
   'js/core/csv.js',
+  'js/core/detalle.js',
   'js/core/diary.js',
   'js/core/parciales.js',
   'js/core/draft.js',
@@ -58,6 +60,8 @@ const ASSETS = [
   'js/ui/app.js',
   'js/ui/catalog-update-screen.js',
   'js/ui/cenas-screen.js',
+  'js/ui/detalle-alimento-screen.js',
+  'js/ui/detalle-nutriente-screen.js',
   'js/ui/estimate-screen.js',
   'js/ui/foods-screen.js',
   'js/ui/more-screen.js',
@@ -74,7 +78,8 @@ const ASSETS = [
   '../data/targets.json',
   '../data/foods.csv',
   '../data/recetas.json',
-  '../data/cenas-semilla.json'
+  '../data/cenas-semilla.json',
+  '../data/nutrientes-info.json'
 ];
 
 self.addEventListener('install', (event) => {
