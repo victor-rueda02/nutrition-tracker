@@ -60,10 +60,11 @@ Detalle completo en `usda/informe.md` (regenerado). Alimentos que se envían a l
 | pimiento_amarillo | 27/31 | E, K, colina, ALA | USDA no tiene más; BEDCA no tiene pimiento amarillo |
 | verduras_asadas_hacendado, parrillada_verduras_hacendado | 27/31 | E, K, colina, ALA | Heredado del pimiento amarillo |
 | corn_flakes | 28/31 | A, C, D | A propósito: fortificación de EE. UU. que la etiqueta no declara |
-| semillas_chia | 25/31 | A, D, K, B5, B6, colina | Completa desde EPA/DHA = 0. Otra fuente posible: CIQUAL (no aprobada aún) |
+| semillas_chia | 25/31 | A, D, K, B5, B6, colina | Completa desde EPA/DHA = 0. BEDCA no la tiene y CIQUAL 15047 tampoco tiene esos datos |
 | pan_molde_blanco | 26/31 | B1, B2, B3, B9, hierro | Vaciados por el enriquecimiento de EE. UU.; BEDCA no publica su pan de molde. La etiqueta del pan lo resolvería |
-| chocolate_negro_85 | 27/31 | C, D, B9, colina | |
-| jamon_curado, muesli | 29/31 | B5, manganeso | Huecos del jamón, de FNDDS (estimado) |
+| chocolate_negro_85 | 30/31 | colina | C de BEDCA 28 (0), D y B9 de CIQUAL 31074; ninguna fuente tiene colina |
+| jamon_curado | 29/31 | B5, manganeso | Huecos de FNDDS (estimado) |
+| muesli | 31/31 | | Mn y B5 de CIQUAL 32113 (muesli Bircher, aproximado) |
 | pistachos_crudos, galleta_maria | 29/31 | K, colina (+ B5/Mn) | |
 | pasta_seca, chorizo, pan_blanco_barra | 30/31 | colina / B5 / B3 | |
 
@@ -109,3 +110,10 @@ crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere acti
 `candidatos` y `filas` aceptan `--incluir-excluidos` (todos los `incluir=no` con término) o `--incluir id1,id2` para
 volcar datos USDA en ingredientes que solo se usan en recetas, **sin activarlos** (la fila sigue con `incluir=no`).
 Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-file=.env scripts/usda.mjs filas --incluir morro_cerdo`.
+
+## Rama `cat/d-e-atun-huecos` (21-10-2026)
+- **Receta `atun_lata_con_aceite`** («Lata de atún con aceite»): 60 g de `atun_lata_aceite` + 20 g de `aceite_oliva`, peso final 80 g, porción `lata:80`, `rol_cena=proteina`, alias solo `lata de atún` (31/31 obligatorios; 369,5 kcal y 21,8 g de proteína por 100 g). Decidido por Victor (21-10-2026): alias solo «lata de atún» («atún en lata» ya es alias de `atun_lata_aceite` y «una lata» es demasiado genérico). Con «una lata de atún», que contiene también «atún» (alias del atún escurrido), elige la IA entre las dos filas.
+- **Huecos con BEDCA/CIQUAL** (CIQUAL 2020 en inglés, `Table Ciqual 2020_ENG_2020 07 07.xls`):
+  - `muesli` 29 -> 31/31: manganeso 1,61 y B5 0,6 de CIQUAL 32113 (muesli Bircher de copos con frutas, sin azúcar: aproximado, no es el Hacendado crunchy). El «promedio sin fortificar» (32141) y el 32138 no traen micros; el 32108 trae B5 = 5 mg, que parece añadido, y se descartó.
+  - `chocolate_negro_85` 27 -> 30/31: D = 2,16 µg y B9 = 52 µg de CIQUAL 31074 (chocolate negro > 70 % de cacao; encaja con la fila en Fe, Mg y Mn). La D viene del propio cacao (D2); el 0 de BEDCA 28 era de otro producto (menos cacao) y recopilado, no medido, y se descartó. C = 0 de BEDCA 28 (CIQUAL da «< 0,5»). Colina: ninguna fuente.
+  - `semillas_chia`, `corn_flakes`, `pasta_seca`: sin cambios. Chía: ni BEDCA ni CIQUAL (15047) tienen A, D, K, B5, B6 ni colina. Corn flakes: A, C y D siguen vacíos a propósito (fortificación). Pasta: la colina no está en BEDCA 598 ni en CIQUAL; B1, B2, B3, B9 y hierro ya están en la fila (USDA sin enriquecer), no se tocan.
