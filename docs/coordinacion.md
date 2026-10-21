@@ -5,11 +5,11 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | Fecha | Encargo | Subagente | Rama | Rondas | Estado | Pendiente de Victor |
 |---|---|---|---|---|---|---|
 | 2026-10-21 | Montar modo coordinador (agentes, permisos, CLAUDE.md §8) y limpiar worktrees | coordinador | main | – | integrado | Borrar a mano las carpetas vacías `../nt-catalogo`, `../nt-cenas`, `../nt-estetica` (bloqueadas por otro proceso) |
-| 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 0 | en curso | – |
+| 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 0 | en revisión (ronda 1) | – |
 | 2026-10-21 | B · Aviso de totales parciales con nutrientes afectados (macros vs micros) | desarrollador | dev/b-aviso-parciales | 2 | integrado | – |
-| 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 0 | en revisión (ronda 1) | ¿Aprobar que el rol_cena viaje a Gemini en «Más ideas» (regla 6)? ¿Dónde probó: Worker publicado o servidor local? |
-| 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 0 | en revisión (ronda 1) | – (decidido: solo «lata de atún») |
-| 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 0 | en revisión (ronda 1) | – |
+| 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 1 | cambios (ronda 2): botón actualizar silencioso | ¿Aprobar que el rol_cena viaje a Gemini en «Más ideas» (regla 6)? ¿Dónde probó: Worker publicado o servidor local? |
+| 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 1 | en revisión (ronda 2) | – (decidido: solo «lata de atún») |
+| 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 1 | en revisión (ronda 2) | – |
 | 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | – | 0 | pendiente (tras D+E, mismas filas) | – (etiquetas recibidas) |
 
 ## Notas
@@ -17,3 +17,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-21, F · etiquetas de Victor (por 100 g). Victor: «si no digo nada, es el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
   - **Salteado de verduras** (ultracongelado, 600 g; judía verde, brócoli, pimiento rojo, champiñón cultivado y cebolla, proporción variable): 31 kcal (128 kJ), grasa 0,3 g (saturadas 0,1), hidratos 3,8 g (azúcares 3,0), fibra 2,3 g, proteína 2,0 g, sal 0,02 g. Fila nueva.
   - **Salteado de verduras asadas** (ultracongelado, 450 g; calabacín, cebolla, berenjena, pimiento rojo y amarillo, proporción variable): 46 kcal (194 kJ), grasa 0,1 g (saturadas 0,0), hidratos 8,0 g (azúcares 6,6), fibra 2,9 g, proteína 1,8 g, sal 0,03 g («sodio natural»). Ya existe como receta `verduras_asadas_hacendado` (20 g de cada verdura cruda, 27 kcal calculadas: falta la pérdida de agua del asado).
+- 2026-10-21 10:18: `git worktree remove` del worktree de B siguió el enlace `node_modules` (symlinkDirectories) y vació el del repo principal. Restaurado con `npm ci`; quitado `symlinkDirectories` y los enlaces; regla en CLAUDE.md §8.

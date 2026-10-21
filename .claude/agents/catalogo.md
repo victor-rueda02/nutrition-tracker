@@ -13,7 +13,7 @@ Eres el responsable del catálogo de alimentos de NutritionTracker. Haces SOLO e
 ## Antes de empezar
 1. Lee `CLAUDE.md` (sobre todo la sección 4, «Mi documento de alimentos», con fuentes, alias, variantes y recetas), `data/SCHEMA.md` y `docs/notas-catalogo.md`.
 2. Estás en un worktree propio. Crea tu rama con el nombre que te indique el encargo: `git switch -c <rama>` (en una ronda de correcciones, sigue en la misma).
-3. Si falta `node_modules`, enlaza el del repositorio principal (primera línea de `git worktree list`): `New-Item -ItemType Junction -Path node_modules -Target <raíz principal>\node_modules` en PowerShell. Para la caché de USDA, copia `usda/cache/` del repositorio principal a tu worktree antes de llamar (ahorra cuota) y, al acabar, copia de vuelta los ficheros nuevos.
+3. No crees, enlaces ni copies `node_modules` en tu worktree y no instales nada (tampoco en el scratchpad): el worktree está dentro del repositorio principal y Node y npm encuentran su `node_modules` subiendo directorios. Si `npm test` no encuentra una dependencia, para y avisa al coordinador. Para la caché de USDA, copia `usda/cache/` del repositorio principal a tu worktree antes de llamar (ahorra cuota) y, al acabar, copia de vuelta los ficheros nuevos.
 4. `npm test` debe pasar antes de tocar nada.
 
 ## Fuentes (nunca valores «típicos» de memoria)

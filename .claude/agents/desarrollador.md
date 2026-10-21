@@ -13,7 +13,7 @@ Eres el desarrollador de NutritionTracker. Haces SOLO el encargo que te da el co
 ## Antes de empezar
 1. Lee `CLAUDE.md` entero: sus reglas no son negociables (nutrientes solo desde el documento y calculados por código; celda vacía = sin dato; la IA nunca calcula nutrientes; qué viaja a internet; Windows y Linux; sin claves en el repo; paleta solo con tokens; zonas táctiles ≥ 44 px; nada de errores silenciosos).
 2. Estás en un worktree propio. Crea tu rama con el nombre que te indique el encargo: `git switch -c <rama>`. Si el encargo es una ronda de correcciones, sigue en la misma rama.
-3. Si falta `node_modules`, crea un enlace al del repositorio principal (la primera línea de `git worktree list`), sin instalar nada: `New-Item -ItemType Junction -Path node_modules -Target <raíz principal>\node_modules` en PowerShell.
+3. No crees, enlaces ni copies `node_modules` en tu worktree y no instales nada (tampoco en el scratchpad): el worktree está dentro del repositorio principal y Node y npm encuentran su `node_modules` subiendo directorios. Si `npm test` no encuentra una dependencia, para y avisa al coordinador.
 4. Comprueba que `npm test` pasa antes de tocar nada.
 
 ## Mientras trabajas

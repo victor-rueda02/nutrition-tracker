@@ -195,4 +195,6 @@ Flujo de cada encargo:
 6. Al terminar un encargo, resumen corto: qué ha cambiado, qué debe probar Victor y cómo.
 7. Registro breve en `docs/coordinacion.md` (encargo, subagente, rondas, estado, pendiente de Victor) para retomarlo si se corta la sesión: léelo al empezar.
 
+Los worktrees de los subagentes están en `.claude/worktrees/` y usan el `node_modules` del repositorio principal sin enlaces (Node sube directorios). **Nunca enlaces `node_modules` en un worktree**: `git worktree remove` (y `Remove-Item -Recurse`) siguen el enlace y vacían el `node_modules` real (pasó el 21-10-2026; se restauró con `npm ci`). Antes de quitar un worktree, comprueba que no tiene enlaces; si los tiene, quítalos con `cmd /c rmdir <enlace>`.
+
 Un encargo de Victor que nombra `data/foods.csv` (o el catálogo) es su permiso para que `catalogo` lo cambie en ese encargo. Las cuotas de la sección 7 (Gemini, USDA) valen por encargo y el subagente las declara en su resumen. Permisos en `.claude/settings.json`: `git push`, `worker:deploy`, `wrangler secret` e instalar dependencias siempre preguntan; `.env` no se lee nunca.
