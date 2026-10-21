@@ -186,6 +186,7 @@ La sesión principal (Opus) es el **coordinador**: Victor habla solo con ella y 
 | `catalogo` | Sonnet, effort medium, worktree | `data/foods.csv`, `data/recetas.json`, `data/cenas-semilla.json`, el fixture y `usda/` (USDA, BEDCA, CIQUAL solo para huecos, etiquetas). Nunca inventa nutrientes; ≤ 30 llamadas a USDA por encargo. |
 | `revisor` | Opus, effort xhigh, solo lectura | Revisa la rama: diff, `npm test`, reglas de este fichero, recálculo a mano de nutrientes y capturas headless a 375 px (claro y oscuro) si hay UI. Devuelve APROBADO o CAMBIOS (BLOQUEANTE/MENOR). |
 | `revisor-estetica` | Sonnet, effort high, solo lectura | Cambios visuales grandes, frente a `docs/referencia-cronometer/`. |
+| `redactor-salud` | Sonnet, effort high, worktree | Investiga y redacta `data/nutrientes-info.json` (información de cada nutriente) con EFSA, NIH ODS, AESAN/BEDCA, OMS y Harvard T.H. Chan; solo toca ese fichero y su test de formato. |
 
 Flujo de cada encargo:
 1. Cuando Victor pide algo, el coordinador lo divide en encargos y le cuenta el plan en 3-5 líneas (qué subagente hace qué). Si es pequeño y claro, empieza sin esperar.
