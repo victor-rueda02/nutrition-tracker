@@ -638,7 +638,7 @@ test('rol_cena sale de data/foods.csv (columna opcional): rolesDe solo da roles 
   assert.equal(roles.merluza_cruda, 'proteina');
   assert.equal(roles.lentejas_caseras, 'plato');
   assert.equal(roles.semillas_chia, 'postre_extra');
-  assert.equal(Object.keys(roles).length, 43);
+  assert.equal(Object.keys(roles).length, 44);
   // vacío o inválido: sin rol (un alimento sin rol cuenta como «otro»; una receta, como «plato»)
   const f = (extra) => new Map([['a', { id: 'a', extra }]]);
   assert.deepEqual(rolesDe(f({ rol_cena: ' Proteina ' })), { a: 'proteina' });
@@ -692,9 +692,10 @@ test('actualizar el documento en el iPhone: un documento sin rol_cena recibe las
     const p = planCatalogUpdate({ local: antiguo, remote: nuevo, base, catalog });
     assert.deepEqual(p.conflictos, [], nombre);
     const final = new Map(applyChoices(p, nuevo, {}).map((f) => [f.id, f]));
-    assert.equal(final.size, antiguo.length, nombre); // no se pierde ningún alimento
+    assert.equal(final.size, nuevo.length, nombre); // no se pierde ningún alimento (y entran los nuevos del publicado)
+    assert.ok(antiguo.every((f) => final.has(f.id)), nombre);
     assert.equal(rolesDe(final).merluza_cruda, 'proteina', nombre);
-    assert.equal(Object.keys(rolesDe(final)).length, 43, nombre);
+    assert.equal(Object.keys(rolesDe(final)).length, 44, nombre);
   }
   // y lo que cambié yo en el dispositivo (un alias) se conserva junto a los roles nuevos
   const conAlias = antiguo.map((f) => (f.id === 'huevo' ? { ...f, alias: [...f.alias, 'huevos de casa'] } : f));

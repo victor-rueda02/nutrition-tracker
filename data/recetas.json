@@ -119,6 +119,25 @@
         }
       ],
       "notas": "Proporciones estimadas; sustituir por pesos reales cuando los pese. Olla de unas 6 raciones de ~470 g. Solo estos cinco ingredientes (sin aceite, cebolla, ajo ni pimentón). Morro = oreja de cerdo de USDA."
+    },
+    {
+      "id": "atun_lata_con_aceite",
+      "nombre": "Lata de atún con aceite",
+      "alias": [
+        "lata de atún"
+      ],
+      "peso_final_g": 80,
+      "ingredientes": [
+        {
+          "food_id": "atun_lata_aceite",
+          "gramos": 60
+        },
+        {
+          "food_id": "aceite_oliva",
+          "gramos": 20
+        }
+      ],
+      "notas": "Lata de atún escurrido (60 g) con su aceite (20 g); 80 g la lata entera."
     }
   ]
 }

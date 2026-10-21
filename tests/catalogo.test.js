@@ -138,3 +138,20 @@ test('lentejas caseras: receta cocinada, "lentejas" a secas es la receta y no ch
   assert.ok(!realList.some((f) => f.id === 'morro_cerdo'));
   assert.equal(byId.get('morro_cerdo').extra.fdc_id, '167857'); // oreja de cerdo: ni BEDCA ni USDA tienen morro
 });
+
+test('lata de atún con aceite: receta de 80 g (60 g de atún + 20 g de aceite), "una lata de atún" = la porción; "atún" y "atún en lata" siguen siendo el atún escurrido', () => {
+  const r = byId.get('atun_lata_con_aceite');
+  assert.deepEqual([r.estado, r.pesoEnCrudo, r.extra.incluir, r.varianteDefecto, r.extra.rol_cena, r.extra.tipo], ['cocinado', false, 'si', true, 'proteina', 'receta']);
+  assert.deepEqual(r.porciones, [{ nombre: 'lata', gramos: 80 }]);
+  assert.deepEqual(r.alias, ['lata de atún']);
+  const t = byId.get('atun_lata_aceite');
+  for (const k of ['energia_kcal', 'proteina_g', 'grasa_total_g']) {
+    assert.ok(Math.abs(r.nutrients[k] - (t.nutrients[k] * 60 + byId.get('aceite_oliva').nutrients[k] * 20) / 80) < 0.01, k);
+  }
+  const lata = normalizeAiResponse({ items: [{ food_id: 'atun_lata_con_aceite', cantidad: 80, unidad: 'g', source_text: 'una lata de atún', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
+  assert.deepEqual([lata.items[0].food_id, lata.items[0].grams, lata.items[0].flags, lata.unmatched.length], ['atun_lata_con_aceite', 80, [], 0]);
+  assert.ok(!flagsOf('atun_lata_aceite', '80 g de atún en lata').includes('sin_alias'));
+  assert.ok(!flagsOf('atun_lata_aceite', '80 g de atún').includes('sin_alias'));
+  assert.ok(flagsOf('atun_lata_con_aceite', '80 g de atún en lata').includes('sin_alias'));
+  assert.ok(flagsOf('atun_lata_con_aceite', '80 g de atún').includes('sin_alias'));
+});
