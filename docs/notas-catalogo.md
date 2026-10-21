@@ -32,7 +32,10 @@ Gasto: 21 llamadas a USDA (de 100); BEDCA, consultas a su web (sin cuota); 0 lla
    identifica nada (come curado serrano y cocido); sin "ternera" ni "solomillo" a secas (regla de cortes).
    Genéricos con un solo alimento aceptados por Victor: "chocolate", "yogur", "griego", "queso", "galletas" (si
    come otro tipo, lo dirá). Solo merecen alias las frases que el código no casa ya (acentos y plurales simples
-   ya se toleran; plurales irregulares como "nuez"/"nueces", no).
+   ya se toleran; plurales irregulares como "nuez"/"nueces", no). Un alias corto que queda dentro de uno más largo de
+   otro alimento (de otro grupo) es válido: si dices el largo y la IA elige el corto, la app avisa
+   (`alias_mas_especifico`, ver CLAUDE.md §4). Hoy: "pan" / "pan de molde" / "pan integral", "atún" / "lata de atún",
+   "pechuga de pavo" / "pechuga de pavo en lonchas", "lentejas" y "chorizo" / "lentejas con chorizo".
 6. **Productos con etiqueta y fortificación** (corn flakes): kcal, macros, fibra, azúcares, sal (sodio = sal ÷ 2,5)
    y vitaminas y minerales declarados, de la etiqueta; ácido fólico a DFE × 1,7; lo que USDA trae por fortificación
    de EE. UU. y la etiqueta no declara, vacío; lo natural del alimento, de USDA.
@@ -79,7 +82,7 @@ Dos productos ultracongelados, dos filas (grupos distintos, no variantes). Victo
 - **`verduras_asadas_hacendado`** (id conservado; calabacín, cebolla, berenjena, pimiento rojo y amarillo; alias «salteado de verduras asadas» y «verduras asadas»): 27 kcal con verduras crudas, así que `peso_final_g` = 58,7 g por cada 100 g crudos (agua perdida al asar, ~41 %) para que cuadren los 46 kcal. 27/31 (faltan E, K, colina y ALA, del pimiento amarillo).
 - **Estado y peso**: `estado=cocinado`, sin `peso_en_crudo` (lo fija recetas.mjs): Victor pesa el producto tal cual sale de la bolsa (congelado, ya salteado o asado), no hay variante cruda y las verduras crudas son solo ingredientes. `rol_cena=verdura`; `nombre_corto` «Salteado de verduras» y «Verduras asadas».
 - **Ronda 2**: filas regeneradas solo con `recetas.mjs --aplicar` (sin retoques a mano); `peso_final_g` de las asadas = 58,7. La parrillada no tenía valores de etiqueta puestos a mano. Roles de «¿Qué ceno?» por decisión de Victor: `jamon_curado`, `jamon_cocido`, `chorizo` → proteina; `pan_integral`, `avena_copos` → hidrato; sin rol (ya vacíos): `lentejas_secas`, `muslo_pollo_con_piel`, `almendras_crudas` (no cena legumbres, asados ni frutos secos).
-- **Alias**: «salteado de verduras» está contenido en «salteado de verduras asadas». Si la IA elige el normal para «salteado de verduras asadas», el código no avisa (lo dicho contiene el alias del elegido). Riesgo bajo, pero no hay comprobación; sería una mejora de código (preferir el alias más largo que case).
+- **Alias**: «salteado de verduras» está contenido en «salteado de verduras asadas». Si la IA elige el normal para «salteado de verduras asadas», la regla «alias más específico» (encargo H) lo marca con confianza baja y ofrece cambiar a las asadas (por eso los dos salteados van en grupos distintos).
 
 ## Pendiente con Victor
 

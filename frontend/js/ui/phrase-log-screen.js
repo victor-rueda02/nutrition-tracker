@@ -27,5 +27,5 @@ export function phraseLogScreen(ui) {
       h('div', { class: 'frase-texto' }, `«${e.texto}»`),
       h('ul', { class: 'problemas' }, e.problemas.map((p) => h('li', { class: `problema ${p.tipo}` },
         `«${p.texto}» · `, h('span', { class: 'tipo' }, TIPOS[p.tipo]),
-        `${p.motivo ? ` (${ui.MOTIVO_TEXT[p.motivo] ?? p.motivo})` : ''}${p.food_id ? ` · la IA: ${nombre(p.food_id)}` : ''} · `, resolucion(p))))))));
+        `${p.motivo ? ` (${ui.MOTIVO_TEXT[p.motivo] ?? p.motivo})` : ''}${p.food_id ? ` · la IA: ${nombre(p.food_id)}` : ''}${p.mas_especifico ? ` · más específico: ${nombre(p.mas_especifico)}` : ''} · `, resolucion(p))))))));
 }

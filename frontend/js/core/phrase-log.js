@@ -1,17 +1,18 @@
 // Registro local de frases problemáticas (para pulir el documento: añadir alias o alimentos). Solo en el dispositivo:
 // nunca se envía fuera. Se anota la frase dictada con sus líneas problemáticas (no reconocido, confianza baja,
-// "no coincide con tus alias") y, al guardar, qué alimento elegiste al final. Funciones puras, sin DOM.
+// "no coincide con tus alias", "hay un alimento más específico") y, al guardar, qué alimento elegiste al final. Funciones puras, sin DOM.
 import { newId } from './ids.js';
 import { serializeCSV } from './csv.js';
 
 export const MAX_ENTRADAS = 300; // las más antiguas se descartan
-export const TIPOS = { no_reconocido: 'No reconocido', sin_alias: 'No coincide con tus alias', confianza_baja: 'Confianza baja' };
+export const TIPOS = { no_reconocido: 'No reconocido', sin_alias: 'No coincide con tus alias', alias_mas_especifico: 'Hay un alimento más específico', confianza_baja: 'Confianza baja' };
 
 // Problemas de una respuesta de la IA (ya validada): un problema por línea, el más importante.
 export function problemsFromResult(result) {
   const out = (result.unmatched ?? []).map((u) => ({ texto: u.text, tipo: 'no_reconocido', motivo: u.motivo ?? null, food_id: u.food_id ?? null }));
   for (const it of result.items ?? []) {
     if (it.flags?.includes('sin_alias')) out.push({ texto: it.source_text, tipo: 'sin_alias', motivo: null, food_id: it.food_id });
+    else if (it.flags?.includes('alias_mas_especifico')) out.push({ texto: it.source_text, tipo: 'alias_mas_especifico', motivo: null, food_id: it.food_id, mas_especifico: it.mas_especifico ?? null });
     else if (it.confidence === 'baja') out.push({ texto: it.source_text, tipo: 'confianza_baja', motivo: null, food_id: it.food_id });
   }
   return out;
@@ -56,7 +57,7 @@ export function logToCSV(log, foodsById) {
   const resolucion = (r) => (r === null ? 'sin guardar' : r === 'descartado' ? 'descartado' : nombre(r));
   const rows = [['fecha', 'frase', 'texto', 'problema', 'motivo', 'alimento_ia', 'resolucion', 'id_resolucion']];
   for (const e of log) {
-    for (const p of e.problemas) rows.push([e.fecha, e.texto, p.texto, TIPOS[p.tipo], p.motivo ?? '', nombre(p.food_id), resolucion(p.resolucion), p.resolucion && p.resolucion !== 'descartado' ? p.resolucion : '']);
+    for (const p of e.problemas) rows.push([e.fecha, e.texto, p.texto, TIPOS[p.tipo], p.motivo ?? (p.mas_especifico ? `más específico: ${nombre(p.mas_especifico)}` : ''), nombre(p.food_id), resolucion(p.resolucion), p.resolucion && p.resolucion !== 'descartado' ? p.resolucion : '']);
   }
   return serializeCSV(rows, { delimiter: ';', bom: true, eol: '\r\n' });
 }

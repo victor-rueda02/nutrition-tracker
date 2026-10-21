@@ -188,6 +188,7 @@ test('salteados Hacendado: «salteado de verduras» = el normal; «salteado de v
     const it = r(id, texto, estado).items[0];
     assert.deepEqual([it.food_id, it.confidence, it.flags], [id, 'alta', []], `${texto} (${estado})`);
   }
-  // si la IA eligiera el normal con «asadas», lo dicho contiene su alias: no hay aviso (límite conocido, ver notas)
-  assert.deepEqual(r('salteado_verduras_hacendado', '200 g de salteado de verduras asadas').items[0].flags, []);
+  // si la IA eligiera el normal con «asadas»: aviso «alias más específico» que apunta a las asadas (confianza baja)
+  const mal = r('salteado_verduras_hacendado', '200 g de salteado de verduras asadas').items[0];
+  assert.deepEqual([mal.flags, mal.mas_especifico, mal.confidence], [['alias_mas_especifico'], 'verduras_asadas_hacendado', 'baja']);
 });
