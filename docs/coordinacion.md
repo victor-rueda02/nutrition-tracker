@@ -7,12 +7,12 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | Montar modo coordinador (agentes, permisos, CLAUDE.md §8) y limpiar worktrees | coordinador | main | – | integrado | – (carpetas nt-* borradas) |
 | 2026-10-21 | A · Botón Guardar tapado por la barra inferior en pantallas de edición | desarrollador | dev/a-guardar-visible | 1 | integrado | – |
 | 2026-10-21 | B · Aviso de totales parciales con nutrientes afectados (macros vs micros) | desarrollador | dev/b-aviso-parciales | 2 | integrado | – |
-| 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 2 | integrado (falta worker:deploy) | ¿Aprobar regla 6 (rol a Gemini)? Victor vio el fallo con el Worker publicado |
+| 2026-10-21 | C · «Más ideas» de ¿Qué ceno? descarta todas las ideas | desarrollador | dev/c-mas-ideas | 2 | integrado y publicado | – (regla 6 aprobada) |
 | 2026-10-21 | D · Receta `atun_lata_con_aceite` | catalogo | cat/d-e-atun-huecos | 2 | integrado | – (decidido: solo «lata de atún») |
 | 2026-10-21 | E · Huecos de chía, corn flakes, chocolate 85 %, muesli y pasta seca (BEDCA/CIQUAL) | catalogo | cat/d-e-atun-huecos | 2 | integrado | – |
 | 2026-10-21 | F · Salteados de verduras (normal y asadas, Hacendado) | catalogo | cat/f-salteados | 2 | integrado | – (Victor: opción a; roles: jamones y chorizo proteina, pan integral y avena hidrato; sin rol lentejas, muslo, almendras) |
 | 2026-10-21 | G · «null» en la vista previa de receta; robustez de chrome-cdp y NT_SIN_CHROME | desarrollador | dev/g-null-receta-cdp | 1 | integrado | – |
-| 2026-10-21 | H · Aviso «alias más específico» (salteado ⊂ salteado asadas, pan ⊂ pan de molde…) | desarrollador | dev/h-alias-especifico | 2 | integrado (falta worker:deploy) | – (aprobado por Victor) |
+| 2026-10-21 | H · Aviso «alias más específico» (salteado ⊂ salteado asadas, pan ⊂ pan de molde…) | desarrollador | dev/h-alias-especifico | 2 | integrado y publicado | – (aprobado por Victor) |
 | 2026-10-21 | I · Campo «etiqueta» en las recetas (valores de etiqueta que recalcular no pierde) | desarrollador | dev/i-etiqueta-recetas | 1 | integrado | – |
 | 2026-10-21 | J · Icono de la app (anillos + hoja morada) | coordinador | main | – | integrado (sin publicar) | Al reinstalar en el iPhone: al reinstalar, exportar diario y documento antes |
 
