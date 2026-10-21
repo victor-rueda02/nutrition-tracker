@@ -1,5 +1,1036 @@
 {
   "version": 1,
   "completo": false,
-  "nutrientes": {}
+  "nutrientes": {
+    "energia_kcal": {
+      "resumen": "Es la energía que aportan los alimentos: grasa, proteína, hidratos y alcohol. El peso corporal se mantiene cuando lo que comes equilibra lo que gastas.",
+      "necesidades": "No hay una cifra única: depende de peso, altura, edad, sexo y actividad. Para un hombre de 30-39 años con peso saludable, la EFSA estima entre 9,5 y 13,5 MJ al día (unas 2.270 a 3.220 kcal) según su actividad, y avisa de que sirven poco para un individuo. Tu objetivo real lo fijas tú en tu plan de objetivos.",
+      "deficit": "Una ingesta menor que el gasto, mantenida, hace perder peso corporal. No es un fallo en sí mismo: depende de tu objetivo.",
+      "exceso": "Una ingesta mayor que el gasto, mantenida, hace ganar peso. La OMS recomienda equilibrar la energía ingerida con la gastada.",
+      "fuentes_alimentos": "Todos los alimentos aportan energía a través de la grasa (la más concentrada), la proteína, los hidratos y el alcohol.",
+      "consejos": "La EFSA recomienda comprobar si la ingesta es adecuada mirando la evolución del peso corporal durante semanas, no un día suelto.",
+      "discrepancias": "La referencia de 2.000 kcal para etiquetado en la UE es solo orientativa; la EFSA calcula las necesidades por sexo, edad y actividad.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population as derived by the EFSA NDA Panel (versión 4, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "agua_g": {
+      "resumen": "El agua participa en casi todas las funciones del cuerpo y es clave para regular la temperatura. Aquí cuenta el agua contenida en los alimentos que registras.",
+      "necesidades": "Ingesta adecuada de la EFSA para adultos: 2,5 litros al día los hombres y 2,0 litros las mujeres, contando bebidas de todo tipo y la humedad de los alimentos, con clima templado y actividad moderada. Con calor o ejercicio, más.",
+      "deficit": "Perder cerca del 1 % del peso en agua se compensa en 24 horas; si las pérdidas siguen, bajan el rendimiento físico y mental y la termorregulación. Orina oscura, cansancio e irritabilidad son señales.",
+      "exceso": "Es raro, pero beber demasiada de golpe supera lo que el riñón elimina (0,7-1,0 L por hora) y puede causar hiponatremia. La EFSA no fija un máximo diario.",
+      "fuentes_alimentos": "Agua del grifo o embotellada, otras bebidas y alimentos ricos en agua (lechuga, pepino, pimiento, apio, frutos rojos, melón), que aportan en torno al 20 % del total.",
+      "consejos": "Un vaso grande con cada comida y tentempié ayuda. El café y el té cuentan; el alcohol aumenta la pérdida de líquido. Lo que bebes sin registrar no suma en la app.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Water (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/water/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "alcohol_g": {
+      "resumen": "Es el etanol de las bebidas alcohólicas y aporta energía. La OMS no reconoce ningún nivel de consumo libre de riesgo.",
+      "necesidades": "No hay necesidad ni ingesta recomendada. Según la OMS, ninguna forma de consumo de alcohol está libre de riesgo; el riesgo depende de cantidad, frecuencia, salud, edad y sexo.",
+      "deficit": "No aplica: no hay ninguna necesidad de alcohol.",
+      "exceso": "La OMS lo relaciona causalmente con más de 200 enfermedades y lesiones: hepáticas, cardiacas, salud mental y varios cánceres (mama, hígado, cabeza y cuello, esófago, colon y recto). Es un carcinógeno reconocido y en el embarazo aumenta el riesgo de síndrome alcohólico fetal. El mayor daño viene del consumo intenso, puntual o continuado.",
+      "fuentes_alimentos": "Bebidas alcohólicas: cerveza, vino, sidra y destilados.",
+      "consejos": "Si bebes, hazlo con comida y alterna con agua. El alcohol aumenta la pérdida de líquido.",
+      "discrepancias": "La OMS afirma que los patrones de bajo riesgo pueden no aumentar de forma significativa los daños, pero no declara seguro ningún nivel.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Alcohol (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/alcohol",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Water (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/water/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "cafeina_mg": {
+      "resumen": "Estimulante presente de forma natural en café, té, cacao, guaraná y nuez de cola, y añadido a refrescos, bebidas energéticas y algunos suplementos.",
+      "necesidades": "No hay ingesta recomendada, solo límites de seguridad de la EFSA (2015) para adultos sanos: hasta 400 mg al día (unos 5,7 mg/kg) repartidos en el día y hasta 200 mg en una toma. En el embarazo, 200 mg al día. Niños y adolescentes: 3 mg/kg al día.",
+      "deficit": "No aplica. Si la tomas a diario y paras de golpe, pueden aparecer dolor de cabeza, cansancio, ansiedad y ánimo bajo durante unos días.",
+      "exceso": "Dosis altas pueden causar ansiedad, inquietud, insomnio y palpitaciones. La EFSA señala que incluso 100 mg pueden alterar el sueño de algunos adultos si se toman cerca de la hora de acostarse.",
+      "fuentes_alimentos": "Café (la principal fuente en adultos en la mayoría de encuestas europeas), té, cacao y chocolate, cola y bebidas energéticas. Una taza de café filtrado (240 ml) tiene unos 95 mg.",
+      "consejos": "Reparte la cafeína durante el día y evítala cerca de dormir. Si eres sensible, el descafeinado ofrece beneficios similares.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Caffeine: opinión científica de EFSA sobre la seguridad de la cafeína (2015)",
+          "url": "https://www.efsa.europa.eu/en/topics/topic/caffeine",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Coffee (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/coffee/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "proteina_g": {
+      "resumen": "Aporta nitrógeno y aminoácidos esenciales para crear y mantener músculo, hueso, piel, enzimas y hemoglobina.",
+      "necesidades": "EFSA, adultos: requerimiento medio de 0,66 g/kg al día y PRI de 0,83 g/kg (unos 58 g con 70 kg). Sin UL: se considera seguro el doble de la PRI. La app usa 50 g como mínimo de referencia, la cifra de etiquetado de la UE.",
+      "deficit": "Por debajo del requerimiento el balance de nitrógeno es negativo y el cuerpo no mantiene sus tejidos. Las dietas mixtas europeas rara vez se quedan cortas en aminoácidos esenciales.",
+      "exceso": "No hay UL. En un estudio con más de 130.000 personas importó la fuente, no el total: la carne roja y procesada se asoció a más riesgo y la proteína vegetal a menos. Con enfermedad renal o hepática, sigue las pautas médicas.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos, semillas, cereales integrales y soja. La proteína animal suele tener mejor composición de aminoácidos esenciales y digestibilidad.",
+      "consejos": "Varía las fuentes y prioriza aves, pescado, legumbres y frutos secos sobre carnes rojas y procesadas.",
+      "discrepancias": "Harvard cita 0,8 g/kg (academia de EE. UU.) y la EFSA 0,83 g/kg; la OMS coincide con la EFSA en el requerimiento medio de 0,66 g/kg.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population as derived by the EFSA NDA Panel (versión 4, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "hidratos_g": {
+      "resumen": "Principal fuente de glucosa: incluyen almidón, azúcares y fibra. Los glucémicos se absorben en el intestino delgado; la fibra pasa sin digerir al colon.",
+      "necesidades": "EFSA: entre el 45 y el 60 % de la energía (rango de referencia, sin mínimo ni UL), unos 225-300 g con 2.000 kcal. Bastan 130 g al día para la glucosa del cerebro, pero no cubren la energía total.",
+      "deficit": "No se fija mínimo. Dietas con menos del 50 % de hidratos y más del 35 % de grasa se asociaron en intervenciones a efectos adversos sobre el peso. Con 50-100 g al día se evita la cetosis.",
+      "exceso": "Las dietas muy altas en hidratos tienden a empeorar los lípidos en sangre, sin datos para fijar máximo. Importa más el tipo: los refinados pueden contribuir a ganar peso y al riesgo de diabetes y enfermedad cardiaca.",
+      "fuentes_alimentos": "Almidón: pan, cereales, patatas, tubérculos y legumbres. Azúcares: fruta, leche, dulces y bebidas azucaradas. Los más recomendables: integrales, verduras, fruta y legumbres.",
+      "consejos": "Elige integrales y poco procesados, y fruta entera antes que zumo. En cereales de desayuno, busca al menos 4 g de fibra y menos de 8 g de azúcar por ración.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Carbohydrates (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/carbohydrates/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "fibra_g": {
+      "resumen": "Hidratos no digeribles (celulosa, pectinas, betaglucanos, almidón resistente). La soluble se encuentra en avena, legumbres y manzana; la insoluble, en el salvado y los integrales.",
+      "necesidades": "EFSA: 25 g al día para adultos, ingesta adecuada para un tránsito normal; con más de 25 g hay beneficio cardiovascular y frente a la diabetes tipo 2. La OMS también recomienda al menos 25 g. Harvard: 25-35 g.",
+      "deficit": "Con poca fibra empeora la regularidad intestinal. Una ingesta mayor se asocia a menos riesgo de enfermedad cardiaca, diabetes tipo 2, divertículos y estreñimiento.",
+      "exceso": "Subir de golpe causa hinchazón y calambres: aumenta gradualmente y bebe más líquido. Con colon irritable, algunas fibras (inulina, oligofructosa) sientan mal.",
+      "fuentes_alimentos": "Cereales integrales, legumbres, fruta entera, verduras, frutos secos y semillas. En Europa los adultos toman de media entre 16 y 29 g al día.",
+      "consejos": "Fruta entera mejor que zumo; arroz, pan y pasta integrales; legumbres en lugar de carne dos o tres veces por semana; almendras, lino o chía en el cereal.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Fiber (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fiber/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "azucares_g": {
+      "resumen": "Mono y disacáridos: los de la fruta, la leche y algunas verduras, y los añadidos a bebidas y dulces. Esta cifra los suma todos.",
+      "necesidades": "No hay mínimo. OMS: azúcares libres por debajo del 10 % de la energía (unos 50 g con 2.000 kcal) y, mejor, del 5 % (unos 25 g); no cuentan los de fruta fresca, verdura ni leche. EFSA (2022): sin UL ni nivel seguro; azúcares añadidos y libres lo más bajos posible en una dieta adecuada. La app usa 90 g (UE) como máximo del total.",
+      "deficit": "No aplica: no hay un mínimo de azúcares.",
+      "exceso": "Aumentan el riesgo de caries y, con las bebidas azucaradas, de ganar peso; la EFSA confirma vínculos con varios problemas de salud, con certeza variable. Las bebidas azucaradas sacian poco.",
+      "fuentes_alimentos": "Fruta, leche y verduras (intrínsecos); refrescos, dulces, bollería, cereales de desayuno y yogures azucarados (añadidos).",
+      "consejos": "Dextrosa, maltosa, miel o jarabes también son azúcares en la etiqueta. Yogur natural con fruta y agua en lugar de refrescos.",
+      "discrepancias": "La OMS pone cifra al azúcar libre; la EFSA, no, y pide lo más bajo posible. La app no separa libres de intrínsecos.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "WHO calls on countries to reduce sugars intake among adults and children (2015)",
+          "url": "https://www.who.int/news/item/04-03-2015-who-calls-on-countries-to-reduce-sugars-intake-among-adults-and-children",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Tolerable upper intake level for dietary sugars: resumen en lenguaje sencillo (EFSA, 2022)",
+          "url": "https://www.efsa.europa.eu/en/plain-language-summary/tolerable-upper-intake-level-dietary-sugars",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Added Sugar in the Diet (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/carbohydrates/added-sugar-in-the-diet/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "almidon_g": {
+      "resumen": "Hidrato complejo de las plantas: se digiere en el intestino delgado y aporta glucosa. Una parte, el almidón resistente, se comporta como fibra.",
+      "necesidades": "Sin valor de referencia propio: la EFSA solo da un rango para los hidratos totales (45-60 % de la energía) y señala que 130 g de hidratos glucémicos al día bastan para el cerebro.",
+      "deficit": "No se ha definido un déficit de almidón en sí. Consulta Hidratos.",
+      "exceso": "Tampoco hay un exceso específico. Los almidones muy refinados, como el pan blanco o las patatas fritas, pueden contribuir a ganar peso y al riesgo de diabetes y enfermedad cardiaca.",
+      "fuentes_alimentos": "Pan y otros cereales, patatas, tubérculos y legumbres. Las legumbres aportan hidratos de digestión lenta.",
+      "consejos": "Elige integrales y poco procesados, y legumbres antes que patatas. El almidón resistente incluye el almidón retrogradado y ciertos granos crudos, y cuenta como fibra.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Carbohydrates (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/carbohydrates/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "grasa_total_g": {
+      "resumen": "Fuente densa de energía; facilita la absorción de vitaminas liposolubles y aporta los ácidos grasos esenciales (linoleico y alfa-linolénico).",
+      "necesidades": "EFSA: entre el 20 y el 35 % de la energía en adultos (rango de referencia, sin UL), unos 44-78 g con 2.000 kcal. OMS: al menos el 15 % y, para evitar ganar peso, un 30 % o menos.",
+      "deficit": "Con el 20 % de la energía, el mínimo observado en Europa, no hay signos de carencia ni efectos adversos sobre los lípidos.",
+      "exceso": "Más del 35 % puede ser compatible con buena salud y peso normal según el patrón de dieta y la actividad. Importa más la calidad que la cantidad.",
+      "fuentes_alimentos": "Aceites vegetales (oliva, girasol, soja), frutos secos, aguacate, pescado azul, carnes, mantequilla y queso.",
+      "consejos": "Prefiere insaturadas (aceite de oliva, frutos secos, pescado), limita saturadas y evita trans. Cocina y aliña con aceites saludables.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Fats and Cholesterol (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "grasas_saturadas_g": {
+      "resumen": "Grasas sin dobles enlaces: el cuerpo las fabrica y no son necesarias en la dieta. Elevan el colesterol LDL («malo»).",
+      "necesidades": "No hay requerimiento. EFSA: lo más bajo posible dentro de una dieta adecuada, sin umbral seguro ni UL. OMS: menos del 10 % de la energía (unos 22 g con 2.000 kcal). La app usa 20 g (UE) como máximo.",
+      "deficit": "No aplica: no son necesarias.",
+      "exceso": "Elevan el LDL de forma continua con la dosis. Cambiarlas por poliinsaturadas reduce los eventos cardiovasculares; cambiarlas por hidratos refinados no ayuda.",
+      "fuentes_alimentos": "Sobre todo alimentos animales (carnes, mantequilla, queso) y coco, aceite de palma y de palmiste.",
+      "consejos": "Sustituye mantequilla por aceite de oliva o de canola, y carne roja por pescado, legumbres y frutos secos.",
+      "discrepancias": "La OMS pone el tope en el 10 % de la energía; la American Heart Association, en el 7 %; la EFSA no da cifra.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "grasas_monoinsaturadas_g": {
+      "resumen": "Grasas con un solo doble enlace, abundantes en el aceite de oliva. El cuerpo las sintetiza, así que no son imprescindibles.",
+      "necesidades": "Sin valor de referencia: la EFSA propone no fijar ninguno para las monoinsaturadas cis, que no tienen un papel específico conocido en prevenir ni causar enfermedades.",
+      "deficit": "No aplica.",
+      "exceso": "No se describen efectos adversos específicos; cuentan como grasa y energía. En un ensayo citado por Harvard, sustituir hidratos por grasa insaturada, sobre todo monoinsaturada, redujo la presión arterial y mejoró los lípidos.",
+      "fuentes_alimentos": "Aceites de oliva, cacahuete y canola; aguacate; almendras, avellanas y pecanas; semillas de calabaza y sésamo.",
+      "consejos": "Aceite de oliva para cocinar y aliñar. Siguen sumando energía: cuida la ración.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "grasas_poliinsaturadas_g": {
+      "resumen": "Grasas con dos o más dobles enlaces: omega-6 (linoleico) y omega-3 (alfa-linolénico, EPA, DHA). El linoleico y el alfa-linolénico son esenciales.",
+      "necesidades": "La EFSA no fija valor para el total, sino para sus componentes: ácido linoleico 4 % de la energía, alfa-linolénico 0,5 % y EPA+DHA 250 mg al día. La American Heart Association sugiere un 8-10 % de la energía.",
+      "deficit": "Con las ingestas europeas más bajas no se observan signos de déficit. Harvard indica que la mayoría de la gente no toma suficiente.",
+      "exceso": "La EFSA no fija UL para omega-6 ni para alfa-linolénico. Sustituir saturadas por poliinsaturadas reduce los eventos cardiovasculares sin cambiar la grasa total.",
+      "fuentes_alimentos": "Aceites de girasol, maíz, soja, lino y canola; nueces; semillas de lino; pescado.",
+      "consejos": "Cámbialas por saturadas, no por refinados. Pescado 2-3 veces por semana y nueces, lino o chía.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "grasas_trans_g": {
+      "resumen": "Grasas con doble enlace «trans»: las industriales (aceites parcialmente hidrogenados) y las naturales de rumiantes (carne y lácteos). El cuerpo no las fabrica ni las necesita.",
+      "necesidades": "Ninguna. EFSA: lo más bajo posible dentro de una dieta adecuada. OMS: menos del 1 % de la energía (unos 2 g con 2.000 kcal). La app no tiene objetivo para trans.",
+      "deficit": "No aplica.",
+      "exceso": "Suben el LDL, bajan el HDL y se asocian a más enfermedad coronaria; las de rumiantes afectan igual a los lípidos. Cada 2 % más de la energía se asoció a un 23 % más de riesgo coronario.",
+      "fuentes_alimentos": "Aceites parcialmente hidrogenados de bollería, fritos industriales, snacks y margarinas; pequeñas cantidades en grasa de vacuno y lácteos.",
+      "consejos": "Busca «grasas parcialmente hidrogenadas» en la etiqueta y limita bollería y snacks. La OMS recomienda evitar las industriales.",
+      "discrepancias": "La EFSA no encuentra evidencia suficiente para saber si las trans de rumiantes y las industriales difieren en riesgo coronario; la OMS pide evitar las industriales.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "Healthy diet (ficha informativa de la OMS)",
+          "url": "https://www.who.int/news-room/fact-sheets/detail/healthy-diet",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "colesterol_mg": {
+      "resumen": "Lípido que el cuerpo fabrica y que está en los alimentos de origen animal. No es necesario en la dieta.",
+      "necesidades": "Ninguna. La EFSA no propone valor de referencia: el principal determinante del LDL es la grasa saturada. La app no tiene objetivo para el colesterol.",
+      "deficit": "No aplica.",
+      "exceso": "Hay una relación dosis-respuesta con el LDL, pero débil en la mayoría; pesa más la mezcla de grasas e hidratos. Algunas personas responden más, y solo se detectan por ensayo y error. Con diabetes o enfermedad cardiaca conviene vigilar los huevos.",
+      "fuentes_alimentos": "Huevos, hígado, carne y lácteos; la mayor parte viene de alimentos que también aportan grasa saturada.",
+      "consejos": "Controla antes la grasa saturada que el colesterol. En un estudio con más de 80.000 enfermeras, un huevo al día no se asoció a más riesgo cardiaco.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Cholesterol (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/cholesterol/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "omega3_g": {
+      "resumen": "Familia de grasas poliinsaturadas: ALA (vegetal y esencial) y EPA y DHA (sobre todo marinos). La cifra suma las tres.",
+      "necesidades": "EFSA, adultos: ALA 0,5 % de la energía (unos 1,1 g con 2.000 kcal) y EPA+DHA 250 mg al día; sin UL. Equivale a una o dos raciones de pescado azul a la semana.",
+      "deficit": "Con las ingestas europeas más bajas no se ven signos de déficit de ALA. Para el feto y el niño, el DHA es importante para el cerebro.",
+      "exceso": "No hay UL para el ALA. Los suplementos de EPA y DHA pueden actuar como anticoagulante leve; la FDA no recomienda más de 2 g al día de suplemento.",
+      "fuentes_alimentos": "EPA y DHA: pescado azul (salmón, caballa, atún, arenque, sardina). ALA: aceites de canola, soja y lino; nueces; chía y lino; verduras de hoja.",
+      "consejos": "Pescado azul cada semana, mejor que suplementos; elige los de menos mercurio, sobre todo en el embarazo. El ALA se convierte poco en EPA y DHA.",
+      "discrepancias": "La EFSA da 250 mg de EPA+DHA; la American Heart Association sugiere unos 1.000 mg al día si hay enfermedad cardiaca.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Overview on Dietary Reference Values for the EU population as derived by the EFSA NDA Panel (versión 4, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/assets/DRV_Summary_tables_jan_17.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Omega-3 Fats (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/omega-3-fats/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "omega6_g": {
+      "resumen": "Familia de grasas poliinsaturadas cuyo principal miembro es el ácido linoleico, esencial: el cuerpo no lo fabrica.",
+      "necesidades": "EFSA: ingesta adecuada de ácido linoleico del 4 % de la energía (unos 9 g con 2.000 kcal), basada en las ingestas europeas más bajas sin déficit. No fija valor para el total ni proporción omega-3/omega-6.",
+      "deficit": "No se observan síntomas de déficit en las poblaciones europeas con las ingestas más bajas.",
+      "exceso": "No hay evidencia consistente de efectos perjudiciales de los omega-6 y la EFSA no fija UL. El ácido linoleico baja el LDL y los triglicéridos frente a los hidratos.",
+      "fuentes_alimentos": "Aceites de girasol, maíz y soja y nueces, entre las principales fuentes de poliinsaturadas.",
+      "consejos": "No hace falta limitarlos: sustituir saturadas por omega-6 se asocia a menos eventos cardiovasculares.",
+      "discrepancias": "La EFSA no recomienda una proporción omega-3/omega-6 por falta de datos.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Types of Fat (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "ala_g": {
+      "resumen": "Ácido alfa-linolénico (18:3 n-3): omega-3 vegetal y esencial. El cuerpo convierte una parte en EPA y DHA.",
+      "necesidades": "EFSA: ingesta adecuada del 0,5 % de la energía (unos 1,1 g con 2.000 kcal); sin UL. La app lo calcula como el 0,5 % de tus kcal.",
+      "deficit": "No se observan signos de déficit con las ingestas europeas más bajas.",
+      "exceso": "No hay evidencia convincente de efectos perjudiciales, y la EFSA no fija UL.",
+      "fuentes_alimentos": "Aceites de lino, canola y soja; nueces; semillas de lino y chía; verduras de hoja.",
+      "consejos": "La conversión a EPA y DHA es limitada: añade también pescado azul. Aceite de canola u oliva para cocinar, y nueces, lino o chía.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Omega-3 Fats (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/omega-3-fats/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "epa_g": {
+      "resumen": "Ácido eicosapentaenoico (20:5 n-3): omega-3 marino. El cuerpo puede fabricar algo a partir del ALA, pero la conversión es limitada.",
+      "necesidades": "EFSA: 250 mg al día de EPA+DHA combinados en adultos (la app los suma en una sola barra); sin UL. Con 250-500 mg diarios baja el riesgo de muerte coronaria y súbita.",
+      "deficit": "No hay un déficit definido. Harvard indica que la evidencia de daño por poco omega-3 es más consistente que la de daño por contaminantes del pescado.",
+      "exceso": "Los suplementos pueden actuar como anticoagulante leve e interactuar con fármacos anticoagulantes. La FDA no recomienda más de 2 g diarios de EPA+DHA.",
+      "fuentes_alimentos": "Pescado azul: salmón, caballa, atún, arenque y sardina.",
+      "consejos": "Una o dos raciones de pescado azul por semana equivalen a unos 250 mg al día. Pescado mejor que suplementos.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Omega-3 Fats (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/omega-3-fats/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "dha_g": {
+      "resumen": "Ácido docosahexaenoico (22:6 n-3): omega-3 marino, muy abundante en el cerebro.",
+      "necesidades": "EFSA: 250 mg al día de EPA+DHA en adultos; en embarazo y lactancia, añadir 100-200 mg de DHA. Sin UL. La app suma EPA y DHA.",
+      "deficit": "El feto y el niño necesitan un aporte continuo de DHA desde el tercer trimestre del embarazo hasta los dos años.",
+      "exceso": "Los suplementos pueden actuar como anticoagulante leve. La FDA no recomienda más de 2 g diarios de EPA+DHA.",
+      "fuentes_alimentos": "Pescado azul (salmón, caballa, atún, arenque, sardina). El aceite de algas es una opción vegana, sobre todo DHA.",
+      "consejos": "Prioriza pescado azul semanal frente a suplementos y, en el embarazo, elige los de menos mercurio.",
+      "referencias": [
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Omega-3 Fats (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/omega-3-fats/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "triptofano_g": {
+      "resumen": "Aminoácido esencial, precursor de serotonina y de niacina (vitamina B3). Es poco abundante en las proteínas.",
+      "necesidades": "OMS/FAO/UNU: 4 mg/kg al día (unos 280 mg con 70 kg). La EFSA no fija valor propio; para la niacina, 60 mg de triptófano equivalen a 1 mg.",
+      "deficit": "Es el aminoácido limitante en algunas variedades de maíz.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Con proteína variada queda cubierto: la EFSA indica que las dietas mixtas europeas rara vez son limitantes en aminoácidos esenciales.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "treonina_g": {
+      "resumen": "Aminoácido esencial: el cuerpo no lo fabrica y debe venir de la proteína de la dieta.",
+      "necesidades": "OMS/FAO/UNU: 15 mg/kg al día (unos 1,05 g con 70 kg). La EFSA no fija valor propio. La ingesta segura sería un 24 % mayor.",
+      "deficit": "Es limitante en algunos cereales.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Combinar cereales con legumbres o lácteos y huevos compensa lo que falte a la proteína de cada uno.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "isoleucina_g": {
+      "resumen": "Aminoácido esencial de cadena ramificada, como la leucina y la valina.",
+      "necesidades": "OMS/FAO/UNU: 20 mg/kg al día (unos 1,4 g con 70 kg). La EFSA no fija valor propio.",
+      "deficit": "En alimentos de origen animal, legumbres y cereales supera con holgura el requerimiento; solo los de cadena ramificada son limitantes en la yuca.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Cubrir la proteína total con variedad cubre este aminoácido: no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "leucina_g": {
+      "resumen": "Aminoácido esencial de cadena ramificada y uno de los más abundantes en las proteínas.",
+      "necesidades": "OMS/FAO/UNU: 39 mg/kg al día (unos 2,7 g con 70 kg), el requerimiento más alto entre los esenciales. La EFSA no fija valor propio.",
+      "deficit": "Las proteínas animales, legumbres y cereales superan el requerimiento; solo los de cadena ramificada son limitantes en la yuca.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Cubrir la proteína total con variedad cubre este aminoácido: no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "lisina_g": {
+      "resumen": "Aminoácido esencial. Es el que más suele faltar en las proteínas de los cereales.",
+      "necesidades": "OMS/FAO/UNU: 30 mg/kg al día (unos 2,1 g con 70 kg), con cierta incertidumbre: los estudios dan entre 22 y 45 mg/kg. La EFSA no fija valor propio.",
+      "deficit": "Los cereales aportan entre el 57 % y el 86 % del requerimiento. Una dieta basada en cereales y poca proteína animal o legumbres puede quedarse corta.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres y frutos secos. Poca en los cereales.",
+      "consejos": "Combina cereales con legumbres, lácteos o huevo para compensar la lisina.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "metionina_g": {
+      "resumen": "Aminoácido esencial con azufre. A partir de él el cuerpo forma cisteína, y también es precursor de la homocisteína.",
+      "necesidades": "OMS/FAO/UNU: 10 mg/kg al día (unos 700 mg con 70 kg), y 15 mg/kg entre metionina y cisteína. La EFSA no fija valor propio.",
+      "deficit": "Es marginal en las proteínas de las legumbres; abunda por igual en cereales y alimentos animales.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos, lácteos, cereales y, en menor medida, legumbres.",
+      "consejos": "Combina legumbres con cereales: unas aportan lo que a las otras les falta.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "cistina_g": {
+      "resumen": "Aminoácido con azufre, no esencial pero condicionado: el cuerpo lo forma a partir de la metionina. La OMS habla de cisteína.",
+      "necesidades": "OMS/FAO/UNU: 4 mg/kg al día de cisteína (unos 280 mg con 70 kg), dentro de 15 mg/kg de metionina más cisteína. La EFSA no fija valor propio.",
+      "deficit": "Si falta metionina, también falta cisteína. Es marginal en las legumbres.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Huevos, carne, pescado, lácteos y cereales.",
+      "consejos": "Cubrir la metionina cubre la cistina; no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "fenilalanina_g": {
+      "resumen": "Aminoácido esencial aromático. El cuerpo convierte una parte en tirosina.",
+      "necesidades": "OMS/FAO/UNU: 25 mg/kg al día entre fenilalanina y tirosina (unos 1,75 g con 70 kg). La EFSA no fija valor propio.",
+      "deficit": "Con proteína variada no suele limitar. La tirosina de la dieta reduce lo que hay que obtener como fenilalanina.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Si tienes una alteración del metabolismo de este aminoácido, sigue las indicaciones de tu médico.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "tirosina_g": {
+      "resumen": "Aminoácido aromático no esencial pero condicionado: el cuerpo lo forma a partir de la fenilalanina.",
+      "necesidades": "OMS/FAO/UNU: 25 mg/kg al día entre fenilalanina y tirosina (unos 1,75 g con 70 kg). La EFSA no fija valor propio.",
+      "deficit": "No es limitante en una dieta con proteína suficiente, porque se forma de la fenilalanina.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "Cubrir la proteína total cubre la tirosina; no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "valina_g": {
+      "resumen": "Aminoácido esencial de cadena ramificada, como la leucina y la isoleucina.",
+      "necesidades": "OMS/FAO/UNU: 26 mg/kg al día (unos 1,8 g con 70 kg). La EFSA no fija valor propio.",
+      "deficit": "Las proteínas animales, legumbres y cereales superan el requerimiento; solo los de cadena ramificada son limitantes en la yuca.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Cubrir la proteína total con variedad cubre este aminoácido: no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "histidina_g": {
+      "resumen": "Aminoácido esencial. La OMS lo considera indispensable porque sin él en la dieta baja la hemoglobina.",
+      "necesidades": "OMS/FAO/UNU: 10 mg/kg al día (unos 700 mg con 70 kg). La EFSA no fija valor propio.",
+      "deficit": "En personas alimentadas con dietas sin histidina se observaron concentraciones de hemoglobina más bajas, por eso se considera indispensable.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Carne, pescado, huevos y lácteos; legumbres, frutos secos y cereales.",
+      "consejos": "Con proteína variada y suficiente queda cubierta: no necesita seguimiento aparte.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "arginina_g": {
+      "resumen": "Aminoácido condicionalmente indispensable según la OMS: en ciertas situaciones fisiológicas o patológicas el cuerpo no basta para producirlo.",
+      "necesidades": "La OMS/FAO/UNU no da un requerimiento para adultos sanos, y la EFSA tampoco fija valor propio.",
+      "deficit": "No se describe déficit en adultos sanos con una dieta con proteína suficiente.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "Se ha propuesto que influye en la presión arterial a través del óxido nítrico, pero la OMS lo recoge solo como propuesta.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "alanina_g": {
+      "resumen": "Aminoácido no esencial (dispensable según la OMS): el cuerpo lo fabrica.",
+      "necesidades": "No hay requerimiento. La OMS lo clasifica como dispensable, igual que el ácido aspártico, la asparagina, el ácido glutámico, la alanina y la serina: el cuerpo lo sintetiza si recibe nitrógeno suficiente. Ni la OMS ni la EFSA dan valor.",
+      "deficit": "No aplica.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento: se cubre con la proteína total.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "acido_aspartico_g": {
+      "resumen": "Aminoácido no esencial (dispensable según la OMS): el cuerpo lo fabrica.",
+      "necesidades": "No hay requerimiento. La OMS lo clasifica como dispensable, igual que el ácido aspártico, la asparagina, el ácido glutámico, la alanina y la serina: el cuerpo lo sintetiza si recibe nitrógeno suficiente. Ni la OMS ni la EFSA dan valor.",
+      "deficit": "No aplica.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento: se cubre con la proteína total.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "acido_glutamico_g": {
+      "resumen": "Aminoácido no esencial (dispensable según la OMS): el cuerpo lo fabrica.",
+      "necesidades": "No hay requerimiento. La OMS lo clasifica como dispensable, pero señala que, junto con la glicina, el glutamato es la fuente más eficaz del nitrógeno que necesita el cuerpo para formar aminoácidos no esenciales.",
+      "deficit": "No aplica.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento: se cubre con la proteína total.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "glicina_g": {
+      "resumen": "Aminoácido condicionalmente indispensable según la OMS: el cuerpo lo fabrica, pero a veces no basta.",
+      "necesidades": "La OMS/FAO/UNU no da un requerimiento para adultos y la EFSA tampoco fija valor.",
+      "deficit": "Su síntesis puede limitar en bebés en crecimiento o con alta demanda, y baja si el nitrógeno de la dieta es escaso.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento en adultos sanos con proteína suficiente.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "prolina_g": {
+      "resumen": "Aminoácido condicionalmente indispensable según la OMS: en ciertas situaciones el cuerpo no basta para producirlo.",
+      "necesidades": "La OMS/FAO/UNU no da un requerimiento para adultos sanos, y la EFSA tampoco fija valor propio.",
+      "deficit": "No se describe déficit en adultos sanos con una dieta con proteína suficiente.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento: se cubre con la proteína total.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    },
+    "serina_g": {
+      "resumen": "Aminoácido no esencial (dispensable según la OMS): el cuerpo lo fabrica.",
+      "necesidades": "No hay requerimiento. La OMS lo clasifica como dispensable, igual que el ácido aspártico, la asparagina, el ácido glutámico, la alanina y la serina: el cuerpo lo sintetiza si recibe nitrógeno suficiente. Ni la OMS ni la EFSA dan valor.",
+      "deficit": "No aplica.",
+      "exceso": "Las fuentes consultadas no fijan un límite superior para este aminoácido.",
+      "fuentes_alimentos": "Está en la proteína de casi cualquier alimento proteico: carne, pescado, huevos, lácteos, legumbres y frutos secos.",
+      "consejos": "No necesita seguimiento: se cubre con la proteína total.",
+      "referencias": [
+        {
+          "organismo": "OMS",
+          "titulo": "Protein and amino acid requirements in human nutrition: informe técnico 935 de la OMS, la FAO y la UNU (2007)",
+          "url": "https://iris.who.int/handle/10665/43411",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "EFSA",
+          "titulo": "Dietary Reference Values for nutrients: Summary report (EFSA, informe técnico, 2017)",
+          "url": "https://www.efsa.europa.eu/sites/default/files/2017_09_DRVs_summary_report.pdf",
+          "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "Harvard T.H. Chan",
+          "titulo": "Protein (The Nutrition Source)",
+          "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/protein/",
+          "consultado": "2026-10-21"
+        }
+      ]
+    }
+  }
 }
