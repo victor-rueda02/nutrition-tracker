@@ -71,15 +71,21 @@ Detalle completo en `usda/informe.md` (regenerado). Alimentos que se envían a l
 Los 12 incompletos restantes tienen `incluir=no` y ningún dato: recetas pendientes (lentejas, repollo al horno,
 crema de calabacín, tortilla de patata) y 8 puntuales que Victor no quiere activar.
 
+## Salteados de verduras Hacendado (rama cat/f-salteados)
+
+Dos productos ultracongelados, dos filas (grupos distintos, no variantes). Victor: «si no digo nada, el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
+- **Método**: receta en `data/recetas.json` con las verduras del catálogo a partes iguales (20 g de cada una; la etiqueta dice «proporción variable»: **micros estimados**). La etiqueta va en el campo `etiqueta` de la receta (kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio = sal ÷ 2,5 × 1000: 8 y 12 mg); `recetas.mjs --aplicar` y la app la respetan. El resto (agua, mono/poli, almidón, vitaminas, minerales, aminoácidos) es de la receta.
+- **`salteado_verduras_hacendado`** (nueva; judías verdes, brócoli, pimiento rojo, champiñón, cebolla; alias «salteado de verduras»): sin pérdida de agua las kcal calculadas son 29,6 frente a 31 de la etiqueta (diferencia de proporciones, no de agua), así que no hay `peso_final_g`. 31/31 obligatorios.
+- **`verduras_asadas_hacendado`** (id conservado; calabacín, cebolla, berenjena, pimiento rojo y amarillo; alias «salteado de verduras asadas» y «verduras asadas»): 27 kcal con verduras crudas, así que `peso_final_g` = 58,7 g por cada 100 g crudos (agua perdida al asar, ~41 %) para que cuadren los 46 kcal. 27/31 (faltan E, K, colina y ALA, del pimiento amarillo).
+- **Estado y peso**: `estado=cocinado`, sin `peso_en_crudo` (lo fija recetas.mjs): Victor pesa el producto tal cual sale de la bolsa (congelado, ya salteado o asado), no hay variante cruda y las verduras crudas son solo ingredientes. `rol_cena=verdura`; `nombre_corto` «Salteado de verduras» y «Verduras asadas».
+- **Ronda 2**: filas regeneradas solo con `recetas.mjs --aplicar` (sin retoques a mano); `peso_final_g` de las asadas = 58,7. La parrillada no tenía valores de etiqueta puestos a mano. Roles de «¿Qué ceno?» por decisión de Victor: `jamon_curado`, `jamon_cocido`, `chorizo` → proteina; `pan_integral`, `avena_copos` → hidrato; sin rol (ya vacíos): `lentejas_secas`, `muslo_pollo_con_piel`, `almendras_crudas` (no cena legumbres, asados ni frutos secos).
+- **Alias**: «salteado de verduras» está contenido en «salteado de verduras asadas». Si la IA elige el normal para «salteado de verduras asadas», el código no avisa (lo dicho contiene el alias del elegido). Riesgo bajo, pero no hay comprobación; sería una mejora de código (preferir el alias más largo que case).
+
 ## Pendiente con Victor
 
 - **Recetas caseras**: lentejas, repollo al horno, crema de calabacín y tortilla de patata. Victor pasará
   ingredientes en crudo y peso final del plato cuando cocine; entonces se añaden a `data/recetas.json` y
   `node scripts/recetas.mjs --aplicar`.
-- **Salteado de verduras** (judía verde redonda, brócoli, pimiento rojo, champiñón laminado, cebolla): faltan las
-  proporciones (el envase dice "variable"). Los ingredientes ya están en el catálogo.
-- **Verduras de Hacendado**: calculadas con verduras crudas, sin la pérdida de agua del asado. Con las kcal de la
-  etiqueta se podría fijar `peso_final_g` para que cuadren.
 - **Jamón cocido**: USDA ~8 % de grasa; el cocido extra español suele tener menos. Mejor con su etiqueta.
 - **Mayonesa**: USDA es de soja; la española suele ser de girasol (vitamina K probablemente alta, E baja).
 - **Pan de molde**: con su etiqueta se rellenarían B1, B2, B3, B9 y hierro.
