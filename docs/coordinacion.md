@@ -15,6 +15,9 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | H · Aviso «alias más específico» (salteado ⊂ salteado asadas, pan ⊂ pan de molde…) | desarrollador | dev/h-alias-especifico | 2 | integrado y publicado | – (aprobado por Victor) |
 | 2026-10-21 | I · Campo «etiqueta» en las recetas (valores de etiqueta que recalcular no pierde) | desarrollador | dev/i-etiqueta-recetas | 1 | integrado | – |
 | 2026-10-21 | J · Icono de la app (anillos + hoja morada) | coordinador | main | – | integrado (sin publicar) | Al reinstalar en el iPhone: al reinstalar, exportar diario y documento antes |
+| 2026-10-21 | K1 · Info de nutrientes: general, hidratos, grasas y aminoácidos (data/nutrientes-info.json) | redactor-salud (emulado) | salud/k1-macros-aminoacidos | 0 | en curso | – |
+| 2026-10-21 | K2 · Info de nutrientes: vitaminas y minerales | redactor-salud (emulado) | salud/k2-vitaminas-minerales | 0 | en curso | – |
+| 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 0 | en curso | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
@@ -22,3 +25,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
   - **Salteado de verduras** (ultracongelado, 600 g; judía verde, brócoli, pimiento rojo, champiñón cultivado y cebolla, proporción variable): 31 kcal (128 kJ), grasa 0,3 g (saturadas 0,1), hidratos 3,8 g (azúcares 3,0), fibra 2,3 g, proteína 2,0 g, sal 0,02 g. Fila nueva.
   - **Salteado de verduras asadas** (ultracongelado, 450 g; calabacín, cebolla, berenjena, pimiento rojo y amarillo, proporción variable): 46 kcal (194 kJ), grasa 0,1 g (saturadas 0,0), hidratos 8,0 g (azúcares 6,6), fibra 2,9 g, proteína 1,8 g, sal 0,03 g («sodio natural»). Ya existe como receta `verduras_asadas_hacendado` (20 g de cada verdura cruda, 27 kcal calculadas: falta la pérdida de agua del asado).
 - 2026-10-21 10:18: `git worktree remove` del worktree de B siguió el enlace `node_modules` (symlinkDirectories) y vació el del repo principal. Restaurado con `npm ci`; quitado `symlinkDirectories` y los enlaces; regla en CLAUDE.md §8.
+- 2026-10-21, K/L: K1 y K2 escriben claves disjuntas de data/nutrientes-info.json en ramas distintas; al integrar, fusionar por clave (no textual) y poner "completo": true. Revisor: ≥ 8 nutrientes contra fuentes y recálculo a mano de un alimento con cantidad no redonda; revisor-estetica con docs/referencia-cronometer/datalle-alimento (errata en el nombre) y detalle-nutriente.
