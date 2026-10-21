@@ -1,7 +1,7 @@
 // Service worker: la app funciona sin conexión (todo se sirve de caché; solo la llamada a la IA necesita internet).
 // Estrategia: caché primero y actualización en segundo plano (los cambios se ven en la siguiente apertura).
 // Sube VERSION cuando cambies la lista de ASSETS para limpiar cachés antiguas.
-const VERSION = 'nt-v17'; // nt-v16 + rol_cena y nombre_corto en foods.csv, semilla sin roles
+const VERSION = 'nt-v18'; // nt-v17 + core/parciales.js (aviso de totales parciales por nutriente y alimento)
 const ASSETS = [
   './',
   'css/catalogo.css',
@@ -30,6 +30,7 @@ const ASSETS = [
   'js/core/sin-datos.js',
   'js/core/csv.js',
   'js/core/diary.js',
+  'js/core/parciales.js',
   'js/core/draft.js',
   'js/core/estimate-validate.js',
   'js/core/estimate.js',
