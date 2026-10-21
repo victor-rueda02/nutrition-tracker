@@ -23,7 +23,7 @@ export function recetasActions(ctx) {
   // Calcula la receta con tu documento, escribe su fila y guarda la definición. Devuelve { ok, errores, res }.
   async function guardarReceta(receta, { definicion = true } = {}) {
     const lista = await todas();
-    const errores = recetaErrors(receta, ctx.byId(), lista);
+    const errores = recetaErrors(receta, ctx.byId(), lista, deps.catalog.keys);
     if (errores.length) return { ok: false, errores };
     const res = computeReceta(receta, ctx.byId(), deps.catalog.keys);
     const fila = recetaToFood(receta, res, ctx.byId().get(receta.id) ?? null);
@@ -43,7 +43,7 @@ export function recetasActions(ctx) {
   function openForm({ receta = null, lines = [], back = 'recetas' } = {}) {
     const src = receta ? receta.ingredientes.map((i) => ({ food_id: i.food_id, grams: i.gramos })) : lines;
     state.recetaForm = {
-      id: receta?.id ?? null, nombre: receta?.nombre ?? '', alias: aliasTexto(receta?.alias ?? ''), peso: fmt(receta?.peso_final_g ?? null), notas: receta?.notas ?? '',
+      id: receta?.id ?? null, nombre: receta?.nombre ?? '', alias: aliasTexto(receta?.alias ?? ''), peso: fmt(receta?.peso_final_g ?? null), notas: receta?.notas ?? '', etiqueta: receta?.etiqueta ?? null, // la etiqueta no se edita aquí: se conserva
       lines: src.map((l, i) => ({ key: `r${i + 1}`, food_id: l.food_id, grams: l.grams })), nextKey: src.length + 1, errores: [], back,
     };
     state.screen = 'recetas'; ctx.render();
@@ -53,9 +53,11 @@ export function recetasActions(ctx) {
   function recetaDelFormulario(form) {
     const lines = form.lines.filter((l) => l.grams > 0);
     const ids = new Set([...state.foods.map((f) => f.id), ...(state.recetas ?? []).map((r) => r.id)]);
-    return recetaFromLines({
+    const receta = recetaFromLines({
       id: form.id ?? slugId(form.nombre, ids), nombre: form.nombre, alias: form.alias.split('|'), lines, peso_final_g: numero(form.peso), notas: form.notas,
     });
+    if (form.etiqueta) receta.etiqueta = { ...form.etiqueta }; // valores de la etiqueta del producto: no se recalculan
+    return receta;
   }
 
   function saveForm() {
@@ -134,7 +136,7 @@ function formScreen(ui) {
     const lines = f.lines.filter((l) => l.grams > 0 && ui.byId().has(l.food_id));
     if (!lines.length) { preview.textContent = 'Añade ingredientes con sus gramos para ver el cálculo.'; return; }
     const peso = numero(f.peso);
-    const res = computeReceta({ ingredientes: lines.map((l) => ({ food_id: l.food_id, gramos: l.grams })), peso_final_g: peso ?? undefined }, ui.byId(), ui.keys);
+    const res = computeReceta({ ingredientes: lines.map((l) => ({ food_id: l.food_id, gramos: l.grams })), peso_final_g: peso ?? undefined, etiqueta: f.etiqueta ?? undefined }, ui.byId(), ui.keys);
     const n = completitud(res, ui.required);
     const sinDato = ui.required.filter((k) => !(k in res.nutrients));
     const nombre = (id) => ui.byId().get(id)?.nombre ?? id;
@@ -167,6 +169,7 @@ function formScreen(ui) {
     h('button', { class: 'secondary', onclick: () => ui.openPicker({ title: 'Añadir ingrediente', onPick: (x) => { set({ lines: [...state.recetaForm.lines, { key: `r${state.recetaForm.nextKey}`, food_id: x.id, grams: null }], nextKey: state.recetaForm.nextKey + 1 }); ui.render(); } }) }, '+ Añadir ingrediente'),
     h('label', {}, 'Peso final del plato cocinado (opcional)', h('span', { class: 'row' }, peso, h('span', {}, 'g'))),
     preview,
+    form.etiqueta ? h('p', { class: 'muted small receta-etiqueta' }, `Valores de etiqueta: ${Object.keys(form.etiqueta).map((k) => ui.labels.get(k) ?? k).join(', ')}. No se recalculan: salen de la etiqueta del producto, el resto de los ingredientes.`) : null,
     form.errores.length ? h('ul', { class: 'error', role: 'alert' }, form.errores.map((e) => h('li', {}, e))) : null,
     h('footer', { class: 'bar' }, h('div', { class: 'muted small' }, 'Se guarda como un alimento de tu documento (estado cocinado) y su definición, en este dispositivo.'),
       h('div', { class: 'row' }, h('button', { class: 'primary', onclick: () => ui.rec.saveForm() }, 'Guardar receta'))));

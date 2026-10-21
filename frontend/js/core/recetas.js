@@ -22,8 +22,15 @@ export function parseRecetas(text) {
   return { recetas, errores: [] };
 }
 
-// Errores que impiden calcular. foodsById: Map id -> alimento del catálogo (también los incluir=no).
-export function validateRecetas(recetas, foodsById) {
+// "etiqueta": valores declarados en la etiqueta de un producto, por 100 g del plato ({ clave: número ≥ 0 }). Sustituyen
+// a los calculados (también si el cálculo los dejaba vacíos); el resto sigue calculándose de los ingredientes.
+const esEtiqueta = (e) => e !== null && typeof e === 'object' && !Array.isArray(e);
+const valorEtiqueta = (v) => esNumero(v) && v >= 0;
+const clavesEtiqueta = (r) => (esEtiqueta(r?.etiqueta) ? Object.keys(r.etiqueta) : []);
+
+// Errores que impiden calcular. foodsById: Map id -> alimento del catálogo (también los incluir=no). keys (opcional):
+// claves de nutriente del catálogo, para validar "etiqueta".
+export function validateRecetas(recetas, foodsById, keys = null) {
   const errores = [];
   const ids = new Set();
   const idsRecetas = new Set(recetas.map((r) => r?.id));
@@ -35,6 +42,13 @@ export function validateRecetas(recetas, foodsById) {
     ids.add(r.id);
     if (!String(r.nombre ?? '').trim()) errores.push(`${q}: falta el nombre`);
     if (r.peso_final_g !== undefined && !(esNumero(r.peso_final_g) && r.peso_final_g > 0)) errores.push(`${q}: peso_final_g debe ser un número mayor que 0`);
+    if (r.etiqueta !== undefined) {
+      if (!esEtiqueta(r.etiqueta)) errores.push(`${q}: etiqueta debe ser un objeto { nutriente: valor por 100 g }`);
+      else for (const [k, v] of Object.entries(r.etiqueta)) {
+        if (keys && !keys.includes(k)) errores.push(`${q}: etiqueta: "${k}" no es un nutriente del catálogo`);
+        if (!valorEtiqueta(v)) errores.push(`${q}: etiqueta: "${k}" debe ser un número mayor o igual que 0`);
+      }
+    }
     if (!Array.isArray(r.ingredientes) || r.ingredientes.length === 0) { errores.push(`${q}: sin ingredientes`); return; }
     r.ingredientes.forEach((ing, j) => {
       const qi = `${q}, ingrediente ${j + 1}`;
@@ -66,12 +80,21 @@ export function computeReceta(receta, foodsById, keys) {
     }
     nutrients[k] = redondea((total / pesoFinal) * 100);
   }
+  for (const k of clavesEtiqueta(receta)) { // la etiqueta manda sobre lo calculado, también donde faltaba el dato
+    if (!keys.includes(k) || !valorEtiqueta(receta.etiqueta[k])) continue;
+    nutrients[k] = receta.etiqueta[k];
+    delete sinDato[k];
+  }
   if (pesoFinal < 0.3 * pesoIngredientes) avisos.push(`peso final (${pesoFinal} g) menor que el 30 % de los ingredientes (${pesoIngredientes} g): ¿está bien pesado?`);
   return { id: receta.id, nutrients, sinDato, avisos, pesoIngredientes, pesoFinal };
 }
 
 const resumenIngredientes = (r) => r.ingredientes.map((i) => `${i.food_id} ${i.gramos} g`).join(', ');
-export const fuenteReceta = (r, res) => `Receta (data/recetas.json): ${resumenIngredientes(r)}; ${r.peso_final_g ? `peso final ${res.pesoFinal} g` : 'sin peso final: proporciones de los ingredientes'}`;
+export const fuenteReceta = (r, res) => {
+  const etiqueta = clavesEtiqueta(r).filter((k) => k in res.nutrients);
+  return `Receta (data/recetas.json): ${resumenIngredientes(r)}; ${r.peso_final_g ? `peso final ${res.pesoFinal} g` : 'sin peso final: proporciones de los ingredientes'}`
+    + (etiqueta.length ? `; etiqueta: ${etiqueta.join(', ')}; resto calculado de la receta` : '');
+};
 
 // Escribe las recetas calculadas en el texto CSV del catálogo, conservando el resto tal cual (separador, BOM,
 // fin de línea; coma decimal si el separador es ";"). Crea la fila si no existe. Las recetas "ejemplo" nunca se
@@ -169,9 +192,9 @@ export function recetaFromLines({ id, nombre, alias = [], lines, peso_final_g = 
 
 // Errores de una receta antes de guardarla desde la app. Además de validateRecetas: nombre corto, id que no pise un
 // alimento que no sea esta receta, y ningún ingrediente que sea una receta (del fichero o una fila tipo=receta).
-export function recetaErrors(receta, foodsById, recetas = []) {
+export function recetaErrors(receta, foodsById, recetas = [], keys = null) {
   const otras = recetas.filter((r) => r.id !== receta.id);
-  const errores = validateRecetas([receta], foodsById).map((e) => e.replace(/^receta "[^"]*": |^receta nº 1: /, ''));
+  const errores = validateRecetas([receta], foodsById, keys).map((e) => e.replace(/^receta "[^"]*": |^receta nº 1: /, ''));
   if (receta.nombre.length > MAX_NOMBRE_RECETA) errores.push(`nombre de más de ${MAX_NOMBRE_RECETA} caracteres`);
   const fila = foodsById.get(receta.id);
   if (fila && fila.extra?.tipo !== TIPO_RECETA && !recetas.some((r) => r.id === receta.id)) errores.push(`el id "${receta.id}" ya es un alimento de tu documento`);
@@ -193,6 +216,10 @@ export function cleanRecetas(list) {
       if (r.alias !== undefined) o.alias = aLista(r.alias);
       if (r.ejemplo) o.ejemplo = true;
       if (r.peso_final_g !== undefined) o.peso_final_g = r.peso_final_g;
+      if (esEtiqueta(r.etiqueta)) {
+        const e = Object.fromEntries(Object.entries(r.etiqueta).filter(([, v]) => valorEtiqueta(v)));
+        if (Object.keys(e).length) o.etiqueta = e;
+      }
       o.ingredientes = r.ingredientes.map((i) => ({ food_id: i.food_id, gramos: i.gramos }));
       if (typeof r.notas === 'string' && r.notas.trim()) o.notas = r.notas.trim();
       if (typeof r.actualizada === 'string') o.actualizada = r.actualizada;

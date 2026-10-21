@@ -99,8 +99,23 @@ nutrientes de sus ingredientes en el propio catálogo. Nada de red ni de IA.
 | `alias` | no | Lista (o texto `a\|b`). Si se omite, se conservan los alias de la fila. |
 | `ingredientes` | sí | `food_id` (cualquier alimento del catálogo, también con `incluir=no`; no otra receta del fichero: no se anidan) y `gramos` (> 0) **en crudo**, de la tanda entera. |
 | `peso_final_g` | no | Peso del plato cocinado entero (olla llena − olla vacía). Sin él, el peso final es la suma de los ingredientes: así los `gramos` pueden ser **proporciones** (p. ej. un producto comercial: 20 g de cada verdura). |
+| `etiqueta` | no | Para productos con etiqueta: objeto `{ "<clave de nutriente>": número ≥ 0 }` con los valores **declarados**, por 100 g del plato. Sustituyen a los calculados (también si el cálculo los dejaba sin dato); el resto sigue calculándose de los ingredientes. Ver «Valores de etiqueta» abajo. |
 | `ejemplo` | no | `true` = receta de ejemplo/plantilla: se calcula pero **nunca** se escribe en el catálogo. |
 | `notas` | no | Se añade tras "Gramos del plato cocinado." en la columna `notas`. |
+
+**Valores de etiqueta** (`etiqueta`, opcional). Un producto con etiqueta (p. ej. un salteado de verduras de
+Hacendado) se modela como receta: los micronutrientes salen de las verduras a partes iguales y los valores declarados
+(kcal, grasa, saturadas, hidratos, azúcares, fibra, proteína y sodio) sustituyen a los calculados. Así sobreviven a
+`recetas.mjs --aplicar`, a «Recalcular todas» y a Editar → Guardar, que antes los pisaban:
+```json
+{ "id": "salteado_verduras_hacendado", "nombre": "Salteado de verduras",
+  "ingredientes": [ { "food_id": "calabacin", "gramos": 20 }, { "food_id": "pimiento_rojo", "gramos": 20 } ],
+  "etiqueta": { "energia_kcal": 36, "grasa_total_g": 1.2, "proteina_g": 1.8, "sodio_mg": 120 } }
+```
+Las claves tienen que ser nutrientes del catálogo (`energia_kcal`, `sodio_mg`...) y los valores números ≥ 0 (un `0` es
+un 0 real). La fila del catálogo anota en `fuente_usda`: `...; etiqueta: energia_kcal, grasa_total_g...; resto calculado de la
+receta`. En la app, el formulario de la receta no edita la etiqueta (la conserva y la muestra en una línea); se edita
+en el JSON. Va también en la copia de seguridad y en «Exportar recetas.json».
 
 **Cálculo** (por nutriente): suma de (valor por 100 g × gramos / 100) de los ingredientes ÷ peso final × 100.
 - Si un ingrediente **no tiene dato** de un nutriente, la receta queda **sin dato** en ese nutriente (nunca un total

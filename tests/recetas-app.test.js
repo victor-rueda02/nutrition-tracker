@@ -131,3 +131,22 @@ test('integración con objetivos: la copia lleva a la vez el plan de objetivos y
   assert.deepEqual(back.recetas, [r]);
   assert.deepEqual(Object.keys(JSON.parse(json)).filter((k) => ['plan_objetivos', 'recetas'].includes(k)), ['plan_objetivos', 'recetas']);
 });
+
+test('etiqueta: cleanRecetas, recetasToJSON, la copia de seguridad y la fusión la conservan (lo no numérico o negativo se descarta)', () => {
+  const r = { id: 'sal', nombre: 'Salteado', ingredientes: [{ food_id: 'a', gramos: 20 }], etiqueta: { energia_kcal: 36, grasa_total_g: 0 } };
+  assert.deepEqual(cleanRecetas([r]), [r]);
+  assert.deepEqual(cleanRecetas([{ ...r, etiqueta: { energia_kcal: 36, grasa_total_g: -1, fibra_g: 'x' } }])[0].etiqueta, { energia_kcal: 36 });
+  assert.equal('etiqueta' in cleanRecetas([{ ...r, etiqueta: { grasa_total_g: -1 } }])[0], false);
+  assert.equal('etiqueta' in cleanRecetas([{ ...r, etiqueta: [1] }])[0], false);
+  assert.deepEqual(parseRecetas(recetasToJSON([{ ...r, actualizada: 'x' }])).recetas, [r]);
+  assert.deepEqual(parseBackup(backupToJSON(buildBackup({ meals: [], recetas: [r] }))).recetas, [r]);
+  assert.deepEqual(mergeRecetas([], [r]), [r]);
+  assert.deepEqual(mergeRecetasImport([], [r]).list, [r]);
+  // la fila de la app (recetaToFood) lleva lo mismo que la del script
+  const res = computeReceta(r, byId, keys);
+  const app = recetaToFood(r, res);
+  const script = parseFoodsCSV(aplicarRecetas(DOC, [r], [res], keys).text, { catalog }).foods.find((f) => f.id === 'sal');
+  assert.deepEqual([app.nutrients, app.extra.fuente_usda], [script.nutrients, script.extra.fuente_usda]);
+  assert.equal(app.nutrients.energia_kcal, 36);
+  assert.deepEqual(recetaErrors({ ...r, etiqueta: { inventado: 1 } }, byId, [], keys).length, 1);
+});

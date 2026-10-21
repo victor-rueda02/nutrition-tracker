@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, dirname } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, NOTA_RECETA, TERMINO_RECETA } from '../frontend/js/core/recetas.js';
+import { parseRecetas, validateRecetas, computeReceta, aplicarRecetas, fuenteReceta, NOTA_RECETA, TERMINO_RECETA } from '../frontend/js/core/recetas.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { searchPlan } from '../scripts/usda-lib.mjs';
 import { catalog, csv, readFile, realFoods } from './helpers.js';
@@ -43,6 +43,43 @@ test('un ingrediente sin dato deja la receta sin dato en ese nutriente (nunca un
   const soloB = computeReceta(R({ ingredientes: [{ food_id: 'b', gramos: 50 }] }), byId, keys);
   assert.equal(soloB.nutrients.fibra_g, 0);
   assert.equal(soloB.nutrients.vitamina_c_mg, undefined); // nadie la tiene
+});
+
+test('etiqueta: sustituye a lo calculado, también donde el cálculo lo dejaba sin dato; un 0 de la etiqueta es un 0', () => {
+  const sin = computeReceta(R({ peso_final_g: 300 }), byId, keys);
+  assert.equal(sin.nutrients.fibra_g, undefined);
+  const res = computeReceta(R({ peso_final_g: 300, etiqueta: { energia_kcal: 50, fibra_g: 3, vitamina_c_mg: 0 } }), byId, keys);
+  assert.equal(res.nutrients.energia_kcal, 50); // calculado: 66,667
+  assert.equal(res.nutrients.fibra_g, 3); // calculado: sin dato
+  assert.equal(res.nutrients.vitamina_c_mg, 0); // nadie la tenía: 0 real de la etiqueta
+  assert.equal(res.nutrients.proteina_g, 6.667); // el resto sigue calculado
+  assert.equal(res.sinDato.fibra_g, undefined); // ya no falta
+  assert.match(fuenteReceta(R({ peso_final_g: 300, etiqueta: { energia_kcal: 50, fibra_g: 3 } }), res), /peso final 300 g; etiqueta: energia_kcal, fibra_g; resto calculado de la receta$/);
+  assert.doesNotMatch(fuenteReceta(R({ peso_final_g: 300 }), sin), /etiqueta/);
+});
+
+test('etiqueta: validación (clave que no es del catálogo, valor negativo o no numérico, no es un objeto)', () => {
+  assert.deepEqual(validateRecetas([R({ etiqueta: { energia_kcal: 36, sodio_mg: 0 } })], byId, keys), []);
+  const errs = validateRecetas([
+    R({ id: 'a1', etiqueta: { inventado_g: 3 } }), R({ id: 'a2', etiqueta: { energia_kcal: -1 } }), R({ id: 'a3', etiqueta: { energia_kcal: '36' } }),
+    R({ id: 'a4', etiqueta: [1] }), R({ id: 'a5', etiqueta: { energia_kcal: null } }),
+  ], byId, keys);
+  for (const s of ['"a1": etiqueta: "inventado_g" no es un nutriente', '"a2": etiqueta: "energia_kcal" debe ser un número mayor o igual que 0',
+    '"a3": etiqueta: "energia_kcal" debe ser un número', '"a4": etiqueta debe ser un objeto', '"a5": etiqueta: "energia_kcal" debe ser un número']) assert.ok(errs.some((e) => e.includes(s)), s);
+  assert.equal(errs.length, 5);
+});
+
+test('etiqueta: aplicar escribe los valores de la etiqueta y la fuente en la fila (y los recalculos no los pierden)', () => {
+  const doc = csv('id,nombre,estado,proteina_g,fibra_g,energia_kcal,fuente_usda', 'r,Vieja,crudo,99,99,99,x', 'a,A,crudo,10,,100,');
+  const recetas = [R({ peso_final_g: 300, etiqueta: { energia_kcal: 50, fibra_g: 3 } })];
+  let texto = doc;
+  for (let vez = 0; vez < 2; vez++) { // aplicar dos veces (como recalcular) da lo mismo
+    const out = aplicarRecetas(texto, recetas, recetas.map((r) => computeReceta(r, byId, keys)), keys);
+    texto = out.text;
+    const r = parseFoodsCSV(out.text, { catalog }).foods.find((f) => f.id === 'r');
+    assert.deepEqual([r.nutrients.energia_kcal, r.nutrients.fibra_g, r.nutrients.proteina_g], [50, 3, 6.667]);
+    assert.match(r.extra.fuente_usda, /etiqueta: energia_kcal, fibra_g; resto calculado de la receta$/);
+  }
 });
 
 test('aviso si el peso final es menor que el agua de los ingredientes o sospechosamente bajo', () => {
@@ -101,7 +138,7 @@ test('data/recetas.json: válido con el catálogo real, con una receta de ejempl
   const { recetas, errores } = parseRecetas(readFile('../data/recetas.json'));
   assert.deepEqual(errores, []);
   const real = byIdOf(realFoods);
-  assert.deepEqual(validateRecetas(recetas, real), []);
+  assert.deepEqual(validateRecetas(recetas, real, keys), []);
   const ej = recetas.filter((r) => r.ejemplo);
   assert.deepEqual(ej.map((r) => r.id), ['ejemplo_arroz_con_huevo']);
   assert.ok(!real.has('ejemplo_arroz_con_huevo'));

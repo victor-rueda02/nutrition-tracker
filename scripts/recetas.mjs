@@ -33,7 +33,7 @@ if (!parsed.report.ok) salir(`${foodsPath} tiene errores; corrígelos antes (imp
 else if (errJson.length) salir(`${recetasPath}: ${errJson.join('; ')}`);
 else {
   const foodsById = new Map(parsed.foods.map((f) => [f.id, f]));
-  const errores = validateRecetas(recetas, foodsById);
+  const errores = validateRecetas(recetas, foodsById, catalog.keys);
   if (errores.length) salir(`${recetasPath} tiene errores:\n${errores.map((e) => `  - ${e}`).join('\n')}`);
   else {
     const resultados = recetas.map((r) => computeReceta(r, foodsById, catalog.keys));
