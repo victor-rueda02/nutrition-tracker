@@ -58,7 +58,7 @@ test('una kcal y un micro con los mismos alimentos no se mezclan: cada gravedad 
   assert.deepEqual(a.menor.grupos[0].nutrientes.map((n) => n.clave), ['colina_mg']);
 });
 
-test('resumen: hasta 2 nutrientes por nombre, más como «N micronutrientes»; alimentos «A, B, C y N más»', () => {
+test('resumen: hasta 2 nutrientes por nombre, más como «N nutrientes»; alimentos «A, B, C y N más»', () => {
   const muchos = ['a', 'b', 'c', 'd', 'e'].map((i) => food(i, i.toUpperCase()));
   const ids = muchos.map((f) => f.id);
   const comidas = [comida(...ids.map((id, i) => [id, 100 - i]))];
