@@ -286,6 +286,12 @@ test('"2 huevos" -> 100 g (2 × porción de 54 g); el número dicho manda: 150 g
   for (const cantidad of [2, 150, 50]) assert.equal(run([line('huevo', '2 huevos', { cantidad })]).unmatched[0]?.motivo, 'sin_porcion', String(cantidad));
 });
 
+test('"3 galletas María" -> 16,8 g (3 × porción galleta de 5,6 g, de la etiqueta)', () => {
+  const r = run([line('galleta_maria', '3 galletas María', { cantidad: 16.8 })]);
+  assert.deepEqual(r.items.map((x) => [x.food_id, x.grams]), [['galleta_maria', 16.8]]);
+  assert.equal(run([line('galleta_maria', '3 galletas María', { cantidad: 3 })]).unmatched[0]?.motivo, 'sin_porcion');
+});
+
 test('unidades con porción: número en cifras o palabras, y la porción nombrada tiene que ser esa', () => {
   const ok = [['kiwi_verde', 'un kiwi', 69], ['aceite_oliva', 'una cucharada de aceite', 13.5], ['aceite_oliva', 'una cucharadita de aceite', 4.5],
     ['aceite_oliva', 'media cucharadita de aceite', 2.25], ['leche_entera', 'medio vaso de leche', 125], ['leche_entera', 'dos vasos de leche', 500],
