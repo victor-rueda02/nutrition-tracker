@@ -280,17 +280,17 @@ test('"1 manzana" -> "sin porción" (la manzana no tiene porción); no se rellen
   assert.deepEqual([l.grams, l.flags], [null, []]);
 });
 
-test('"2 huevos" -> 100 g (2 × porción de 50 g); el número dicho manda: 150 g no valen para "2 huevos"', () => {
-  const r = run([line('huevo', '2 huevos', { cantidad: 100 })]);
-  assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.flags]), [['huevo', 100, []]]);
+test('"2 huevos" -> 100 g (2 × porción de 54 g); el número dicho manda: 150 g no valen para "2 huevos"', () => {
+  const r = run([line('huevo', '2 huevos', { cantidad: 108 })]);
+  assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.flags]), [['huevo', 108, []]]);
   for (const cantidad of [2, 150, 50]) assert.equal(run([line('huevo', '2 huevos', { cantidad })]).unmatched[0]?.motivo, 'sin_porcion', String(cantidad));
 });
 
 test('unidades con porción: número en cifras o palabras, y la porción nombrada tiene que ser esa', () => {
   const ok = [['kiwi_verde', 'un kiwi', 69], ['aceite_oliva', 'una cucharada de aceite', 13.5], ['aceite_oliva', 'una cucharadita de aceite', 4.5],
     ['aceite_oliva', 'media cucharadita de aceite', 2.25], ['leche_entera', 'medio vaso de leche', 125], ['leche_entera', 'dos vasos de leche', 500],
-    ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 50.4], ['huevo', 'un huevo y medio', 75],
-    ['huevo', 'media docena de huevos', 300], ['leche_entera', 'vaso de leche', 250]]; // sin número: una porción entera
+    ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 54], ['huevo', 'un huevo y medio', 81],
+    ['huevo', 'media docena de huevos', 324], ['leche_entera', 'vaso de leche', 250]]; // sin número: una porción entera
   for (const [id, text, cantidad] of ok) assert.deepEqual(run([line(id, text, { cantidad })]).items.map((x) => [x.food_id, x.grams]), [[id, cantidad]], text);
   const mal = [['kiwi_verde', 'un kiwi', 100, 'g'], ['aceite_oliva', 'una cucharadita de aceite', 13.5, 'g'], ['leche_entera', 'un vaso de leche', 250, 'ml'],
     ['aceite_oliva', '15 de aceite', 15, 'g']]; // 15 < 20: son unidades, y 15 cucharadas no son 15 g
