@@ -96,9 +96,9 @@ test('coincidencia con el término: ignora mayúsculas y puntuación', () => {
 test('plan de búsqueda del documento real: omite incluir=no, sin término y recetas', () => {
   const plan = searchPlan(realFoods);
   const omit = (id) => plan.find((p) => p.food.id === id).omitido;
-  assert.equal(omit('arroz_blanco_crudo'), null);
+  assert.equal(omit('huevo'), null);
   assert.equal(omit('ron'), 'excluido (incluir=no)');
-  assert.equal(plan.filter((p) => !p.omitido).length, 41);
+  assert.equal(plan.filter((p) => !p.omitido).length, 22);
 });
 
 // ---------- cliente HTTP simulado ----------
