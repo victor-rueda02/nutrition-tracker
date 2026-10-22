@@ -4,3 +4,15 @@
 .catalogo-update .conflicto .chip { text-align:left; }
 .aviso-catalogo { border-left:4px solid var(--accent); }
 .aviso-catalogo p { margin:4px 0; }
+/* Conflictos: por alimento (dos botones grandes) y, plegado, campo a campo. Los chips se apilan y el texto puede partirse. */
+.catalogo-update .chips { display:flex; flex-direction:column; align-items:stretch; gap:6px; background:none; border-radius:0; padding:0; margin:8px 0 4px; }
+.catalogo-update .chips .chip { min-height:44px; padding:8px 14px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); white-space:normal; text-align:left; font-size:.9rem; }
+.catalogo-update .chips .chip[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.catalogo-update .conflictos > .secondary { min-height:44px; width:100%; margin:4px 0 8px; }
+.catalogo-update .conflicto-alimento .campos { margin-top:8px; }
+.catalogo-update .conflicto-alimento .campos summary { min-height:44px; display:flex; align-items:center; cursor:pointer; color:var(--link); }
+.catalogo-update .conflicto-alimento .aviso-ia { margin:6px 0 2px; color:var(--fg); border-left:4px solid var(--warn); padding-left:8px; }
+.catalogo-update .conflicto .chips { margin:8px 0 4px; }
+.catalogo-update .confirm-delete { margin:6px 0 10px; }
+.catalogo-update .confirm-delete button { min-height:44px; }
+.catalogo-update .confirm-delete .row { flex-direction:column; align-items:stretch; }

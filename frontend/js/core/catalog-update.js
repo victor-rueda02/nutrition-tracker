@@ -56,6 +56,10 @@ export function etiquetaCampo(campo, catalog) {
   return k;
 }
 
+// Un alimento que añadiste desde la app con «Estimar con IA» (datos de USDA sin revisar): si el documento publicado
+// trae el mismo id, lo publicado es el revisado.
+export const anadidoConIA = (food) => food?.extra?.tipo === 'usda_app' || String(food?.extra?.pendiente_revisar ?? '').trim().toLowerCase() === 'si';
+
 // Plan de actualización. Devuelve { foods (con los conflictos resueltos como "mío"), nuevos, actualizados,
 // retirados, propios (creados en el dispositivo), conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
 export function planCatalogUpdate({ local, remote, base = null, catalog }) {
@@ -102,7 +106,14 @@ export function planCatalogUpdate({ local, remote, base = null, catalog }) {
   const propio = (l) => (B ? !B.has(l.id) : l.extra?.tipo === 'usda_app');
   const retirados = quedan.filter((l) => !propio(l)).map((l) => ({ id: l.id, nombre: l.nombre }));
   const propios = quedan.filter(propio).map((l) => ({ id: l.id, nombre: l.nombre }));
-  return { foods, nuevos, actualizados, retirados, propios, conflictos, hayCambios: nuevos.length + actualizados.length + conflictos.length > 0 };
+  // Alimentos con conflictos (para elegir de una vez todo un alimento): { id, nombre, campos (nº), anadidoConIA }.
+  const alimentosConflicto = [];
+  for (const c of conflictos) {
+    let a = alimentosConflicto.find((x) => x.id === c.id);
+    if (!a) { a = { id: c.id, nombre: c.nombre, campos: 0, anadidoConIA: anadidoConIA(L.get(c.id)) }; alimentosConflicto.push(a); }
+    a.campos++;
+  }
+  return { foods, nuevos, actualizados, retirados, propios, conflictos, alimentosConflicto, hayCambios: nuevos.length + actualizados.length + conflictos.length > 0 };
 }
 
 // Aplica tus elecciones en los conflictos: elecciones = { "id|campo": "publicado" | "mio" } (por defecto, "mío").
@@ -114,6 +125,34 @@ export function applyChoices(plan, remote, elecciones = {}) {
     if (elecciones[`${c.id}|${c.campo}`] === 'publicado') copiar(porId.get(c.id), R.get(c.id), c.campo);
   }
   return foods;
+}
+
+// Elecciones iniciales: "mío" en todo (se omite) salvo los alimentos añadidos con IA, que llegan como lo publicado.
+export function eleccionesPorDefecto(plan) {
+  const ia = new Set((plan.alimentosConflicto ?? []).filter((a) => a.anadidoConIA).map((a) => a.id));
+  const out = {};
+  for (const c of plan.conflictos) if (ia.has(c.id)) out[`${c.id}|${c.campo}`] = 'publicado';
+  return out;
+}
+
+// Elige "publicado" o "mio" en todos los conflictos de un alimento. Devuelve unas elecciones nuevas.
+export function elegirAlimento(plan, elecciones, id, que) {
+  const out = { ...elecciones };
+  for (const c of plan.conflictos) if (c.id === id) out[`${c.id}|${c.campo}`] = que;
+  return out;
+}
+
+// Elige "publicado" o "mio" en todos los conflictos de todos los alimentos.
+export function elegirTodos(plan, elecciones, que) {
+  const out = { ...elecciones };
+  for (const c of plan.conflictos) out[`${c.id}|${c.campo}`] = que;
+  return out;
+}
+
+// ¿Qué hay elegido en un alimento? 'publicado' | 'mio' si es lo mismo en todos sus conflictos; 'mixto' si no.
+export function eleccionAlimento(plan, elecciones, id) {
+  const v = new Set(plan.conflictos.filter((c) => c.id === id).map((c) => elecciones[`${c.id}|${c.campo}`] === 'publicado' ? 'publicado' : 'mio'));
+  return v.size === 1 ? [...v][0] : 'mixto';
 }
 
 // Cabeceras extra (columnas de trabajo) de los dos documentos, sin repetir y en orden.
