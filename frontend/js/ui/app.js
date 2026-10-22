@@ -23,7 +23,7 @@ import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTempl
 import { templatesScreen } from './templates-screen.js';
 import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
 import { phraseLogScreen } from './phrase-log-screen.js';
-import { hashText, planCatalogUpdate, applyChoices, unirCabeceras } from '../core/catalog-update.js';
+import { hashText, planCatalogUpdate, applyChoices, unirCabeceras, eleccionesPorDefecto } from '../core/catalog-update.js';
 import { catalogUpdateScreen } from './catalog-update-screen.js';
 import { parseNumber } from '../core/numbers.js';
 import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } from './estimate-screen.js';
@@ -96,7 +96,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'diary', sheet: null, menu: false, docSection: 'documento', catQuery: '', catFilter: 'todos', catFocus: false, addDate: null, plantillasBack: 'alimentos', recetasBack: 'alimentos', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catMsg: '', catBack: 'diary',
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catConfirmarTodos: false, catMsg: '', catBack: 'diary',
     detalle: null, estimate: null, cenas: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
@@ -295,7 +295,8 @@ export function mountApp(root, deps) {
       if (!plan.hayCambios) { await deps.store.setSetting('catalogo_base', { hash, text }); decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
       const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === hash;
       state.catUpdate = { hash, text, remote, plan, ignorado };
-      state.catEleccion = {};
+      state.catEleccion = eleccionesPorDefecto(plan);
+      state.catConfirmarTodos = false;
       state.catMsg = '';
       if (manual) { state.catBack = volver; state.screen = 'catalogo'; }
       render();
