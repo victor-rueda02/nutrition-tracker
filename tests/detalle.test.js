@@ -65,7 +65,8 @@ test('porciones: «g» y cada porción del documento; gramos desde cantidad y po
 });
 
 test('fuente corta legible y completitud n/31', () => {
-  assert.match(fuenteDe(realFoods.find((f) => f.id === 'almendras_crudas')).corto, /^USDA FoodData Central \(SR Legacy\) · fdcId 170567$/);
+  assert.match(fuenteDe(realFoods.find((f) => f.id === 'arroz_blanco_crudo')).corto, /^USDA FoodData Central \(SR Legacy\) · fdcId 169756$/);
+  assert.match(fuenteDe(realFoods.find((f) => f.id === 'almendras_crudas')).corto, /^Etiqueta/);
   assert.match(fuenteDe(realFoods.find((f) => f.id === 'brocoli')).corto, /^BEDCA/);
   assert.match(fuenteDe(realFoods.find((f) => f.id === 'corn_flakes')).corto, /^Etiqueta/);
   assert.match(fuenteDe(realFoods.find((f) => f.id === 'atun_lata_con_aceite')).corto, /^Receta/);

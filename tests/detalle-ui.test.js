@@ -222,7 +222,7 @@ test('desde el Diario: «Volver» sin guardar deja la comida como estaba; el nut
   t.type(t.$('input.detalle-cantidad'), '50');
   await t.act(() => t.ver('Calcio').click());
   const hoy = t.$('.rango-tabla tr[data-fila="hoy"] td').textContent;
-  assert.match(hoy, /107 mg/); // otros alimentos 80,7 (almendras 30 g) + este alimento con la cantidad nueva (50 g = 26)
+  assert.match(hoy, /98 mg/); // otros alimentos 72 (almendras 30 g) + este alimento con la cantidad nueva (50 g = 26)
   assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (con esta cantidad)');
   assert.equal(t.$('.ley-otros').textContent, 'Llevas hoy (sin este alimento)');
   assert.match(t.$('.ley-aporte').textContent, /^Este alimento · \d+ % del objetivo$/);
