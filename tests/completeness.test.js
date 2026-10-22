@@ -71,8 +71,9 @@ test('catálogo real con nutrientes de USDA, BEDCA y recetas: 62 completos (la c
   const sinDatos = rep.incomplete.filter((p) => p.filled === 0).map((p) => p.id);
   assert.equal(sinDatos.length, 11);
   assert.ok(foods.filter((f) => sinDatos.includes(f.id)).every((f) => f.extra.incluir === 'no'));
-  // pan de molde: enriquecimiento de EE. UU. vaciado a propósito (sin dato, no 0)
+  // pan de molde (etiqueta Hacendado + BEDCA 2161): B1, B2, B9 y hierro de BEDCA; B3 sigue vacía (BEDCA solo da equivalentes de niacina)
   const pan = foods.find((f) => f.id === 'pan_molde_blanco');
-  for (const k of ['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'vitamina_b3_mg', 'hierro_mg']) assert.equal(pan.nutrients[k], undefined, k);
+  assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg'].map((k) => pan.nutrients[k]), [27, 0.19, 0.04, 1.4]);
+  assert.equal(pan.nutrients.vitamina_b3_mg, undefined);
   assert.equal(pan.extra.fdc_id, '174924');
 });
