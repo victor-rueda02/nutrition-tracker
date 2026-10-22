@@ -196,7 +196,7 @@ test('desde el Diario: gramos de la línea, sin «Guardar» hasta cambiarlos, y 
   assert.match(t.$('header.top .title-block small').textContent, /Desayuno/);
   assert.equal(t.$('footer.bar'), null); // sin cambios no se muestra «Guardar»
   assert.equal(t.$('nav.tabbar'), null); // y la pantalla puede llevar pie fijo: sin barra inferior
-  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /303 kcal/); // 379 × 80 / 100
+  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /307 kcal/); // 384 × 80 / 100
   t.type(t.$('input.detalle-cantidad'), '37,5');
   assert.equal(t.$('footer.bar button').textContent, 'Guardar');
   assert.equal(t.$('nav.tabbar'), null);

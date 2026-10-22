@@ -86,9 +86,9 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   assert.equal(t.btn('Guardar').disabled, true);          // línea sin gramos
   t.type(grams[1], '100');
   assert.equal(t.btn('Guardar').disabled, false);
-  // con el catálogo real: 90,5 g de avena (379 kcal/100 g) + 100 g de huevo (143 kcal/100 g)
-  assert.match(t.root.textContent, /343 kcal · 11,9 g prot./);
-  assert.match(t.root.textContent, /Total: 486 kcal · 24,5 g de proteína/);
+  // con el catálogo real: 90,5 g de avena (384 kcal/100 g) + 100 g de huevo (143 kcal/100 g)
+  assert.match(t.root.textContent, /348 kcal · 11 g prot./);
+  assert.match(t.root.textContent, /Total: 491 kcal · 23,6 g de proteína/);
   assert.ok(!/parcial|sin dato/.test(t.root.textContent));
   await t.act(() => t.$$('button[aria-label^="Borrar"]')[1].click());
   assert.equal(t.$$('li.card[data-key]').length, 1);
@@ -243,14 +243,14 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
   await t.act(() => t.btn('Diario').click());
   assert.equal(t.$('.daylabel').textContent, 'Hoy');
   assert.equal(t.$('button[aria-label="Día siguiente"]').disabled, true);
-  assert.match(comidaCon(t).textContent, /Desayuno.*446 kcal/);
-  assert.match(comidaCon(t).textContent, /Avena \(copos\/molida\) · 80 g · 303 kcal/);
+  assert.match(comidaCon(t).textContent, /Desayuno.*450 kcal/);
+  assert.match(comidaCon(t).textContent, /Avena \(copos\/molida\) · 80 g · 307 kcal/);
   assert.equal(t.$('.alert-ul'), null);
-  // Informe diario (tres puntos): 80 g de avena (379 kcal) + 100 g de huevo (143 kcal) = 446 kcal; objetivo de referencia 2000 kcal
+  // Informe diario (tres puntos): 80 g de avena (384 kcal) + 100 g de huevo (143 kcal) = 450 kcal; objetivo de referencia 2000 kcal
   await t.act(() => verInforme(t));
   assert.match(t.$('header').textContent, /Informe diario/);
-  assert.match(fila(t, 'energia_kcal').textContent, /446 kcal \/ 2000 kcal/);
-  assert.match(fila(t, 'energia_kcal').textContent, /Por debajo · 22 %/);
+  assert.match(fila(t, 'energia_kcal').textContent, /450 kcal \/ 2000 kcal/);
+  assert.match(fila(t, 'energia_kcal').textContent, /Por debajo · 23 %/);
   assert.match(fila(t, 'vitamina_b12_ug').textContent, /µg/);
   assert.ok(fila(t, 'epa_dha'));
   await t.act(() => t.btn('‹ Volver').click());
