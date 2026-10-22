@@ -156,6 +156,31 @@ test('registro de frases: anota el aviso con el alimento más específico (tambi
   assert.match(csv, /Hay un alimento más específico;más específico: Pan de molde blanco;Pan blanco de barra;/);
 });
 
+test('tomate frito Hacendado: «tomate frito» es el estilo casero y «con aceite de oliva» es otra fila; el aviso salta al elegir la equivocada; «frito» no es estado', () => {
+  const ok = one('salsa_tomate_frito', '70 g de tomate frito', realList, { cantidad: 70 });
+  limpio(ok);
+  assert.equal(ok.food_id, 'salsa_tomate_frito');
+  assert.ok(!ok.flags.includes('variante_no_disponible') && !ok.flags.includes('sin_alias') && !ok.flags.includes('estado_discrepante'));
+  const nueva = one('salsa_tomate_frito_oliva', '70 g de tomate frito con aceite de oliva', realList, { cantidad: 70 });
+  limpio(nueva);
+  assert.equal(nueva.food_id, 'salsa_tomate_frito_oliva');
+  dispara(one('salsa_tomate_frito', '70 g de tomate frito con aceite de oliva', realList, { cantidad: 70 }), 'salsa_tomate_frito_oliva');
+  assert.notEqual(byId.get('salsa_tomate_frito').grupo, byId.get('salsa_tomate_frito_oliva').grupo);
+});
+
+test('pan de molde integral Hacendado: «2 rebanadas de pan de molde integral» = 64 g de la fila nueva; si la IA elige el blanco avisa (alias más específico) y con el integral normal, sin porción', () => {
+  const frase = '2 rebanadas de pan de molde integral';
+  const ok = one('pan_molde_integral', frase, realList, { cantidad: 64 });
+  limpio(ok);
+  assert.deepEqual([ok.food_id, ok.grams, ok.flags], ['pan_molde_integral', 64, []]);
+  assert.deepEqual(byId.get('pan_molde_integral').porciones, [{ nombre: 'rebanada', gramos: 32 }]);
+  dispara(one('pan_molde_blanco', '64 g de pan de molde integral', realList, { cantidad: 64 }), 'pan_molde_integral');
+  // con el pan integral normal (sin porción «rebanada») la frase ni siquiera se resuelve: va a «sin porción»
+  const integral = normalizeAiResponse({ items: [line('pan_integral', frase, { cantidad: 64 })], unmatched: [] }, realList);
+  assert.equal(integral.items.length, 0);
+  assert.equal(integral.unmatched[0].motivo, 'sin_porcion');
+});
+
 // Optimización del Worker (10 ms de CPU): sameWord y spansIn dan lo mismo que la versión con cadenas.
 test('sameWord rápido equivale a la comparación con sufijos y spansIn/termSpans coinciden', async () => {
   const { sameWord, spansIn, words } = await import('../frontend/js/core/text.js');

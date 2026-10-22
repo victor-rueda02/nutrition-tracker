@@ -22,9 +22,9 @@ test('lista compacta: sin los alimentos incluir=no y sin nutrientes', () => {
   assert.equal(buildCompactList(foods, { includeExcluded: true }).length, 2);
 });
 
-test('lista compacta del documento real: 59 de 73 (14 con incluir=no fuera) y ningún nutriente', () => {
-  assert.equal(realFoods.length, 73);
-  assert.equal(realList.length, 59);
+test('lista compacta del documento real: 65 de 79 (14 con incluir=no fuera) y ningún nutriente', () => {
+  assert.equal(realFoods.length, 79);
+  assert.equal(realList.length, 65);
   assert.ok(!realList.some((f) => f.id === 'ron' || f.id === 'crema_calabacin'));
   const text = JSON.stringify(realList);
   for (const k of catalog.keys) assert.ok(!text.includes(k), k);

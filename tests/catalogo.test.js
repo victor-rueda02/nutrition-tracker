@@ -42,7 +42,7 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, undefined]);
   assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
   assert.equal(pan.extra.fdc_id, '172675');
-  assert.equal(byId.get('jamon_cocido').extra.fdc_id, '168295');
+  assert.match(byId.get('jamon_cocido').extra.fuente_usda, /^Etiqueta Jamon cocido Hacendado .*BEDCA 965 .*USDA Pork, cured, ham/);
 });
 
 test('alias: regla de cortes y especies, sin genéricos de especie o de corte', () => {
@@ -75,7 +75,7 @@ test('incluir=no: activados mayonesa (con "mahonesa") y chorizo; el resto de pun
   assert.deepEqual([c.extra.incluir, c.estado, c.extra.termino_busqueda_usda, c.nutrients.energia_kcal, c.nutrients.vitamina_b5_mg], ['si', 'procesado', undefined, 322, undefined]);
   assert.match(c.extra.fuente_usda, /^BEDCA 2264/); // chorizo español: BEDCA, huecos de USDA; sin término para que usda.mjs no lo pise
   const m = byId.get('mayonesa');
-  assert.deepEqual([m.extra.incluir, m.estado, m.extra.fdc_id], ['si', 'procesado', '171009']);
+  assert.deepEqual([m.extra.incluir, m.estado, m.extra.fdc_id], ['si', 'procesado', '171009']); // etiqueta Hacendado + BEDCA 1708 (girasol); USDA solo huecos
   assert.ok(!flagsOf('mayonesa', '15 g de mahonesa').includes('sin_alias'));
   for (const id of ['coca_cola', 'tinto_verano', 'ron', 'lengua_cerdo', 'salsa_cerdo_lata', 'salchicha_desayuno_cerdo', 'yogur_griego_vainilla', 'queso_monterey_jack']) {
     assert.equal(byId.get(id).extra.incluir, 'no', id);
@@ -146,15 +146,20 @@ test('lentejas caseras: receta cocinada, "lentejas" a secas es la receta y no ch
   assert.equal(byId.get('morro_cerdo').extra.fdc_id, '167857'); // oreja de cerdo: ni BEDCA ni USDA tienen morro
 });
 
-test('lata de atún con aceite: receta de 80 g (60 g de atún + 20 g de aceite), "una lata de atún" = la porción; "atún" y "atún en lata" siguen siendo el atún escurrido', () => {
+test('lata de atún con aceite: receta de 80 g (60 g de atún + 14 g de aceite, con la etiqueta), "una lata de atún" = la porción; "atún" y "atún en lata" siguen siendo el atún escurrido', () => {
   const r = byId.get('atun_lata_con_aceite');
   assert.deepEqual([r.estado, r.pesoEnCrudo, r.extra.incluir, r.varianteDefecto, r.extra.rol_cena, r.extra.tipo], ['cocinado', false, 'si', true, 'proteina', 'receta']);
   assert.deepEqual(r.porciones, [{ nombre: 'lata', gramos: 80 }]);
   assert.deepEqual(r.alias, ['lata de atún']);
   const t = byId.get('atun_lata_aceite');
-  for (const k of ['energia_kcal', 'proteina_g', 'grasa_total_g']) {
-    assert.ok(Math.abs(r.nutrients[k] - (t.nutrients[k] * 60 + byId.get('aceite_oliva').nutrients[k] * 20) / 80) < 0.01, k);
+  // etiqueta Hacendado por 100 g neto: 352 kcal, 31 g de grasa (4,6 saturadas), 0,9 g de hidratos, 18 g de proteína, sodio 0,9 g de sal ÷ 2,5
+  assert.deepEqual(['energia_kcal', 'grasa_total_g', 'grasas_saturadas_g', 'hidratos_g', 'proteina_g', 'sodio_mg'].map((k) => r.nutrients[k]), [352, 31, 4.6, 0.9, 18, 360]);
+  // el resto se calcula con 60 g de atún escurrido + 14 g de aceite (peso final 80 g)
+  for (const k of ['vitamina_e_mg', 'calcio_mg']) {
+    assert.ok(Math.abs(r.nutrients[k] - (t.nutrients[k] * 60 + byId.get('aceite_oliva').nutrients[k] * 14) / 80) < 0.01, k);
   }
+  assert.equal(t.nutrients.vitamina_k_ug, undefined); // la K de USDA era de aceite de soja: sin dato en el atún y, por tanto, en la lata
+  assert.equal(r.nutrients.vitamina_k_ug, undefined);
   const lata = normalizeAiResponse({ items: [{ food_id: 'atun_lata_con_aceite', cantidad: 80, unidad: 'g', source_text: 'una lata de atún', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
   assert.deepEqual([lata.items[0].food_id, lata.items[0].grams, lata.items[0].flags, lata.unmatched.length], ['atun_lata_con_aceite', 80, [], 0]);
   assert.ok(!flagsOf('atun_lata_aceite', '80 g de atún en lata').includes('sin_alias'));
