@@ -280,7 +280,7 @@ test('"1 manzana" -> "sin porción" (la manzana no tiene porción); no se rellen
   assert.deepEqual([l.grams, l.flags], [null, []]);
 });
 
-test('"2 huevos" -> 100 g (2 × porción de 54 g); el número dicho manda: 150 g no valen para "2 huevos"', () => {
+test('"2 huevos" -> 108 g (2 × porción de 54 g = 108 g); el número dicho manda: 150 g no valen para "2 huevos"', () => {
   const r = run([line('huevo', '2 huevos', { cantidad: 108 })]);
   assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.flags]), [['huevo', 108, []]]);
   for (const cantidad of [2, 150, 50]) assert.equal(run([line('huevo', '2 huevos', { cantidad })]).unmatched[0]?.motivo, 'sin_porcion', String(cantidad));

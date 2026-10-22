@@ -155,9 +155,11 @@ test('lata de atún con aceite: receta de 80 g (60 g de atún + 14 g de aceite, 
   // etiqueta Hacendado por 100 g neto: 352 kcal, 31 g de grasa (4,6 saturadas), 0,9 g de hidratos, 18 g de proteína, sodio 0,9 g de sal ÷ 2,5
   assert.deepEqual(['energia_kcal', 'grasa_total_g', 'grasas_saturadas_g', 'hidratos_g', 'proteina_g', 'sodio_mg'].map((k) => r.nutrients[k]), [352, 31, 4.6, 0.9, 18, 360]);
   // el resto se calcula con 60 g de atún escurrido + 14 g de aceite (peso final 80 g)
-  for (const k of ['vitamina_e_mg', 'vitamina_k_ug', 'calcio_mg']) {
+  for (const k of ['vitamina_e_mg', 'calcio_mg']) {
     assert.ok(Math.abs(r.nutrients[k] - (t.nutrients[k] * 60 + byId.get('aceite_oliva').nutrients[k] * 14) / 80) < 0.01, k);
   }
+  assert.equal(t.nutrients.vitamina_k_ug, undefined); // la K de USDA era de aceite de soja: sin dato en el atún y, por tanto, en la lata
+  assert.equal(r.nutrients.vitamina_k_ug, undefined);
   const lata = normalizeAiResponse({ items: [{ food_id: 'atun_lata_con_aceite', cantidad: 80, unidad: 'g', source_text: 'una lata de atún', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
   assert.deepEqual([lata.items[0].food_id, lata.items[0].grams, lata.items[0].flags, lata.unmatched.length], ['atun_lata_con_aceite', 80, [], 0]);
   assert.ok(!flagsOf('atun_lata_aceite', '80 g de atún en lata').includes('sin_alias'));

@@ -62,7 +62,7 @@ test('fichero de ejemplo: el huevo está completo y el resto aparece como pendie
   assert.equal(rep.incomplete[0].ratio <= rep.incomplete.at(-1).ratio, true);
 });
 
-test('catálogo real con nutrientes de USDA, BEDCA y recetas: 67 completos (la chía, con EPA y DHA = 0 de vegetal); incompletos los 11 con incluir=no sin datos', () => {
+test('catálogo real con nutrientes de USDA, BEDCA y recetas: 67 completos (la chía, con EPA y DHA = 0 de vegetal); incompletos los 12 (los 11 con incluir=no sin datos y la bebida de avena sin enriquecer)', () => {
   const { foods } = parseFoodsCSV(readFile('./fixtures/alimentos_iniciales.csv'), { catalog });
   const rep = completenessReport(foods, settings);
   assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [79, 67, 12]);
