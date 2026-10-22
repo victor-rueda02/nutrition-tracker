@@ -23,7 +23,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 3 | integrado y publicado | – |
 | 2026-10-22 | P · Actualizar documento: «Usar el publicado» por alimento y para todos; añadidos con IA → publicado por defecto | desarrollador | dev/p-actualizar-publicado | 2 | integrado y publicado | – |
 | 2026-10-22 | Q · Queso fresco Hacendado (fila nueva, etiqueta) | catalogo | cat/q-queso-fresco | 1 | integrado y publicado | – (rol_cena proteina, decidido por el coordinador) |
-| 2026-10-23 | R · Bebida de avena completa (CIQUAL sin enriquecer) | catalogo | cat/r-bebida-avena | 0 | en curso | ¿Incompletos excluidos (8 puntuales + 3 recetas): ocultar, borrar o completar? |
+| 2026-10-23 | R · Bebida de avena completa (CIQUAL sin enriquecer) | catalogo | cat/r-bebida-avena | 1 | integrado | ¿Incompletos excluidos (8 puntuales + 3 recetas): ocultar, borrar o completar? |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
