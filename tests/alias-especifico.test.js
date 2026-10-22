@@ -156,6 +156,18 @@ test('registro de frases: anota el aviso con el alimento más específico (tambi
   assert.match(csv, /Hay un alimento más específico;más específico: Pan de molde blanco;Pan blanco de barra;/);
 });
 
+test('tomate frito Hacendado: «tomate frito» es el estilo casero y «con aceite de oliva» es otra fila; el aviso salta al elegir la equivocada; «frito» no es estado', () => {
+  const ok = one('salsa_tomate_frito', '70 g de tomate frito', realList, { cantidad: 70 });
+  limpio(ok);
+  assert.equal(ok.food_id, 'salsa_tomate_frito');
+  assert.ok(!ok.flags.includes('variante_no_disponible') && !ok.flags.includes('sin_alias') && !ok.flags.includes('estado_discrepante'));
+  const nueva = one('salsa_tomate_frito_oliva', '70 g de tomate frito con aceite de oliva', realList, { cantidad: 70 });
+  limpio(nueva);
+  assert.equal(nueva.food_id, 'salsa_tomate_frito_oliva');
+  dispara(one('salsa_tomate_frito', '70 g de tomate frito con aceite de oliva', realList, { cantidad: 70 }), 'salsa_tomate_frito_oliva');
+  assert.notEqual(byId.get('salsa_tomate_frito').grupo, byId.get('salsa_tomate_frito_oliva').grupo);
+});
+
 // Optimización del Worker (10 ms de CPU): sameWord y spansIn dan lo mismo que la versión con cadenas.
 test('sameWord rápido equivale a la comparación con sufijos y spansIn/termSpans coinciden', async () => {
   const { sameWord, spansIn, words } = await import('../frontend/js/core/text.js');

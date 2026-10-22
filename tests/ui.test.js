@@ -72,7 +72,7 @@ test('flujo completo: dictar -> confirmar (editar, borrar) -> guardar; la IA sol
   await t.act(() => t.btn('Procesar').click());
   assert.equal(t.calls.length, 1);
   assert.equal(t.calls[0].texto, 'para desayunar 80 g de avena, 2 huevos y un plátano');
-  assert.equal(t.calls[0].alimentos.length, 59); // sin los incluir=no
+  assert.equal(t.calls[0].alimentos.length, 60); // sin los incluir=no
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('nutrients'));
   assert.ok(!JSON.stringify(t.calls[0].alimentos).includes('densidad')); // la densidad no viaja: la conversión de ml es local
   // confirmación
@@ -560,7 +560,7 @@ test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }
   assert.ok(t.saved[0].text.startsWith('﻿id;nombre;'));
   assert.match(t.saved[0].text, /aceite_oliva;.*;0,91;/);
   assert.ok(t.saved[1].text.startsWith('﻿id,nombre,'));
-  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 73 alimentos/);
+  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 74 alimentos/);
 });
 
 test('importar el diario: resumen antes de aplicar, fusión por id, nunca borra; repetir no duplica', { skip }, async () => {
