@@ -90,7 +90,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - Al «Buscar actualización del documento», un alimento del dispositivo cuyo `id` esté en la lista y **no** en el
   `foods.csv` publicado se elimina del catálogo del dispositivo al pulsar «Actualizar», aunque se hubiera cambiado desde
   la app. La revisión los enseña antes y avisa de las líneas del diario y de las recetas que los usan. El diario y las
-  recetas no se tocan (las líneas quedan como «alimento borrado»). Es la única excepción a «la actualización nunca borra
+  recetas no se tocan (las líneas siguen en el diario con su id y sin datos nutricionales). Es la única excepción a «la actualización nunca borra
   alimentos». Si el `foods.csv` publicado vuelve a traer un `id` de la lista, no se borra; tampoco se borra un alimento con ese `id` creado después en la app (`tipo=usda_app` o receta: solo se borra lo que la base ya tenía).
 
 ## Recetas (`data/recetas.json`)
