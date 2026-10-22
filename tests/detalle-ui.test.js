@@ -45,15 +45,15 @@ test('desde Mi catálogo: 100 g por defecto, fuente, completitud, resumen de mac
   assert.equal(t.$('header.top strong').textContent, 'Aceite de oliva');
   assert.equal(t.$('input.detalle-cantidad').value, '100');
   assert.match(t.$('.detalle-por').textContent, /^Información nutricional por 100 g$/);
-  assert.match(t.$('.detalle-fuente').textContent, /Fuente de datos: USDA FoodData Central \(SR Legacy\) · fdcId 171413/);
+  assert.match(t.$('.detalle-fuente').textContent, /Fuente de datos: Etiqueta del producto/);
   assert.match(t.$('.detalle-comp').textContent, /^\d+\/31 nutrientes obligatorios con dato/);
   assert.match(t.$('.detalle-fuente-completa p').textContent, /Oil, olive/);
   assert.deepEqual([...t.$('select.detalle-porcion').options].map((o) => o.textContent), ['g', '1 cucharada (13,5 g)', '1 cucharadita (4,5 g)']);
   // resumen de energía y macros: valor / objetivo, % y barra
   const kcal = t.$('.detalle-resumen [data-clave="energia_kcal"]');
-  assert.match(kcal.querySelector('.nut-valor').textContent, /884 kcal/);
+  assert.match(kcal.querySelector('.nut-valor').textContent, /903 kcal/);
   assert.match(kcal.querySelector('.nut-valor').textContent, /2000 kcal/);
-  assert.match(kcal.querySelector('.nut-pct').textContent, /44 %/);
+  assert.match(kcal.querySelector('.nut-pct').textContent, /45 %/);
   assert.ok(kcal.querySelector('.meter'));
   assert.deepEqual(t.$$('.detalle-resumen .nut').map((x) => x.dataset.clave), ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']);
   // todos los nutrientes, por grupos
@@ -72,7 +72,7 @@ test('cantidad no redonda y porciones: los valores se recalculan sin guardar nad
   await t.act(() => t.ver('Aceite de oliva').click());
   t.type(t.$('input.detalle-cantidad'), '37,5');
   assert.match(t.$('.detalle-por').textContent, /por 37,5 g$/);
-  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /332 kcal/); // 884 × 37,5 / 100 = 331,5
+  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /339 kcal/); // 903,3 × 37,5 / 100 = 338,7
   // porción: 1 cucharada = 13,5 g; 2 cucharadas = 27 g
   t.choose(t.$('select.detalle-porcion'), 'p0');
   assert.equal(t.$('input.detalle-cantidad').value, '1');
