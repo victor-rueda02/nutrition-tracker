@@ -20,9 +20,9 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 2 | integrado | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 | 2026-10-21 | M · UL de vitamina A y folato solo informativo (no avisa en Diario ni descarta en ¿Qué ceno?) + menores de L | desarrollador | dev/m-ul-informativo | 1 | integrado | – (Victor: opción b) |
 | 2026-10-22 | N · «Repetir de ayer» sin nada marcado y casilla por comida (tri-estado) | desarrollador | dev/n-repetir-casillas | 2 | integrado y publicado | – (coordinador: «Repetir esta comida» y plantillas siguen todo marcado) |
-| 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 3 | integrado (sin publicar hasta P) | – |
-| 2026-10-22 | P · Actualizar documento: «Usar el publicado» por alimento y para todos; añadidos con IA → publicado por defecto | desarrollador | dev/p-actualizar-publicado | 2 | integrado | – |
-| 2026-10-22 | Q · Queso fresco Hacendado (fila nueva, etiqueta) | catalogo | cat/q-queso-fresco | 1 | integrado | – (rol_cena proteina, decidido por el coordinador) |
+| 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 3 | integrado y publicado | – |
+| 2026-10-22 | P · Actualizar documento: «Usar el publicado» por alimento y para todos; añadidos con IA → publicado por defecto | desarrollador | dev/p-actualizar-publicado | 2 | integrado y publicado | – |
+| 2026-10-22 | Q · Queso fresco Hacendado (fila nueva, etiqueta) | catalogo | cat/q-queso-fresco | 1 | integrado y publicado | – (rol_cena proteina, decidido por el coordinador) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
@@ -41,3 +41,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-22, O: también jamón cocido, lenteja pardina (recalcular lentejas_caseras), mayonesa (girasol), galleta María (porción 5,6 g). Chorizo casero: sin cambios (BEDCA). Fin de preguntas.
 - 2026-10-22, O: revisor tanda 1 (17 alimentos contra fotos): valores OK; BLOQUEANTE términos USDA en filas con etiqueta (CLAUDE.md §4). Pendiente de Victor: etiquetas de pan de molde integral (nuevo), bebida de avena (mal emparejada con bebida de arroz), salchichón, anacardos (creados en el iPhone; pasarlos al documento con los mismos ids); confirmar 12 % de cáscara del huevo; etiqueta del pavo en lonchas (luego).
 - 2026-10-22, P: simulación real (export iPhone vs main): 96 campos en conflicto en 4 alimentos, todos «Publicado» por defecto; 28 actualizados y 2 nuevos sin conflicto; nada se borra. Tras publicar, Victor debe recalcular o borrar las 3 recetas de un ingrediente del iPhone (salchichon_2, bebida_de_avena_2, cafe_solo_expreso): siguen con valores viejos y su alias puede ganar al dictar.
+- 2026-10-23: git push de O, P y Q (catálogo con etiquetas, 80 alimentos; «Usar el publicado»; queso fresco). Worker sin cambios. Victor debe: exportar diario, aceptar actualización (96 campos en 4 alimentos, «Publicado» por defecto), recalcular o borrar las 3 recetas de un ingrediente.
