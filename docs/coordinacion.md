@@ -20,7 +20,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 2 | integrado | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 | 2026-10-21 | M · UL de vitamina A y folato solo informativo (no avisa en Diario ni descarta en ¿Qué ceno?) + menores de L | desarrollador | dev/m-ul-informativo | 1 | integrado | – (Victor: opción b) |
 | 2026-10-22 | N · «Repetir de ayer» sin nada marcado y casilla por comida (tri-estado) | desarrollador | dev/n-repetir-casillas | 2 | integrado y publicado | – (coordinador: «Repetir esta comida» y plantillas siguen todo marcado) |
-| 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 1 | cambios (tanda 1: vaciar términos USDA en filas con etiqueta, tomates mono/poli, menores) | – |
+| 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 1 | en revisión (correcciones tanda 1 + tanda 2) | – |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
