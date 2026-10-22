@@ -5,6 +5,9 @@
 .repeat .source-label { font-size:1.25rem; }
 .repeat nav .source-label { text-transform:capitalize; }
 .repeat .repeat-group .meal-head h2 { margin:0; font-size:1.1rem; }
+/* Casilla de la comida a la izquierda del nombre: la etiqueta entera es la zona táctil (≥ 44 px), como las de los alimentos. */
+.repeat .repeat-meal-name { gap:10px; margin:0; min-height:44px; min-width:44px; cursor:pointer; color:var(--fg); }
+.repeat .repeat-meal-name input[type=checkbox] { flex:none; }
 .repeat .repeat-item { padding:10px 0; border-bottom:1px solid var(--line); }
 .repeat .repeat-item:last-child { border-bottom:none; }
 .repeat .repeat-item.off .repeat-name > span:not(.tag), .repeat .repeat-item.off .repeat-qty { opacity:.5; }

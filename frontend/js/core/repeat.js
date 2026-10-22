@@ -14,23 +14,42 @@ const redondea = (x) => Math.round(x * 10) / 10;
 
 // Estado de la pantalla a partir de las comidas guardadas de un día (o de una sola, desde el Diario), o de una
 // plantilla (template = { id, nombre }). Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
-export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null }) {
+// marcadoInicial: true (por defecto) deja marcados los conocidos; false los deja todos sin marcar (ver marcadoInicialPara).
+export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null, marcadoInicial = true }) {
   let n = 0;
   const groups = MEALS.map((meal) => ({
     meal,
     items: meals.filter((m) => m.meal === meal).flatMap((m) => m.lines.map((l) => {
       const known = foodsById.has(l.food_id);
-      return { key: `i${++n}`, food_id: l.food_id, nombre: foodsById.get(l.food_id)?.nombre ?? l.food_id, grams: l.grams, checked: known, known };
+      return { key: `i${++n}`, food_id: l.food_id, nombre: foodsById.get(l.food_id)?.nombre ?? l.food_id, grams: l.grams, checked: known && marcadoInicial, known };
     })),
   })).filter((g) => g.items.length);
   return { sourceDate, recordId, template, targetDate, targetMeal, groups };
 }
+
+// ¿Se abre con todo marcado? Una sola comida elegida a propósito (desde el Diario) o una plantilla, sí; el día entero
+// ("Repetir de ayer", "Copiar día anterior" y las flechas del día de origen), no: Victor marca lo que quiere repetir.
+export const marcadoInicialPara = ({ recordId = null, template = null } = {}) => !!(recordId || template);
 
 const mapItem = (r, key, fn) => ({ ...r, groups: r.groups.map((g) => ({ ...g, items: g.items.map((i) => (i.key === key ? fn(i) : i)) })) });
 export const allItems = (r) => r.groups.flatMap((g) => g.items);
 export const findItem = (r, key) => allItems(r).find((i) => i.key === key);
 
 export const toggleItem = (r, key, checked) => mapItem(r, key, (i) => ({ ...i, checked: i.known && !!checked }));
+
+// Casilla de una comida: 'none' (ninguno marcado), 'some' (indeterminada) o 'all'. Solo cuentan los alimentos que se pueden
+// marcar (los que ya no están en el documento no); sin ninguno marcable, 'none'.
+export function estadoComida(r, meal) {
+  const marcables = (r.groups.find((g) => g.meal === meal)?.items ?? []).filter((i) => i.known);
+  const marcados = marcables.filter((i) => i.checked).length;
+  return marcados === 0 ? 'none' : marcados === marcables.length ? 'all' : 'some';
+}
+
+// Pulsar la casilla de una comida: si no estaban todos marcados (vacía o indeterminada), marca todos; si sí, desmarca todos.
+export function toggleComida(r, meal) {
+  const marcar = estadoComida(r, meal) !== 'all';
+  return { ...r, groups: r.groups.map((g) => (g.meal !== meal ? g : { ...g, items: g.items.map((i) => ({ ...i, checked: i.known && marcar })) })) };
+}
 
 // "80", "80,5" o "80.5". Vacío o inválido -> null (no se puede añadir marcado).
 export function setItemGrams(r, key, raw) {

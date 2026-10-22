@@ -1,7 +1,7 @@
 // "Repetir comida": registrar lo de otro día ajustando los gramos, sin IA.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createRepeat, toggleItem, setItemGrams, nudge, setTarget, repeatTotals, validateRepeat, toRecords, allItems, findItem, DESTINO_ORIGEN, PASOS } from '../frontend/js/core/repeat.js';
+import { createRepeat, toggleItem, setItemGrams, nudge, setTarget, repeatTotals, validateRepeat, toRecords, marcadoInicialPara, estadoComida, toggleComida, allItems, findItem, DESTINO_ORIGEN, PASOS } from '../frontend/js/core/repeat.js';
 import { realFoods } from './helpers.js';
 
 const byId = new Map(realFoods.map((f) => [f.id, f]));
@@ -80,6 +80,60 @@ test('un alimento que ya no está en el documento sale desmarcado y no se puede 
   assert.deepEqual([fantasma.checked, fantasma.known, fantasma.nombre, huevo.checked], [false, false, 'ya_no_existe', true]);
   assert.equal(findItem(toggleItem(r, fantasma.key, true), fantasma.key).checked, false);
   assert.deepEqual(toRecords(r, { now: NOW, idGen })[0].lines.map((l) => l.food_id), ['huevo']);
+});
+
+// ---------- Marcado inicial y casilla por comida ----------
+test('marcado inicial: "Repetir de ayer" (día entero) sin nada marcado; una comida elegida o una plantilla, con todo marcado', () => {
+  assert.equal(marcadoInicialPara({}), false);
+  assert.equal(marcadoInicialPara(), false);
+  assert.equal(marcadoInicialPara({ recordId: 'c' }), true);
+  assert.equal(marcadoInicialPara({ template: { id: 't', nombre: 'x' } }), true);
+  const sin = nuevo({ marcadoInicial: false });
+  assert.ok(allItems(sin).length === 5 && allItems(sin).every((i) => !i.checked));
+  assert.deepEqual(validateRepeat(sin), { ok: false, empty: true, count: 0, problems: [] });
+  assert.ok(allItems(nuevo()).every((i) => i.checked)); // por defecto, como siempre
+  assert.throws(() => toRecords(sin, { now: NOW, idGen }), /Nada válido/);
+});
+
+test('casilla de comida: ninguno -> vacía; algunos -> indeterminada; todos -> marcada', () => {
+  let r = nuevo({ marcadoInicial: false });
+  assert.equal(estadoComida(r, 'desayuno'), 'none');
+  r = toggleItem(r, r.groups[0].items[0].key, true);
+  assert.equal(estadoComida(r, 'desayuno'), 'some');
+  assert.equal(estadoComida(r, 'comida'), 'none');
+  for (const i of r.groups[0].items) r = toggleItem(r, i.key, true);
+  assert.equal(estadoComida(r, 'desayuno'), 'all');
+  assert.equal(estadoComida(r, 'cena'), 'none'); // una comida que no está en el día
+});
+
+test('casilla de comida: pulsarla marca todos si no lo estaban (vacía o indeterminada) y desmarca todos si sí; no toca las otras comidas', () => {
+  let r = nuevo({ marcadoInicial: false });
+  r = toggleComida(r, 'desayuno');
+  assert.deepEqual(r.groups.map((g) => g.items.map((i) => i.checked)), [[true, true, true], [false, false]]);
+  assert.equal(estadoComida(r, 'desayuno'), 'all');
+  r = toggleComida(r, 'desayuno');
+  assert.ok(allItems(r).every((i) => !i.checked));
+  // indeterminada: al pulsar, marca todos
+  r = toggleItem(r, r.groups[1].items[0].key, true);
+  assert.equal(estadoComida(r, 'comida'), 'some');
+  r = toggleComida(r, 'comida');
+  assert.deepEqual(r.groups[1].items.map((i) => i.checked), [true, true]);
+  assert.deepEqual(r.groups[0].items.map((i) => i.checked), [false, false, false]);
+  // desmarcar un alimento suelto de una comida completa la deja indeterminada
+  r = toggleItem(r, r.groups[1].items[1].key, false);
+  assert.equal(estadoComida(r, 'comida'), 'some');
+  // es puro: no modifica el estado anterior
+  const antes = nuevo({ marcadoInicial: false });
+  toggleComida(antes, 'desayuno');
+  assert.ok(allItems(antes).every((i) => !i.checked));
+});
+
+test('casilla de comida: los alimentos que ya no están en el documento no cuentan ni se marcan', () => {
+  const una = (lineas) => createRepeat({ meals: [M('x', 'cena', lineas)], sourceDate: '2026-10-17', foodsById: byId, targetDate: '2026-10-18', marcadoInicial: false });
+  const r = toggleComida(una([['ya_no_existe', 30], ['huevo', 100]]), 'cena');
+  assert.deepEqual(r.groups[0].items.map((i) => i.checked), [false, true]);
+  assert.equal(estadoComida(r, 'cena'), 'all');
+  assert.equal(estadoComida(toggleComida(una([['ya_no_existe', 30]]), 'cena'), 'cena'), 'none');
 });
 
 test('ids sin crypto.randomUUID: UUID v4 con getRandomValues, o con Math.random si no hay crypto', async () => {
