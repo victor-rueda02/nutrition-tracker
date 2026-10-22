@@ -42,7 +42,7 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, undefined]);
   assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
   assert.equal(pan.extra.fdc_id, '172675');
-  assert.equal(byId.get('jamon_cocido').extra.fdc_id, '168295');
+  assert.match(byId.get('jamon_cocido').extra.fuente_usda, /^Etiqueta Jamon cocido Hacendado .*BEDCA 965 .*USDA Pork, cured, ham/);
 });
 
 test('alias: regla de cortes y especies, sin genéricos de especie o de corte', () => {
