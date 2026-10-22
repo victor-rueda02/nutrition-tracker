@@ -302,18 +302,9 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 
 ## Incompletos, de peor a mejor
 
-- coca_cola: 0/31 (0 %) — sin datos de USDA
-- crema_calabacin: 0/31 (0 %) — sin datos de USDA
-- lengua_cerdo: 0/31 (0 %) — sin datos de USDA
+> Retirados el 23-10-2026 (sin datos, no se usaban; ver `data/retirados.json`): crema_calabacin, tortilla_patata, repollo_al_horno, coca_cola, tinto_verano, ron, lengua_cerdo, salsa_cerdo_lata, salchicha_desayuno_cerdo, yogur_griego_vainilla, queso_monterey_jack.
+
 - lentejas_caseras: 0/31 (0 %) — sin datos de USDA
-- queso_monterey_jack: 0/31 (0 %) — sin datos de USDA
-- repollo_al_horno: 0/31 (0 %) — sin datos de USDA
-- ron: 0/31 (0 %) — sin datos de USDA
-- salchicha_desayuno_cerdo: 0/31 (0 %) — sin datos de USDA
-- salsa_cerdo_lata: 0/31 (0 %) — sin datos de USDA
-- tinto_verano: 0/31 (0 %) — sin datos de USDA
-- tortilla_patata: 0/31 (0 %) — sin datos de USDA
-- yogur_griego_vainilla: 0/31 (0 %) — sin datos de USDA
 
 ## Para resolver a mano
 
@@ -327,17 +318,6 @@ Generado por `scripts/usda.mjs filas`. Revisa `usda/foods.propuesto.csv` antes d
 - galleta_maria: sin termino_busqueda_usda
 - merluza_cruda: sin termino_busqueda_usda
 - verduras_asadas_hacendado: receta por descomponer ("(receta: data/recetas.json)")
-- crema_calabacin: excluido (incluir=no) ("(descomponer en ingredientes)")
-- tortilla_patata: excluido (incluir=no) ("(descomponer: patata, huevo, aceite, cebolla)")
 - lentejas_caseras: excluido (incluir=no) ("(descomponer en ingredientes)")
-- repollo_al_horno: excluido (incluir=no) ("(descomponer en ingredientes)")
-- coca_cola: excluido (incluir=no) ("Beverages, carbonated, cola, regular")
-- tinto_verano: excluido (incluir=no)
-- ron: excluido (incluir=no) ("Alcoholic beverage, distilled, rum, 80 proof")
 - chorizo: sin termino_busqueda_usda
-- lengua_cerdo: excluido (incluir=no) ("Pork, fresh, variety meats and by-products, tongue, raw")
-- salsa_cerdo_lata: excluido (incluir=no) ("Gravy, pork, canned")
-- salchicha_desayuno_cerdo: excluido (incluir=no) ("Sausage, pork, fresh, raw")
-- yogur_griego_vainilla: excluido (incluir=no)
-- queso_monterey_jack: excluido (incluir=no) ("Cheese, monterey")
 - parrillada_verduras_hacendado: receta por descomponer ("(receta: data/recetas.json)")

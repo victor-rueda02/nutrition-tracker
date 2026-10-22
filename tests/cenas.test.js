@@ -12,12 +12,17 @@ import { loadTargets } from '../frontend/js/core/targets.js';
 import { targetsForDate, planDeReferencia } from '../frontend/js/core/targets-plan.js';
 import { shiftDate } from '../frontend/js/core/diary.js';
 import { buildCompactList } from '../frontend/js/core/ai-contract.js';
-import { catalog, settings, readFile, realFoods } from './helpers.js';
+import { catalog, settings, readFile, realFoods, foodsConSinDatos } from './helpers.js';
 
 const semilla = JSON.parse(readFile('../data/cenas-semilla.json'));
 const sinCenasSemilla = { ...semilla, cenas: [] }; // solo los roles (sin las cenas de Cronometer)
 const targets = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog).targets;
 const foodsById = new Map(realFoods.map((f) => [f.id, f]));
+// El catálogo real ya no tiene alimentos sin datos ni excluidos con rol (se retiraron el 23-10-2026): para probar cómo se
+// tratan, un catálogo con los alimentos de prueba de fixtures/sin_datos.csv y una semilla con una cena que los usa.
+const foodsByIdSD = new Map(foodsConSinDatos.map((f) => [f.id, f]));
+const semillaSD = { ...semilla, cenas: [...semilla.cenas, { fecha: '2026-09-19', lineas: [{ food_id: 'plato_sd', gramos: null }, { food_id: 'pan_blanco_barra', gramos: 50 }, { food_id: 'pepino', gramos: 50 }, { food_id: 'crema_sd', gramos: 300 }, { food_id: 'pera_cruda', gramos: 70 }, { food_id: 'postre_sd', gramos: 125 }] }] };
+const retirados = JSON.parse(readFile('../data/retirados.json')).retirados.map((r) => r.id);
 const FECHA = '2026-10-20';
 const ref = targetsForDate(FECHA, { plan: null, targets, catalog });
 const conPlan = targetsForDate(FECHA, { plan: planDeReferencia({ fecha: '2026-10-01', perfil: 'hombre', targets, catalog }), targets, catalog });
@@ -73,20 +78,20 @@ test('kcal, proteína, hidratos y grasa de cada propuesta son exactamente sumLin
 });
 
 // ---------- 4: lo que nunca se propone ----------
-test('con la semilla y el catálogo real no sale ningún alimento excluido, sin datos o equivalente antiguo; descartados los nombra', () => {
-  const r = proponer();
-  const PROHIBIDOS = ['tortilla_patata', 'crema_calabacin', 'yogur_griego_vainilla', 'queso_monterey_jack', 'pan_integral'];
+test('con la semilla y el catálogo no sale ningún alimento excluido, sin datos o equivalente antiguo; descartados los nombra', () => {
+  const r = proponer({ semilla: semillaSD, foodsById: foodsByIdSD });
+  const PROHIBIDOS = ['plato_sd', 'crema_sd', 'postre_sd', 'pan_integral'];
   for (const p of r.propuestas) {
     for (const l of p.lineas) {
-      const f = foodsById.get(l.food_id);
+      const f = foodsByIdSD.get(l.food_id);
       assert.ok(!PROHIBIDOS.includes(l.food_id), l.food_id);
       assert.ok(f && !isExcluded(f) && !foodSinDatos(f), l.food_id);
     }
   }
   const ids = r.descartados.map((d) => d.food_id);
-  for (const id of ['tortilla_patata', 'crema_calabacin', 'yogur_griego_vainilla', 'queso_monterey_jack']) assert.ok(ids.includes(id), id);
+  for (const id of ['plato_sd', 'crema_sd', 'postre_sd']) assert.ok(ids.includes(id), id);
   assert.ok(r.descartados.every((d) => d.motivo === 'sin_datos'));
-  assert.match(textoDescartados(r.descartados).join(' '), /No propongo .*(tortilla|crema de calabac).*: no tienen datos\./i);
+  assert.match(textoDescartados(r.descartados).join(' '), /No propongo .*(plato de prueba|crema de prueba).*: no tienen datos\./i);
   // la equivalencia: el pan de barra de la semilla es pan_blanco_barra
   assert.ok(semilla.cenas.flatMap((c) => c.lineas).some((l) => l.food_id === 'pan_blanco_barra'));
   assert.ok(!semilla.cenas.flatMap((c) => c.lineas).some((l) => l.food_id === 'pan_integral'));
@@ -97,14 +102,15 @@ test('la semilla solo usa ids que existen en data/foods.csv, con rol conocido, y
   for (const id of ids) { assert.ok(foodsById.has(id), id); assert.ok(rolesDe(foodsById)[id], `rol_cena de ${id} en data/foods.csv`); }
   assert.ok(!semilla.cenas.some((c) => c.fecha === '2026-09-18'));
   assert.ok(!ids.has('tinto_verano') && !ids.has('ron') && !ids.has('coca_cola'));
-  assert.equal(semilla.cenas.length, 6);
+  assert.ok(retirados.every((id) => !ids.has(id)), 'la semilla no usa alimentos retirados (data/retirados.json)');
+  assert.equal(semilla.cenas.length, 5); // la del 19-sep (tortilla, crema de calabacín) se quitó con los retirados: sin proteína ni plato
   const g = (fecha, id) => semilla.cenas.find((c) => c.fecha === fecha).lineas.filter((l) => l.food_id === id).map((l) => l.gramos);
   assert.deepEqual(g('2026-09-17', 'aceite_oliva'), [9.1]); // 10 ml × 0,91
   assert.deepEqual(g('2026-09-22', 'aceite_oliva'), [5.46]);
   assert.deepEqual(g('2026-09-24', 'aceite_oliva'), [22.46]); // 17 g + 6 ml
   assert.deepEqual([g('2026-09-22', 'pan_molde_blanco'), g('2026-09-23', 'queso_tierno_loncha')], [[75], [20]]);
   assert.ok(semilla.cenas.flatMap((c) => c.lineas).filter((l) => l.supuesto).length === 2);
-  assert.deepEqual(g('2026-09-19', 'tortilla_patata'), [null]);
+  assert.ok(!semilla.cenas.some((c) => c.fecha === '2026-09-19'));
   assert.deepEqual([g('2026-09-21', 'kiwi_verde'), g('2026-09-22', 'zanahoria'), g('2026-09-21', 'chocolate_negro_85')], [[69], [61], [10]]);
 });
 
@@ -237,12 +243,12 @@ test('plantillas de cena y recetas con datos aparecen como candidatos; las de ot
   assert.ok(p);
   assert.equal(p.origen, 'Tu plantilla «Pollo con arroz»');
   assert.ok(!r.propuestas.some((x) => x.origen.includes('Desayuno fuerte')));
-  const rec = proponer({ semilla: sinCenasSemilla, recetas: [{ id: 'lentejas_caseras' }, { id: 'tortilla_patata' }] });
+  const rec = proponer({ semilla: sinCenasSemilla, foodsById: foodsByIdSD, recetas: [{ id: 'lentejas_caseras' }, { id: 'plato_sd' }] });
   const l = rec.propuestas.find((x) => x.tipo === 'receta');
   assert.ok(l);
   assert.equal(l.origen, 'Tu receta «' + foodsById.get('lentejas_caseras').nombre + '»');
   assert.ok(l.lineas.some((x) => x.food_id === 'yogur_griego_natural'));
-  assert.ok(!rec.propuestas.some((x) => x.lineas.some((y) => y.food_id === 'tortilla_patata'))); // sin datos
+  assert.ok(!rec.propuestas.some((x) => x.lineas.some((y) => y.food_id === 'plato_sd'))); // sin datos
   // una receta nunca registrada parte de la ración de 300 g (escalable entre 0,6 y 1,5)
   assert.ok(l.lineas.find((x) => x.rol === 'plato').base === 300);
 });
@@ -296,8 +302,8 @@ test('avisos: cada uno aparece exactamente en su caso', () => {
   assert.match(conCena.avisos.find((a) => a.codigo === 'cena_registrada').texto, /^Ya tienes una cena registrada \(\d+ kcal\): esto propone qué añadir\.$/);
   assert.ok(!codigos(proponer()).includes('cena_registrada'));
   // consumido_parcial
-  const parcial = proponer({ comidasDelDia: [...DIA_TIPICO, meal('t', 'otro', [['tortilla_patata', 100]])] });
-  assert.match(parcial.avisos.find((a) => a.codigo === 'consumido_parcial').texto, /no es completo: Tortilla de patata no tiene datos/);
+  const parcial = proponer({ foodsById: foodsByIdSD, comidasDelDia: [...DIA_TIPICO, meal('t', 'otro', [['plato_sd', 100]])] });
+  assert.match(parcial.avisos.find((a) => a.codigo === 'consumido_parcial').texto, /no es completo: Plato de prueba no tiene datos/);
   assert.ok(!codigos(proponer()).includes('consumido_parcial'));
   // semilla ya probado; sin_candidatos
   const sin = proponer({ semilla: sinCenasSemilla });
@@ -349,9 +355,9 @@ test('las ideas de la IA entran como candidatos con S_hab = 0, mismo escalado y 
   const ideas = [
     { nombre: 'Pollo con arroz y brócoli', lineas: [{ food_id: 'pechuga_pollo_cruda', gramos: 180 }, { food_id: 'arroz_blanco_crudo', gramos: 90 }, { food_id: 'brocoli', gramos: 150 }] },
     { nombre: 'Huevos con patata', lineas: [{ food_id: 'huevo', gramos: 120 }, { food_id: 'patata_cruda', gramos: 200 }, { food_id: 'pimiento_rojo', gramos: 80 }] },
-    { nombre: 'Con un alimento sin datos', lineas: [{ food_id: 'tortilla_patata', gramos: 200 }] },
+    { nombre: 'Con un alimento sin datos', lineas: [{ food_id: 'plato_sd', gramos: 200 }] },
   ];
-  const r = proponer({ ideasIA: ideas });
+  const r = proponer({ ideasIA: ideas, foodsById: foodsByIdSD });
   assert.deepEqual(r.propuestas, sin.propuestas);
   assert.ok(r.ideas.length >= 1 && r.ideas.length <= 3);
   for (const p of r.ideas) {
@@ -362,7 +368,7 @@ test('las ideas de la IA entran como candidatos con S_hab = 0, mismo escalado y 
     const s = sumLines(p.lineas.map((l) => ({ food: foodsById.get(l.food_id), grams: l.gramos })), ['energia_kcal']);
     assert.equal(p.kcal, s.energia_kcal.value);
   }
-  assert.ok(!r.ideas.some((p) => p.lineas.some((l) => l.food_id === 'tortilla_patata')));
+  assert.ok(!r.ideas.some((p) => p.lineas.some((l) => l.food_id === 'plato_sd')));
 });
 
 test('nombres de nutrientes para la IA: sin dígitos, sin cantidades, como mucho 8, en el orden de lo que más falta', () => {
@@ -572,7 +578,7 @@ test('(19) la «verdura cruda» de los modos cubierto y ligero sale solo de `cru
     for (const p of r.propuestas) for (const l of p.lineas.filter((x) => x.rol === 'verdura')) { assert.ok(crudas.has(l.food_id), l.food_id); assert.ok(l.gramos >= 100); }
   }
   // ninguna de `crudas` válida (sin datos, inexistente, lista vacía o ausente): no se ofrece verdura cruda
-  for (const lista of [['tortilla_patata', 'no_existe'], [], undefined]) {
+  for (const lista of [['crema_sd', 'no_existe'], [], undefined]) {
     const sem = { ...semilla, crudas: lista };
     const pasado = proponer({ semilla: sem, objetivos: conR(-80) });
     assert.equal(pasado.recomendacion, 'no_cenar');
@@ -730,7 +736,7 @@ test('rol_cena sale de data/foods.csv (columna opcional): rolesDe solo da roles 
   assert.equal(roles.merluza_cruda, 'proteina');
   assert.equal(roles.lentejas_caseras, 'plato');
   assert.equal(roles.semillas_chia, 'postre_extra');
-  assert.equal(Object.keys(roles).length, 54);
+  assert.equal(Object.keys(roles).length, 50);
   // vacío o inválido: sin rol (un alimento sin rol cuenta como «otro»; una receta, como «plato»)
   const f = (extra) => new Map([['a', { id: 'a', extra }]]);
   assert.deepEqual(rolesDe(f({ rol_cena: ' Proteina ' })), { a: 'proteina' });
@@ -780,14 +786,20 @@ test('actualizar el documento en el iPhone: un documento sin rol_cena recibe las
   const antiguo = parseFoodsCSV(readFile('./fixtures/foods_sin_rol_cena.csv'), { catalog }).foods;
   const nuevo = parseFoodsCSV(readFile('../data/foods.csv'), { catalog }).foods;
   assert.ok(antiguo.every((f) => f.extra.rol_cena === undefined));
+  // los 11 alimentos que el documento antiguo aún tiene y el publicado ya no (data/retirados.json) son lo único que se borra
+  const lista = JSON.parse(readFile('../data/retirados.json')).retirados;
+  assert.equal(lista.length, 11);
+  assert.ok(lista.every((r) => antiguo.some((f) => f.id === r.id) && !nuevo.some((f) => f.id === r.id)));
   for (const [nombre, base] of [['con base', antiguo], ['sin base', null]]) {
-    const p = planCatalogUpdate({ local: antiguo, remote: nuevo, base, catalog });
+    const p = planCatalogUpdate({ local: antiguo, remote: nuevo, base, catalog, retirados: lista });
     assert.deepEqual(p.conflictos, [], nombre);
+    assert.equal(p.eliminados.length, 11, nombre);
     const final = new Map(applyChoices(p, nuevo, {}).map((f) => [f.id, f]));
-    assert.equal(final.size, nuevo.length, nombre); // no se pierde ningún alimento (y entran los nuevos del publicado)
-    assert.ok(antiguo.every((f) => final.has(f.id)), nombre);
+    assert.equal(final.size, nuevo.length, nombre); // lo que se borra son solo los retirados (y entran los nuevos del publicado)
+    assert.ok(antiguo.filter((f) => !lista.some((r) => r.id === f.id)).every((f) => final.has(f.id)), nombre);
+    assert.ok(lista.every((r) => !final.has(r.id)), nombre);
     assert.equal(rolesDe(final).merluza_cruda, 'proteina', nombre);
-    assert.equal(Object.keys(rolesDe(final)).length, 54, nombre);
+    assert.equal(Object.keys(rolesDe(final)).length, 50, nombre);
   }
   // y lo que cambié yo en el dispositivo (un alias) se conserva junto a los roles nuevos
   const conAlias = antiguo.map((f) => (f.id === 'huevo' ? { ...f, alias: [...f.alias, 'huevos de casa'] } : f));

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "retirados": [
+    { "id": "crema_calabacin", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "tortilla_patata", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "repollo_al_horno", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "coca_cola", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "tinto_verano", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "ron", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "lengua_cerdo", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "salsa_cerdo_lata", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "salchicha_desayuno_cerdo", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "yogur_griego_vainilla", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" },
+    { "id": "queso_monterey_jack", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" }
+  ]
+}

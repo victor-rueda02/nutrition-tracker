@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildCompactList, detectEstado, toCompact } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, parseModelJson, checkStructure } from '../frontend/js/core/ai-validate.js';
-import { realFoods, realList, rulesList, catalog } from './helpers.js';
+import { realFoods, realList, rulesList, catalog, foodsConSinDatos } from './helpers.js';
 
 // Una línea dictada tal y como la devolvería el modelo.
 const line = (food_id, source_text, o = {}) => ({ food_id, cantidad: 100, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'ninguno', ...o });
@@ -22,10 +22,12 @@ test('lista compacta: sin los alimentos incluir=no y sin nutrientes', () => {
   assert.equal(buildCompactList(foods, { includeExcluded: true }).length, 2);
 });
 
-test('lista compacta del documento real: 66 de 80 (14 con incluir=no fuera) y ningún nutriente', () => {
-  assert.equal(realFoods.length, 80);
+test('lista compacta del documento real: 66 de 69 (3 con incluir=no fuera) y ningún nutriente', () => {
+  assert.equal(realFoods.length, 69);
   assert.equal(realList.length, 66);
-  assert.ok(!realList.some((f) => f.id === 'ron' || f.id === 'crema_calabacin'));
+  assert.ok(!realList.some((f) => ['patata_asada', 'merluza_cocida', 'morro_cerdo'].includes(f.id)));
+  // los alimentos de prueba con incluir=no tampoco viajan
+  assert.ok(!buildCompactList(foodsConSinDatos).some((f) => f.id.endsWith('_sd')));
   const text = JSON.stringify(realList);
   for (const k of catalog.keys) assert.ok(!text.includes(k), k);
 });

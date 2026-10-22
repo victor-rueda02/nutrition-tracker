@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
-import { realFoods, rulesFoods, catalog, settings, readFile } from './helpers.js';
+import { realFoods, rulesFoods, catalog, settings, readFile, foodsConSinDatos } from './helpers.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
+import { hashText } from '../frontend/js/core/catalog-update.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 
@@ -14,7 +15,7 @@ const NOW = new Date('2026-10-16T07:30:00Z'); // 09:30 en Madrid
 
 const ITEM = (food_id, grams, source_text, o = {}) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false, ...o });
 
-async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st, publicado, ajustes = {}, enDiario = false } = {}) {
+async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'https://w', token: 't' }, files, objetivos = {}, meals = [], shareResult = 'compartido', health = { ok: true, configurado: true, token: 'ok' }, idGen = 'contador', alterStore = (st) => st, publicado, ajustes = {}, enDiario = false, retirados } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
@@ -33,7 +34,7 @@ async function setup({ responses = [], foods = realFoods, conn = { endpoint: 'ht
     },
     async health() { return health; },
   });
-  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; },
+  const app = mountApp(root, { store, createAiClient, catalog, settings, targets: TARGETS, objetivos, retirados, initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn, now: () => NOW, idGen: idGen === 'contador' ? (() => { let n = 0; return () => `m${++n}`; })() : idGen ?? undefined, readFile: (f) => f.text(), saveFile: async (f) => { saved.push(f); return shareResult; },
     fetchPublished: publicado === undefined ? undefined : async () => { if (publicado instanceof Error) throw publicado; return publicado; } });
   await app.whenIdle();
   if (!enDiario) root.querySelector('button[aria-label="Añadir comida"]').click(); // la app abre en el Diario; el "+" central lleva directo al dictado
@@ -124,19 +125,19 @@ test('cambiar alimento con el buscador del documento (sin acentos ni plurales)',
 });
 
 test('alimento excluido (incluir=no): motivo claro, se activa con un toque y se reinterpreta la frase', { skip }, async () => {
-  const lentejas = realFoods.find((f) => f.id === 'crema_calabacin');
-  const first = { items: [ITEM('kiwi_verde', 69, 'un kiwi')], unmatched: [{ text: 'medio kilo de crema de calabacín', motivo: 'no_en_catalogo' }], warnings: [] };
-  const second = { items: [ITEM('kiwi_verde', 69, 'un kiwi'), ITEM('crema_calabacin', 500, 'medio kilo de crema de calabacín')], unmatched: [], warnings: [] };
-  const t = await setup({ responses: [first, second] });
-  t.type(t.$('textarea'), 'medio kilo de crema de calabacín y un kiwi');
+  const lentejas = foodsConSinDatos.find((f) => f.id === 'crema_sd'); // fixture: el catálogo real ya no tiene alimentos excluidos sin datos
+  const first = { items: [ITEM('kiwi_verde', 69, 'un kiwi')], unmatched: [{ text: 'medio kilo de crema de prueba', motivo: 'no_en_catalogo' }], warnings: [] };
+  const second = { items: [ITEM('kiwi_verde', 69, 'un kiwi'), ITEM('crema_sd', 500, 'medio kilo de crema de prueba')], unmatched: [], warnings: [] };
+  const t = await setup({ responses: [first, second], foods: foodsConSinDatos });
+  t.type(t.$('textarea'), 'medio kilo de crema de prueba y un kiwi');
   await t.act(() => t.btn('Procesar').click());
   assert.match(t.root.textContent, /Excluido del catálogo \(incluir=no\)/);
   await t.act(() => t.btn(`Activar «${lentejas.nombre}»`).click());
   assert.equal(t.calls.length, 2);
-  assert.equal(t.calls[0].alimentos.some((f) => f.id === 'crema_calabacin'), false);
-  assert.equal(t.calls[1].alimentos.some((f) => f.id === 'crema_calabacin'), true);
+  assert.equal(t.calls[0].alimentos.some((f) => f.id === 'crema_sd'), false);
+  assert.equal(t.calls[1].alimentos.some((f) => f.id === 'crema_sd'), true);
   assert.deepEqual(t.$$('li.card[data-key] input.grams').map((i) => i.value), ['69', '500']);
-  assert.equal((await t.store.getCatalogRecord()).foods.find((f) => f.id === 'crema_calabacin').extra.incluir, 'si');
+  assert.equal((await t.store.getCatalogRecord()).foods.find((f) => f.id === 'crema_sd').extra.incluir, 'si');
 });
 
 test('sin_porcion: "Poner gramos" añade la línea vacía y no se guarda hasta teclear los gramos', { skip }, async () => {
@@ -292,11 +293,11 @@ test('Diario: el UL informativo (vitamina A con 400 g de zanahoria, folato) no a
 });
 
 test('Diario: un alimento sin datos deja los totales parciales y se dice cuál', { skip }, async () => {
-  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['coca_cola', 330]])] });
+  const t = await setup({ foods: foodsConSinDatos, meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['refresco_sd', 330]])] });
   await t.act(() => t.btn('Diario').click());
-  assert.match(t.$('[role=alert]').textContent, /Sin datos nutricionales: Coca-Cola Classic/); // sin ningún dato: se avisa aparte
-  assert.doesNotMatch(t.$('.parciales')?.textContent ?? '', /Coca-Cola/); // y no inunda el aviso de parciales
-  assert.match(comidaCon(t).textContent, /Coca-Cola Classic · 330 g · sin dato/);
+  assert.match(t.$('[role=alert]').textContent, /Sin datos nutricionales: Refresco de prueba/); // sin ningún dato: se avisa aparte
+  assert.doesNotMatch(t.$('.parciales')?.textContent ?? '', /Refresco de prueba/); // y no inunda el aviso de parciales
+  assert.match(comidaCon(t).textContent, /Refresco de prueba · 330 g · sin dato/);
   await t.act(() => verInforme(t));
   assert.match(fila(t, 'energia_kcal').textContent, /parcial/);
 });
@@ -342,12 +343,12 @@ test('Diario: un día sin parciales no muestra el aviso', { skip }, async () => 
 });
 
 test('Informe diario: nombra los alimentos sin datos y los borrados del documento (aviso «Sin datos nutricionales»)', { skip }, async () => {
-  const t = await setup({ meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['coca_cola', 330], ['alimento_borrado', 50]])] });
+  const t = await setup({ foods: foodsConSinDatos, meals: [MEAL('m', '2026-10-16', 'comida', [['kiwi_verde', 100], ['refresco_sd', 330], ['alimento_borrado', 50]])] });
   await t.act(() => t.btn('Diario').click());
   await t.act(() => verInforme(t));
   const aviso = t.$$('[role=alert]').find((x) => /Sin datos nutricionales/.test(x.textContent));
   assert.ok(aviso);
-  assert.match(aviso.textContent, /Coca-Cola Classic/);
+  assert.match(aviso.textContent, /Refresco de prueba/);
   assert.match(aviso.textContent, /alimento_borrado/);
   assert.match(aviso.textContent, /no son completos/);
 });
@@ -560,7 +561,7 @@ test('exportar el documento: Excel (; y coma decimal) o CSV con comas', { skip }
   assert.ok(t.saved[0].text.startsWith('﻿id;nombre;'));
   assert.match(t.saved[0].text, /aceite_oliva;.*;0,91;/);
   assert.ok(t.saved[1].text.startsWith('﻿id,nombre,'));
-  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 80 alimentos/);
+  assert.match(t.$('p.ok[role=status]').textContent, /Documento exportado: 69 alimentos/);
 });
 
 test('importar el diario: resumen antes de aplicar, fusión por id, nunca borra; repetir no duplica', { skip }, async () => {
@@ -1228,4 +1229,76 @@ test('elegir a mano un alimento excluido lo usa en la línea sin activarlo (sigu
   assert.ok(t.$$('li.card[data-key] button.name').some((b) => b.textContent === 'Merluza cocida'));
   assert.equal(t.app.state.foods.find((f) => f.id === 'merluza_cocida').extra.incluir, 'no');
   assert.equal(await t.store.getCatalogRecord(), null); // no se ha tocado el documento
+});
+
+// ---------- Alimentos retirados (data/retirados.json): la actualización del documento los elimina tras enseñarlos ----------
+const RETIRADOS = { version: 1, retirados: [{ id: 'coca', fecha: '2026-10-23', motivo: 'sin datos' }, { id: 'ron', fecha: '2026-10-23', motivo: 'sin datos' }, { id: 'ya_no_esta', fecha: '2026-10-23', motivo: 'ya borrado' }] };
+const escenarioRetirados = () => {
+  const publicado = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si');
+  // el dispositivo tiene lo mismo + Coca-Cola y Ron (sin datos); Ron además lo cambió Victor (alias propio)
+  const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron|ron añejo,,si'));
+  const baseVieja = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron,,no'); // lo que copió el dispositivo cuando aún se publicaban
+  return { publicado, mio, ajustes: { catalogo_base: { hash: hashText(publicado), text: baseVieja } } }; // el hash coincide: el foods.csv no cambió, pero hay retirados
+};
+
+test('retirados: aunque el foods.csv no haya cambiado se ofrece la actualización; la revisión los nombra y, al aplicar, desaparecen', { skip }, async () => {
+  const { publicado, mio, ajustes } = escenarioRetirados();
+  const t = await setup({ foods: mio, publicado, ajustes, retirados: RETIRADOS, enDiario: true });
+  const aviso = t.$('section[aria-label="Documento nuevo"]');
+  assert.ok(aviso, 'el aviso del Diario se ofrece sin cambios en el publicado');
+  assert.match(aviso.textContent, /0 nuevos, 0 actualizados, 2 alimentos retirados por eliminar/);
+  await t.act(() => t.btn('Revisar').click());
+  const sec = t.$('section[aria-label="Alimentos retirados"]');
+  assert.match(sec.querySelector('h2').textContent, /^Se eliminarán 2 alimentos retirados del documento$/);
+  assert.match(sec.textContent, /Coca-Cola Classic, Ron\./);
+  assert.match(sec.textContent, /no se aplica hasta pulsar «Actualizar»/);
+  assert.equal(sec.querySelector('.aviso-uso'), null); // el diario y las recetas no los usan: sin avisos de uso
+  assert.equal(t.app.state.foods.length, 4); // nada cambia hasta pulsar Actualizar
+  assert.equal(await t.store.getCatalogRecord(), null);
+  await t.act(() => t.btn('Actualizar').click());
+  const rec = await t.store.getCatalogRecord();
+  assert.deepEqual(rec.foods.map((f) => f.id), ['arroz', 'kiwi_verde']);
+  assert.deepEqual(t.app.state.foods.map((f) => f.id), ['arroz', 'kiwi_verde']);
+  assert.match(t.$('[role=status]').textContent, /Documento actualizado: 0 nuevos, 0 actualizados, 2 eliminados/);
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  assert.equal((await t.store.getSetting('catalogo_base')).text, publicado); // catalogo_base = lo publicado
+  assert.equal(t.$('[role=alert]'), null);
+});
+
+test('retirados: la revisión avisa de las líneas del diario y de las recetas que los usan; el diario y las recetas no se tocan', { skip }, async () => {
+  const { publicado, mio, ajustes } = escenarioRetirados();
+  const receta = { id: 'mi_cena', nombre: 'Mi cena', ingredientes: [{ food_id: 'arroz', gramos: 100 }, { food_id: 'ron', gramos: 10 }] };
+  const meals = [MEAL('m1', '2026-10-15', 'cena', [['arroz', 100], ['coca', 330]]), MEAL('m2', '2026-10-16', 'comida', [['coca', 200], ['ron', 40], ['kiwi_verde', 69]])];
+  const t = await setup({ foods: mio, publicado, ajustes: { ...ajustes, recetas: [receta] }, retirados: RETIRADOS, meals, enDiario: true });
+  await t.act(() => t.btn('Revisar').click());
+  const avisos = t.$$('section[aria-label="Alimentos retirados"] .aviso-uso').map((x) => x.textContent);
+  assert.equal(avisos.length, 2);
+  assert.equal(avisos[0], '⚠ Hay 3 líneas del diario que usan alimentos retirados; seguirán en el diario con su id y sin datos nutricionales.');
+  assert.equal(avisos[1], '⚠ La receta «Mi cena» usa un alimento retirado (Ron); no se borra: revísala en Recetas.');
+  await t.act(() => t.btn('Actualizar').click());
+  assert.deepEqual(t.app.state.foods.map((f) => f.id), ['arroz', 'kiwi_verde']);
+  const guardadas = await t.store.allMeals();
+  assert.deepEqual(guardadas.map((m) => m.lines.map((l) => l.food_id)).sort(), [['arroz', 'coca'], ['coca', 'ron', 'kiwi_verde']].sort()); // el diario, intacto
+  assert.deepEqual(await t.store.getSetting('recetas'), [receta]); // la receta, también
+});
+
+test('retirados: «Ahora no» se recuerda; uno ya publicado no se borra; sin retirados.json (o con basura) la app sigue como antes', { skip }, async () => {
+  const { publicado, mio, ajustes } = escenarioRetirados();
+  const t = await setup({ foods: mio, publicado, ajustes, retirados: RETIRADOS, enDiario: true });
+  await t.act(() => t.$('section[aria-label="Documento nuevo"]').querySelector('button.link').click()); // Ahora no
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  assert.match(await t.store.getSetting('catalogo_ignorado'), /^[0-9a-f]{8}\+coca,ron$/);
+  assert.equal(t.app.state.foods.length, 4);
+  // si lo publicado SÍ trae uno de la lista, ese no se borra (el otro, sí)
+  const conRon = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'ron,Ron,ron,,no');
+  const t2 = await setup({ foods: mio, publicado: conRon, ajustes: { catalogo_base: { hash: hashText(conRon), text: csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron,,no') } }, retirados: RETIRADOS, enDiario: true });
+  await t2.act(() => t2.btn('Revisar').click());
+  assert.match(t2.$('section[aria-label="Alimentos retirados"]').textContent, /Se eliminarán 1 alimento retirado del documento[\s\S]*Coca-Cola Classic\./);
+  // sin el fichero o con otro formato: nada que eliminar, y con el publicado al día no hay aviso
+  for (const sin of [undefined, null, 'basura', { retirados: 'no' }, []]) {
+    const t3 = await setup({ foods: mio, publicado, ajustes, retirados: sin, enDiario: true });
+    assert.equal(t3.$('section[aria-label="Documento nuevo"]'), null, String(sin));
+    assert.equal(t3.app.state.foods.length, 4);
+    assert.equal(t3.$('[role=alert]'), null);
+  }
 });

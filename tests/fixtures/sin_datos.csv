@@ -1,0 +1,6 @@
+id,nombre,alias,porciones,estado,variante_por_defecto,grupo,incluir,rol_cena,nombre_corto
+refresco_sd,Refresco de prueba,refresco de prueba,,crudo,si,refresco_sd,no,,
+crema_sd,Crema de prueba,crema de prueba,,crudo,si,crema_sd,no,verdura,
+plato_sd,Plato de prueba,plato de prueba|tortilla de prueba,,crudo,si,plato_sd,no,plato,
+postre_sd,Postre de prueba,postre de prueba,,crudo,si,postre_sd,no,postre_base,
+licor_sd,Licor de prueba,ron,,crudo,si,licor_sd,no,,

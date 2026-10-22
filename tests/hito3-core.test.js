@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDraft, setGrams, changeFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, validateDraft, previewTotals, toMealRecord, draftFromRecord, setDate, setMeal } from '../frontend/js/core/draft.js';
 import { defaultMeal, madridNow, MEALS } from '../frontend/js/core/meal-defaults.js';
-import { realFoods } from './helpers.js';
+import { realFoods, foodsConSinDatos } from './helpers.js';
 
 const byId = new Map(realFoods.map((f) => [f.id, f]));
 const result = {
@@ -71,10 +71,11 @@ test('previewTotals usa el documento; un alimento sin nutrientes deja el total p
   // catálogo real: 80 g avena (384 kcal) + 100 g huevo (143) + 50 g kiwi (61)
   assert.equal(Math.round(t.energia_kcal.value * 10) / 10, 480.7);
   assert.deepEqual(t.energia_kcal.missing, []);
-  const parcial = previewTotals(addLine(setGrams(mk(), 'l3', '50'), 'coca_cola', 330), byId); // incluir=no, sin datos
+  const conSD = new Map(foodsConSinDatos.map((f) => [f.id, f]));
+  const parcial = previewTotals(addLine(setGrams(mk(), 'l3', '50'), 'refresco_sd', 330), conSD); // incluir=no, sin datos (fixture)
   assert.equal(Math.round(parcial.energia_kcal.value * 10) / 10, 480.7);
-  assert.deepEqual(parcial.energia_kcal.missing, ['coca_cola']);
-  const vacio = previewTotals(addLine(createDraft({ meal: 'otro', foodsById: byId }), 'coca_cola', 330), byId);
+  assert.deepEqual(parcial.energia_kcal.missing, ['refresco_sd']);
+  const vacio = previewTotals(addLine(createDraft({ meal: 'otro', foodsById: conSD }), 'refresco_sd', 330), conSD);
   assert.equal(vacio.energia_kcal.value, null);
   const withData = new Map([['a', { id: 'a', nutrients: { energia_kcal: 200, proteina_g: 10 } }]]);
   const d = addLine(createDraft({ meal: 'otro', foodsById: withData }), 'a', 50);

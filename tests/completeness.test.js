@@ -62,15 +62,15 @@ test('fichero de ejemplo: el huevo está completo y el resto aparece como pendie
   assert.equal(rep.incomplete[0].ratio <= rep.incomplete.at(-1).ratio, true);
 });
 
-test('catálogo real con nutrientes de USDA, BEDCA y recetas: 69 completos (la chía, con EPA y DHA = 0 de vegetal); incompletos los 11 (con incluir=no y sin datos)', () => {
+test('catálogo real con nutrientes de USDA, BEDCA y recetas: 69 completos (la chía, con EPA y DHA = 0 de vegetal); ya no queda ninguno incompleto ni sin datos', () => {
   const { foods } = parseFoodsCSV(readFile('./fixtures/alimentos_iniciales.csv'), { catalog });
   const rep = completenessReport(foods, settings);
-  assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [80, 69, 11]);
+  assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [69, 69, 0]);
   const chia = rep.perFood.find((p) => p.id === 'semillas_chia');
   assert.deepEqual([chia.filled, chia.incomplete], [25, false]);
-  const sinDatos = rep.incomplete.filter((p) => p.filled === 0).map((p) => p.id);
-  assert.equal(sinDatos.length, 11);
-  assert.ok(foods.filter((f) => sinDatos.includes(f.id)).every((f) => f.extra.incluir === 'no'));
+  // los 11 alimentos sin datos que había se retiraron (data/retirados.json): ninguno con 0 nutrientes
+  assert.deepEqual(rep.incomplete, []);
+  assert.equal(rep.perFood.filter((p) => p.filled === 0).length, 0);
   // pan de molde (etiqueta Hacendado + BEDCA 2161): B1, B2, B9 y hierro de BEDCA; B3 sigue vacía (BEDCA solo da equivalentes de niacina)
   const pan = foods.find((f) => f.id === 'pan_molde_blanco');
   assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg'].map((k) => pan.nutrients[k]), [27, 0.19, 0.04, 1.4]);

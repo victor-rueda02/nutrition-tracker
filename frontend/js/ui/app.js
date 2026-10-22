@@ -23,7 +23,7 @@ import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTempl
 import { templatesScreen } from './templates-screen.js';
 import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
 import { phraseLogScreen } from './phrase-log-screen.js';
-import { hashText, planCatalogUpdate, applyChoices, unirCabeceras, eleccionesPorDefecto } from '../core/catalog-update.js';
+import { hashText, planCatalogUpdate, applyChoices, unirCabeceras, eleccionesPorDefecto, cleanRetirados, usoDeRetirados } from '../core/catalog-update.js';
 import { catalogUpdateScreen } from './catalog-update-screen.js';
 import { parseNumber } from '../core/numbers.js';
 import { estimateActions, estimateScreen, pendientesView, MOTIVOS_ESTIMABLES } from './estimate-screen.js';
@@ -287,14 +287,23 @@ export function mountApp(root, deps) {
       try { text = await deps.fetchPublished(); } catch { decir('No se pudo consultar el documento publicado (¿sin conexión?).', 'sin_conexion'); return; }
       const hash = hashText(text);
       const base = await deps.store.getSetting('catalogo_base');
-      if (base?.hash === hash) { decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
+      // Aunque el publicado no haya cambiado, hay que revisar si el dispositivo aún tiene alimentos de data/retirados.json.
+      const retirados = cleanRetirados(deps.retirados);
+      const tieneRetirados = retirados.some((r) => state.foods.some((f) => f.id === r.id));
+      if (base?.hash === hash && !tieneRetirados) { decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
       const remote = parseFoodsCSV(text, { catalog: deps.catalog });
       if (!remote.report.ok || !remote.foods.length) { decir('El documento publicado tiene errores: no se ofrece.', 'errores'); return; }
       const baseFoods = base?.text ? parseFoodsCSV(base.text, { catalog: deps.catalog }).foods : null;
-      const plan = planCatalogUpdate({ local: state.foods, remote: remote.foods, base: baseFoods, catalog: deps.catalog });
+      const plan = planCatalogUpdate({ local: state.foods, remote: remote.foods, base: baseFoods, catalog: deps.catalog, retirados });
       if (!plan.hayCambios) { await deps.store.setSetting('catalogo_base', { hash, text }); decir('Tu documento está al día con el publicado.', 'al_dia'); return; }
-      const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === hash;
-      state.catUpdate = { hash, text, remote, plan, ignorado };
+      // Con alimentos por eliminar, la revisión dice dónde se usan (el diario y las recetas no se tocan).
+      const uso = plan.eliminados.length
+        ? usoDeRetirados({ eliminados: plan.eliminados, meals: await deps.store.allMeals(), recetas: cleanRecetas(await deps.store.getSetting('recetas')) })
+        : null;
+      // «Ahora no» se recuerda por versión publicada y por conjunto de eliminaciones (un retirado nuevo vuelve a avisar).
+      const clave = plan.eliminados.length ? `${hash}+${plan.eliminados.map((e) => e.id).join(',')}` : hash;
+      const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === clave;
+      state.catUpdate = { hash, clave, text, remote, plan, uso, ignorado };
       state.catEleccion = eleccionesPorDefecto(plan);
       state.catAbiertos = {};
       state.catConfirmarTodos = false;
@@ -313,7 +322,7 @@ export function mountApp(root, deps) {
       await deps.store.setSetting('catalogo_base', { hash: u.hash, text: u.text });
       await deps.store.setSetting('catalogo_ignorado', null);
       state.catUpdate = null;
-      state.diaryMsg = `Documento actualizado: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados.`;
+      state.diaryMsg = `Documento actualizado: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados${u.plan.eliminados.length ? `, ${u.plan.eliminados.length} eliminados` : ''}.`;
       state.screen = 'diary'; render();
     })(), 'No se pudo actualizar el documento');
   }
@@ -321,7 +330,7 @@ export function mountApp(root, deps) {
   // «Ahora no»: no se vuelve a avisar de esta versión (se puede revisar desde Documento).
   function postponeCatalogUpdate() {
     return track((async () => {
-      await deps.store.setSetting('catalogo_ignorado', state.catUpdate.hash);
+      await deps.store.setSetting('catalogo_ignorado', state.catUpdate.clave ?? state.catUpdate.hash);
       state.catUpdate = { ...state.catUpdate, ignorado: true };
       state.catConfirmarTodos = false;
       if (state.screen === 'catalogo') state.screen = state.catBack;
@@ -859,7 +868,7 @@ export function mountApp(root, deps) {
       dayHeader(),
       state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
       state.catUpdate && !state.catUpdate.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
-        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} ${state.catUpdate.plan.conflictos.length === 1 ? 'campo' : 'campos'} en conflicto en ${state.catUpdate.plan.alimentosConflicto.length} ${state.catUpdate.plan.alimentosConflicto.length === 1 ? 'alimento' : 'alimentos'}` : ''}.`),
+        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} ${state.catUpdate.plan.conflictos.length === 1 ? 'campo' : 'campos'} en conflicto en ${state.catUpdate.plan.alimentosConflicto.length} ${state.catUpdate.plan.alimentosConflicto.length === 1 ? 'alimento' : 'alimentos'}` : ''}${state.catUpdate.plan.eliminados?.length ? `, ${state.catUpdate.plan.eliminados.length} ${state.catUpdate.plan.eliminados.length === 1 ? 'alimento retirado por eliminar' : 'alimentos retirados por eliminar'}` : ''}.`),
         h('div', { class: 'row' },
           h('button', { class: 'secondary', onclick: () => { state.catBack = 'diary'; state.screen = 'catalogo'; render(); } }, 'Revisar'),
           h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,

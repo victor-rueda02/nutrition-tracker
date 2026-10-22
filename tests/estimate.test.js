@@ -10,7 +10,7 @@ import {
 import { claveTermino, emptyCache, putBusquedas, getBusqueda, buscarConCache, fichasConCache, cleanCache, MAX_BUSQUEDAS } from '../frontend/js/core/usda-cache.js';
 import { resolveUnmatchedWithLines, createDraft, validateDraft, toMealRecord } from '../frontend/js/core/draft.js';
 import { foodsToCSV, parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
-import { realFoods, realList, catalog } from './helpers.js';
+import { realFoods, realList, catalog, foodsConSinDatos } from './helpers.js';
 
 const byId = new Map(realFoods.map((f) => [f.id, f]));
 const ING = (o) => ({ food_id: null, termino_usda: null, nombre: 'x', estado: 'cocinado', gramos: 10, ...o });
@@ -164,7 +164,8 @@ test('sugerencia del documento: un ingrediente de USDA que nombra un alimento tu
   assert.equal(s('carne picada cocinada', 'cocinado'), null);
   assert.equal(sugerirDelDocumento({ nombre: 'carne picada cocinada', estado: 'cocinado', termino: 'Beef, ground, cooked, pan-browned' }, realFoods), null); // nunca por el término en inglés
   assert.equal(s('pasta de lasaña cocida', 'cocinado'), null); // pasta seca no vale para pasta cocida
-  assert.equal(s('ron', 'procesado'), null); // excluido (incluir=no)
+  assert.equal(s('merluza cocida', 'cocinado'), null); // excluido (incluir=no); el catálogo real ya no tiene «ron»
+  assert.equal(sugerirDelDocumento({ nombre: 'ron', estado: 'procesado' }, foodsConSinDatos), null); // fixture excluido con alias «ron»
   const e = createEstimate({ result: { plato: 'x', gramos: 100, ingredientes: [{ origen: 'usda', termino: 'Milk, whole', nombre: 'leche entera', estado: 'procesado', gramos: 100 }] }, texto: 'x', index: 0, foods: realFoods });
   assert.equal(e.ings[0].sugerido, 'leche_entera');
   assert.equal(e.ings[0].origen, 'usda'); // solo se sugiere: no cambia hasta que lo toques

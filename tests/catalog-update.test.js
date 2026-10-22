@@ -1,7 +1,7 @@
 // Actualizar el documento del dispositivo con el foods.csv publicado (fusión a tres bandas).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hashText, planCatalogUpdate, applyChoices, unirCabeceras, anadidoConIA, eleccionesPorDefecto, elegirAlimento, elegirTodos, eleccionAlimento } from '../frontend/js/core/catalog-update.js';
+import { hashText, planCatalogUpdate, applyChoices, unirCabeceras, anadidoConIA, eleccionesPorDefecto, elegirAlimento, elegirTodos, eleccionAlimento, cleanRetirados, usoDeRetirados } from '../frontend/js/core/catalog-update.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { catalog, csv, readFile } from './helpers.js';
 
@@ -152,4 +152,118 @@ test('export real de Victor: sus 4 alimentos de Estimar con IA ya publicados con
   // Y mantener lo mío en un alimento sigue siendo posible.
   const mantener = elegirAlimento(p, eleccionesPorDefecto(p), 'salchichon', 'mio');
   assert.deepEqual(de(applyChoices(p, pub, mantener), 'salchichon').nutrients, de(mio, 'salchichon').nutrients);
+});
+
+// ---------- Alimentos retirados (data/retirados.json): la única excepción a «nunca se borra un alimento» ----------
+const RET = [{ id: 'ron', fecha: '2026-10-23', motivo: 'sin datos, no se usa' }, { id: 'coca', fecha: '2026-10-23', motivo: 'sin datos, no se usa' }, { id: 'ya_no_esta', fecha: '2026-10-23', motivo: 'ya borrado' }];
+
+test('retirados: se borran los que están en el dispositivo y no en lo publicado, aunque los hubieras cambiado; los demás no', () => {
+  const base = doc('arroz,Arroz,arroz,,365,7,si', 'ron,Ron,ron,,,,no', 'coca,Coca-Cola,coca,,,,no', 'chorizo,Chorizo,chorizo,,322,20,si', 'viejo,Viejo,viejo,,10,1,si');
+  const mio = doc('arroz,Arroz,arroz,,365,7,si', 'ron,Ron,ron|ron añejo,,,,si', 'coca,Coca-Cola,coca,,,,no', 'chorizo,Chorizo,chorizo,,322,20,si', 'viejo,Viejo,viejo,,10,1,si', 'puntual,Puntual,puntual,,50,1,no');
+  const publicado = doc('arroz,Arroz,arroz,,365,7,si', 'chorizo,Chorizo,chorizo,,322,20,si');
+  const p = planCatalogUpdate({ local: mio, remote: publicado, base, catalog, retirados: RET });
+  assert.deepEqual(p.eliminados, [{ id: 'ron', nombre: 'Ron' }, { id: 'coca', nombre: 'Coca-Cola' }]);
+  assert.deepEqual(p.foods.map((f) => f.id), ['arroz', 'chorizo', 'viejo', 'puntual']);
+  assert.equal(p.hayCambios, true); // aunque no cambie nada más
+  assert.deepEqual([p.nuevos, p.actualizados, p.conflictos], [[], [], []]);
+  // «ya no publicado» (se mantiene) no se mezcla con «retirado» (se borra)
+  assert.deepEqual([p.retirados.map((r) => r.id), p.propios.map((r) => r.id)], [['viejo'], ['puntual']]);
+  assert.deepEqual(applyChoices(p, publicado).map((f) => f.id), ['arroz', 'chorizo', 'viejo', 'puntual']);
+});
+
+test('retirados: uno que lo publicado sí trae no se borra nunca; uno ya ausente no hace nada; sin lista, como antes', () => {
+  const mio = doc('arroz,Arroz,arroz,,365,7,si', 'ron,Ron,ron,,,,no');
+  const publicado = doc('arroz,Arroz,arroz,,365,7,si', 'ron,Ron,ron,,,,no');
+  const p = planCatalogUpdate({ local: mio, remote: publicado, base: mio, catalog, retirados: RET });
+  assert.deepEqual(p.eliminados, []); // publicado lo trae: se queda
+  assert.ok(de(p.foods, 'ron'));
+  assert.equal(p.hayCambios, false);
+  // 'ya_no_esta' y 'coca' no están en el dispositivo: nada que borrar
+  const sinRon = doc('arroz,Arroz,arroz,,365,7,si');
+  const q = planCatalogUpdate({ local: sinRon, remote: sinRon, base: sinRon, catalog, retirados: RET });
+  assert.deepEqual([q.eliminados, q.hayCambios, q.foods.length], [[], false, 1]);
+  // sin retirados (o con formatos raros), el comportamiento de siempre: no se borra nada
+  for (const r of [undefined, null, [], 'basura', { retirados: 7 }, [null, 3, {}, { id: '' }]]) {
+    const z = planCatalogUpdate({ local: mio, remote: sinRon, base: mio, catalog, retirados: r });
+    assert.deepEqual([z.eliminados, z.retirados.map((x) => x.id), z.hayCambios, z.foods.length], [[], ['ron'], false, 2], String(r));
+  }
+  // un retirado que se hubiera quedado en un conflicto no lo deja: no se pregunta por lo que se va a borrar
+  const base = doc('ron,Ron,ron,,,,no', 'arroz,Arroz,arroz,,365,7,si');
+  const local = doc('ron,Ron,ron|a,,,,no', 'arroz,Arroz,arroz,,365,7,si');
+  const remoto = doc('ron,Ron,ron|b,,,,no', 'arroz,Arroz,arroz,,365,7,si');
+  assert.equal(planCatalogUpdate({ local, remote: remoto, base, catalog, retirados: RET }).conflictos.length, 1); // publicado lo trae: conflicto normal
+});
+
+test('cleanRetirados: acepta { version, retirados } o una lista, ignora lo inválido y los repetidos', () => {
+  assert.deepEqual(cleanRetirados({ version: 1, retirados: [{ id: 'a', fecha: '2026-10-23', motivo: 'm' }, { id: ' b ' }, { id: 'a' }, null, { id: 5 }, 'c'] }),
+    [{ id: 'a', fecha: '2026-10-23', motivo: 'm' }, { id: 'b', fecha: '', motivo: '' }, { id: 'c', fecha: '', motivo: '' }]);
+  assert.deepEqual(cleanRetirados(['x', 'y']).map((r) => r.id), ['x', 'y']);
+  for (const v of [undefined, null, 4, 'a', {}, { retirados: {} }]) assert.deepEqual(cleanRetirados(v), [], String(v));
+  // el fichero real: 11 ids únicos con fecha y motivo
+  const real = cleanRetirados(JSON.parse(readFile('../data/retirados.json')));
+  assert.equal(real.length, 11);
+  assert.ok(real.every((r) => /^[a-z0-9_]+$/.test(r.id) && /^\d{4}-\d\d-\d\d$/.test(r.fecha) && r.motivo));
+  // y ninguno sigue en el catálogo publicado
+  const publicado = new Set(parseFoodsCSV(readFile('../data/foods.csv'), { catalog }).foods.map((f) => f.id));
+  assert.ok(real.every((r) => !publicado.has(r.id)));
+});
+
+test('usoDeRetirados: cuenta las líneas del diario y nombra las recetas que usan un retirado, sin tocar nada', () => {
+  const eliminados = [{ id: 'ron', nombre: 'Ron' }, { id: 'coca', nombre: 'Coca-Cola' }];
+  const meals = [{ lines: [{ food_id: 'arroz' }, { food_id: 'coca' }] }, { lines: [{ food_id: 'ron' }, { food_id: 'coca' }] }, { lines: [{ food_id: 'arroz' }] }, { lines: [] }, {}];
+  const recetas = [{ id: 'r1', nombre: 'R1', ingredientes: [{ food_id: 'arroz' }, { food_id: 'ron' }, { food_id: 'ron' }] }, { id: 'r2', nombre: 'R2', ingredientes: [{ food_id: 'arroz' }] }, { id: 'r3', ingredientes: [{ food_id: 'coca' }, { food_id: 'ron' }] }];
+  const u = usoDeRetirados({ eliminados, meals, recetas });
+  assert.deepEqual(u, { lineas: 3, comidas: 2, recetas: [{ id: 'r1', nombre: 'R1', ingredientes: ['Ron'] }, { id: 'r3', nombre: 'r3', ingredientes: ['Coca-Cola', 'Ron'] }] });
+  assert.deepEqual(usoDeRetirados({}), { lineas: 0, comidas: 0, recetas: [] });
+  assert.deepEqual(usoDeRetirados({ eliminados, meals: [{ lines: [{ food_id: 'arroz' }] }] }), { lineas: 0, comidas: 0, recetas: [] });
+});
+
+test('export real de Victor (22-10-2026): al actualizar desaparecen los 11 retirados y lo demás queda igual', () => {
+  const retirados = JSON.parse(readFile('../data/retirados.json'));
+  const ids = retirados.retirados.map((r) => r.id);
+  const exportado = parseFoodsCSV(readFile('./fixtures/export_iphone_2026-10-22.csv'), { catalog }).foods; // con ; y coma decimal
+  const publicado = parseFoodsCSV(readFile('../data/foods.csv'), { catalog }).foods;
+  assert.equal(exportado.length, 80);
+  assert.ok(ids.every((id) => de(exportado, id)), 'el dispositivo de Victor tiene los 11');
+  for (const [nombre, base] of [['sin base', null], ['con base = lo que copió', exportado]]) {
+    const p = planCatalogUpdate({ local: exportado, remote: publicado, base, catalog, retirados });
+    assert.deepEqual(p.eliminados.map((e) => e.id).sort(), [...ids].sort(), nombre);
+    assert.deepEqual(p.conflictos, [], nombre);
+    const final = applyChoices(p, publicado, {});
+    const porId = new Map(final.map((f) => [f.id, f]));
+    assert.ok(ids.every((id) => !porId.has(id)), nombre); // los 11 desaparecen
+    // todo lo que tenía sigue (salvo los 11); lo que trae lo publicado, con lo publicado
+    const restantes = exportado.filter((f) => !ids.includes(f.id));
+    assert.equal(restantes.length, 69, nombre);
+    assert.ok(restantes.every((f) => porId.has(f.id)), nombre);
+    assert.equal(final.length, restantes.length + p.nuevos.length, nombre); // y nada más desaparece ni se duplica
+    for (const f of publicado) assert.deepEqual(porId.get(f.id).nutrients, f.nutrients, `${nombre}: ${f.id}`);
+    // lo que el dispositivo tiene y lo publicado no (los tres «recetas de un ingrediente» del iPhone) queda tal cual
+    for (const id of ['salchichon_2', 'bebida_de_avena_2', 'cafe_solo_expreso']) assert.deepEqual(porId.get(id), de(exportado, id), `${nombre}: ${id}`);
+    // y los alimentos que no cambian entre el dispositivo y lo publicado quedan exactamente igual
+    const sinCambios = restantes.filter((f) => !p.actualizados.some((a) => a.id === f.id) && de(publicado, f.id));
+    assert.ok(sinCambios.length > 20, nombre);
+    for (const f of sinCambios) assert.deepEqual(porId.get(f.id), f, `${nombre}: ${f.id}`);
+  }
+});
+
+test('retirados: un alimento con un id retirado que creaste después en la app (Estimar con IA, receta) no se borra', () => {
+  const base = docX('arroz,Arroz,arroz,365,7,,');
+  const publicado = docX('arroz,Arroz,arroz,365,7,,');
+  const mio = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron casero,ron,230,0,usda_app,si', 'coca,Mi receta de cola,cola,40,0,receta,');
+  // con base: lo que la base no tenía es tuyo (propios) y no se elimina
+  const p = planCatalogUpdate({ local: mio, remote: publicado, base, catalog, retirados: RET });
+  assert.deepEqual(p.eliminados, []);
+  assert.deepEqual(p.propios.map((x) => x.id), ['ron', 'coca']);
+  assert.deepEqual(p.foods.map((f) => f.id), ['arroz', 'ron', 'coca']);
+  assert.equal(p.hayCambios, false);
+  // sin base, ante la duda no se borra lo creado en la app (tipo usda_app o receta)
+  const q = planCatalogUpdate({ local: mio, remote: publicado, base: null, catalog, retirados: RET });
+  assert.deepEqual(q.eliminados, []);
+  assert.deepEqual(q.foods.map((f) => f.id), ['arroz', 'ron', 'coca']);
+  // pero el mismo id, cuando venía de lo publicado (la base lo tenía), sí se borra
+  const baseConRon = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron,ron,,,,', 'coca,Coca-Cola,coca,,,,');
+  const viejo = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron,ron,,,,', 'coca,Coca-Cola,coca,,,,');
+  assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: baseConRon, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
+  assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: null, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
 });

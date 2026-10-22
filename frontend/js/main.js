@@ -46,8 +46,10 @@ async function boot() {
     try { semilla = JSON.parse(await fetchText('cenas-semilla.json')); } catch { /* sin semilla */ }
     let nutrientesInfo = null; // data/nutrientes-info.json: textos del detalle de nutriente (sin él, «Información aún no disponible»)
     try { nutrientesInfo = JSON.parse(await fetchText('nutrientes-info.json')); } catch { /* sin información de nutrientes */ }
+    let retirados = null; // data/retirados.json: alimentos que Victor retira del documento (sin él, nada se elimina)
+    try { retirados = JSON.parse(await fetchText('retirados.json')); } catch { /* sin lista de retirados */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase, semilla, nutrientesInfo,
+      store, createAiClient, catalog, settings, targets, fetchPublished, recetasBase, semilla, nutrientesInfo, retirados,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });

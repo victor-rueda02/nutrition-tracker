@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTargets, resolveTargets, referenceValue } from '../frontend/js/core/targets.js';
 import { diaryReport, dayTotals, evaluate, shiftDate } from '../frontend/js/core/diary.js';
-import { catalog, settings, readFile, realFoods, rulesFoods } from './helpers.js';
+import { catalog, settings, readFile, realFoods, rulesFoods, foodsConSinDatos } from './helpers.js';
 
 const raw = JSON.parse(readFile('../data/targets.json'));
 const { targets, warnings } = loadTargets(raw, catalog);
@@ -95,13 +95,13 @@ test('diario real: totales del día, por comida, EPA + DHA sumados y UL superado
 });
 
 test('diario: alimento sin datos o borrado del documento -> total parcial y se dice cuál; nunca suma 0', () => {
-  const meals = [meal('a', 'otro', [['kiwi_verde', 100], ['coca_cola', 330], ['ya_no_existe', 50]])];
-  const r = diaryReport(meals, byId, resolveTargets(targets), catalog);
+  const meals = [meal('a', 'otro', [['kiwi_verde', 100], ['refresco_sd', 330], ['ya_no_existe', 50]])];
+  const r = diaryReport(meals, new Map(foodsConSinDatos.map((f) => [f.id, f])), resolveTargets(targets), catalog);
   const kcal = val(r.rows, 'energia_kcal');
   assert.equal(kcal.total, 61);
   assert.equal(kcal.parcial, true);
-  assert.deepEqual(kcal.missing.sort(), ['coca_cola', 'ya_no_existe']);
-  assert.deepEqual(r.sinDatos.sort(), ['Coca-Cola Classic', 'ya_no_existe']);
+  assert.deepEqual(kcal.missing.sort(), ['refresco_sd', 'ya_no_existe']);
+  assert.deepEqual(r.sinDatos.sort(), ['Refresco de prueba', 'ya_no_existe']);
   assert.equal(r.comidas[0].kcalParcial, true);
   assert.equal(diaryReport([], byId, resolveTargets(targets), catalog).rows.every((x) => x.estado === 'sin_dato'), true);
 });
