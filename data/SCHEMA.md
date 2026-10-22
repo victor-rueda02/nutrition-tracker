@@ -78,6 +78,20 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - `foods.sample.csv`: 10 alimentos de ejemplo. **Valores aproximados, no verificados contra USDA; no usar como catálogo.**
   Se regeneran con `npm run build:templates`.
 - `recetas.json`: recetas del catálogo (ver abajo). Las filas de receta de `foods.csv` se calculan desde aquí.
+- `retirados.json`: alimentos que se quitan del documento «como si no hubiesen estado nunca» (ver abajo).
+
+## Alimentos retirados (`data/retirados.json`)
+```json
+{ "version": 1, "retirados": [ { "id": "coca_cola", "fecha": "2026-10-23", "motivo": "sin datos, no se usa" } ] }
+```
+- `id`: el `id` del alimento retirado. `fecha` (AAAA-MM-DD) y `motivo` son informativos.
+- Al quitar un alimento del `foods.csv` se añade aquí su `id`. La app lo carga como los demás `data/*.json` (va en la caché
+  del service worker; si el fichero falta o no es válido, se ignora y nada se elimina).
+- Al «Buscar actualización del documento», un alimento del dispositivo cuyo `id` esté en la lista y **no** en el
+  `foods.csv` publicado se elimina del catálogo del dispositivo al pulsar «Actualizar», aunque se hubiera cambiado desde
+  la app. La revisión los enseña antes y avisa de las líneas del diario y de las recetas que los usan. El diario y las
+  recetas no se tocan (las líneas quedan como «alimento borrado»). Es la única excepción a «la actualización nunca borra
+  alimentos». Si el `foods.csv` publicado vuelve a traer un `id` de la lista, no se borra.
 
 ## Recetas (`data/recetas.json`)
 Una receta es **una fila más del catálogo**: la app la trata como cualquier alimento (dictas "300 g de lentejas").
