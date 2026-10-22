@@ -186,10 +186,18 @@
         },
         {
           "food_id": "aceite_oliva",
-          "gramos": 20
+          "gramos": 14
         }
       ],
-      "notas": "Lata de atún escurrido (60 g) con su aceite (20 g); 80 g la lata entera."
+      "etiqueta": {
+        "energia_kcal": 352,
+        "grasa_total_g": 31,
+        "grasas_saturadas_g": 4.6,
+        "hidratos_g": 0.9,
+        "proteina_g": 18,
+        "sodio_mg": 360
+      },
+      "notas": "Lata de atún claro en aceite de oliva Hacendado: 60 g escurrido + 14 g de aceite (la etiqueta da 25 g de grasa en 80 g netos y 11 g en 60 g escurridos: el líquido son unos 14 g de aceite y el resto jugo/agua, sin nutrientes); 80 g la lata entera. Etiqueta por 100 g neto."
     }
   ]
 }
