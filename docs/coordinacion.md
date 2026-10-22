@@ -20,6 +20,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 2 | integrado | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 | 2026-10-21 | M · UL de vitamina A y folato solo informativo (no avisa en Diario ni descarta en ¿Qué ceno?) + menores de L | desarrollador | dev/m-ul-informativo | 1 | integrado | – (Victor: opción b) |
 | 2026-10-22 | N · «Repetir de ayer» sin nada marcado y casilla por comida (tri-estado) | desarrollador | dev/n-repetir-casillas | 2 | integrado y publicado | – (coordinador: «Repetir esta comida» y plantillas siguen todo marcado) |
+| 2026-10-22 | O · Pulir alimentos diarios con su etiqueta + resto de micros de USDA/BEDCA (uno a uno con Victor) | catalogo | cat/o-pulir-etiquetas | 0 | en curso (preguntando: 1 leche entera) | Etiquetas, una a una |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
@@ -33,3 +34,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-21, L: el revisor de código aprobó (recálculo del chorizo a 123 g y 37,5 g correcto). Nota para Victor: cantidad_habitual_g del muslo de pollo es 460 g (sale primero en «En tu catálogo»): confirmar.
 - 2026-10-22: git push de K1, K2, L y M (detalle de alimento y nutriente, información de nutrientes, UL informativo). Worker sin cambios (no hace falta deploy).
 - 2026-10-22: git push de N (Repetir de ayer sin marcar, casilla por comida). Worker sin cambios.
+- 2026-10-22, O · cola de alimentos (días de uso en 8): leche entera, pan integral, chocolate 85 %, yogur griego, almendras, avena, cacao en polvo, aceite de oliva, chía, crema de cacahuete, arroz blanco, tomate frito, nueces, pistachos tostados, dátiles, jamón curado, muesli; después pasta, pavo en lonchas, pan de molde, queso tierno… Respuestas de Victor: foto / «luego» / «estímalo tú». Un solo agente de catálogo en una rama, commit por alimento; revisor por tandas de ~5.
