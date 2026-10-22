@@ -55,18 +55,7 @@ galleta_maria;Galleta María;;;;omitido: sin termino_busqueda_usda;;;;;;;;;;;;;;
 merluza_cruda;Merluza cruda;;;;omitido: sin termino_busqueda_usda;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 patata_cruda;Patata cruda con piel;Potatoes, flesh and skin, raw;170026;;completo;170026;Potatoes, flesh and skin, raw;SR Legacy;31/31;100 %;Foundation/SR Legacy ≥ 80 % entre los 3 más parecidos al término (100 %): completitud 31/31 (100 %), parecido al término 100 %;170026;Potatoes, flesh and skin, raw;SR Legacy;31/31;100 %;170029;Potatoes, red, flesh and skin, raw;SR Legacy;31/31;100 %;170028;Potatoes, white, flesh and skin, raw;SR Legacy;31/31;100 %;170030;Potatoes, Russet, flesh and skin, baked;SR Legacy;31/31;80 %;170434;Potatoes, white, flesh and skin, baked;SR Legacy;31/31;80 %
 verduras_asadas_hacendado;Salteado de verduras asadas;(receta: data/recetas.json);;;omitido: receta por descomponer;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-crema_calabacin;Crema de calabacín casera;(descomponer en ingredientes);;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-tortilla_patata;Tortilla de patata;(descomponer: patata, huevo, aceite, cebolla);;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 lentejas_caseras;Lentejas caseras;(descomponer en ingredientes);;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-repollo_al_horno;Repollo al horno;(descomponer en ingredientes);;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-coca_cola;Coca-Cola Classic;Beverages, carbonated, cola, regular;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-tinto_verano;Tinto de verano limón;;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-ron;Ron;Alcoholic beverage, distilled, rum, 80 proof;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 chorizo;Chorizo;;;;omitido: sin termino_busqueda_usda;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 mayonesa;Mayonesa comercial;;;;completo;171009;Salad dressing, mayonnaise, regular;SR Legacy;31/31;100 %;Foundation/SR Legacy ≥ 80 % entre los 2 más parecidos al término (100 %): completitud 31/31 (100 %), parecido al término 100 %;171009;Salad dressing, mayonnaise, regular;SR Legacy;31/31;100 %;171403;Salad dressing, mayonnaise type, regular, with salt;SR Legacy;31/31;100 %;169055;Salad dressing, caesar dressing, regular;SR Legacy;31/31;75 %;173592;Salad dressing, ranch dressing, regular;SR Legacy;31/31;75 %;173594;Salad dressing, mayonnaise, light;SR Legacy;31/31;75 %
-lengua_cerdo;Lengua de cerdo;Pork, fresh, variety meats and by-products, tongue, raw;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-salsa_cerdo_lata;Salsa de cerdo en lata;Gravy, pork, canned;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-salchicha_desayuno_cerdo;Salchicha de desayuno de cerdo;Sausage, pork, fresh, raw;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-yogur_griego_vainilla;Yogur griego vainilla premium;;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-queso_monterey_jack;Queso Monterey Jack;Cheese, monterey;;;omitido: excluido (incluir=no);;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 parrillada_verduras_hacendado;Parrillada de verduras Hacendado;(receta: data/recetas.json);;;omitido: receta por descomponer;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

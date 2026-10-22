@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
-import { realFoods, catalog, settings, readFile } from './helpers.js';
+import { realFoods, catalog, settings, readFile, foodsConSinDatos } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 const INFO = JSON.parse(readFile('./fixtures/nutrientes-info.fixture.json'));
@@ -109,9 +109,9 @@ test('sin dato se muestra «—» sin barra; un 0 escrito se muestra 0 con su ba
 });
 
 test('un alimento sin ningún dato: todo «—» y ninguna barra', { skip }, async () => {
-  const t = await setup();
+  const t = await setup({ foods: foodsConSinDatos }); // fixture: el catálogo real ya no tiene alimentos sin datos
   await t.alCatalogo();
-  await t.act(() => t.ver('Coca-Cola Classic').click());
+  await t.act(() => t.ver('Refresco de prueba').click());
   assert.equal(t.$$('.detalle .meter').length, 0);
   assert.ok(t.$$('.detalle .nut').every((x) => x.querySelector('.nut-valor').textContent === '—'));
   assert.match(t.$('.detalle-comp').textContent, /^0\/31/);

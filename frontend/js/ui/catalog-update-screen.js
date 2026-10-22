@@ -11,7 +11,7 @@ const valor = (campo, v) => {
 // ui: { h, doc, state, header, render, applyCatalogUpdate, postponeCatalogUpdate, back }
 export function catalogUpdateScreen(ui) {
   const { h, state } = ui;
-  const { plan, remote } = state.catUpdate;
+  const { plan, remote, uso } = state.catUpdate;
   const lista = (titulo, items, texto) => (items.length ? h('details', { class: 'panel' }, h('summary', {}, `${titulo} (${items.length})`),
     h('ul', {}, items.map((i) => h('li', {}, texto(i))))) : null);
   const eleccion = (c) => state.catEleccion[`${c.id}|${c.campo}`] ?? 'mio';
@@ -42,14 +42,23 @@ export function catalogUpdateScreen(ui) {
   return h('main', { class: 'catalogo-update' },
     ui.header('Actualizar documento', ui.back),
     h('section', { class: 'panel' },
-      h('p', {}, `Hay una versión nueva de tu documento de alimentos publicado (${remote.foods.length} alimentos).`),
+      h('p', {}, plan.nuevos.length || plan.actualizados.length || plan.conflictos.length
+        ? `Hay una versión nueva de tu documento de alimentos publicado (${remote.foods.length} alimentos).`
+        : `Tu documento de alimentos publicado (${remote.foods.length} alimentos) retira alimentos que aún tienes en este dispositivo.`),
       h('ul', { class: 'small resumen' },
         h('li', {}, `${plan.nuevos.length} nuevos`),
         h('li', {}, `${plan.actualizados.length} actualizados`),
+        plan.eliminados?.length ? h('li', {}, `${plan.eliminados.length} ${plan.eliminados.length === 1 ? 'retirado: se elimina' : 'retirados: se eliminan'} (ver abajo)`) : null,
         plan.retirados.length ? h('li', {}, `${plan.retirados.length} ya no están publicados: se mantienen en tu dispositivo (pueden estar en tu diario)`) : null,
         plan.propios?.length ? h('li', {}, `${plan.propios.length} creados en este dispositivo (Estimar con IA, recetas): se mantienen`) : null,
         h('li', {}, plan.conflictos.length ? `${plan.conflictos.length} ${plan.conflictos.length === 1 ? 'conflicto' : 'conflictos'} en ${plan.alimentosConflicto.length} ${plan.alimentosConflicto.length === 1 ? 'alimento' : 'alimentos'}: elige abajo` : 'Sin conflictos: se conservan los cambios que hiciste desde la app')),
       h('p', { class: 'muted small' }, 'Nada cambia hasta que pulses «Actualizar». Tu diario no se toca.')),
+    plan.eliminados?.length ? h('section', { class: 'panel aviso-retirados', 'aria-label': 'Alimentos retirados' },
+      h('h2', {}, `Se eliminarán ${plan.eliminados.length} ${plan.eliminados.length === 1 ? 'alimento retirado' : 'alimentos retirados'} del documento`),
+      h('p', { class: 'retirados-nombres' }, `${plan.eliminados.map((e) => e.nombre).join(', ')}.`),
+      h('p', { class: 'muted small' }, 'Los has pedido retirar (data/retirados.json). Se borran de este dispositivo aunque los hubieras cambiado; no se aplica hasta pulsar «Actualizar».'),
+      uso?.lineas ? h('p', { class: 'aviso-uso small', role: 'note' }, `Hay ${uso.lineas} ${uso.lineas === 1 ? 'línea' : 'líneas'} del diario que ${uso.lineas === 1 ? 'usa' : 'usan'} alimentos retirados; seguirán en el diario como «alimento borrado».`) : null,
+      ...(uso?.recetas ?? []).map((r) => h('p', { class: 'aviso-uso small', role: 'note' }, `La receta «${r.nombre}» usa ${r.ingredientes.length === 1 ? 'un alimento retirado' : 'alimentos retirados'} (${r.ingredientes.join(', ')}); no se borra: revísala en Recetas.`))) : null,
     lista('Nuevos', plan.nuevos, (i) => i.nombre),
     lista('Actualizados', plan.actualizados, (i) => `${i.nombre}: ${i.campos.join(', ')}`),
     lista('Ya no publicados (se mantienen)', plan.retirados, (i) => i.nombre),

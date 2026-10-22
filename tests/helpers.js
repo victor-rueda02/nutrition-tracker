@@ -19,6 +19,10 @@ import { buildCompactList } from '../frontend/js/core/ai-contract.js';
 // Documento real de Victor (fixture) y su lista compacta para la IA.
 export const realFoods = parseFoodsCSV(read('./fixtures/alimentos_iniciales.csv'), { catalog }).foods;
 export const realList = buildCompactList(realFoods);
+// Alimentos de prueba SIN ningún dato y con incluir=no (fixtures/sin_datos.csv): el catálogo real ya no tiene ninguno
+// (los 11 que había se retiraron el 23-10-2026), pero hay que probar cómo se tratan. `foodsConSinDatos` = real + estos.
+export const sinDatosFoods = parseFoodsCSV(read('./fixtures/sin_datos.csv'), { catalog }).foods;
+export const foodsConSinDatos = [...realFoods, ...sinDatosFoods];
 // Copia CONGELADA del catálogo (18-10-2026, antes de marcar peso_en_crudo en general y excluir merluza_cocida y
 // patata_asada) para probar las reglas de variantes con grupos crudo/cocinado. No se actualiza al pulir el catálogo.
 export const rulesFoods = parseFoodsCSV(read('./fixtures/reglas_variantes.csv'), { catalog }).foods;

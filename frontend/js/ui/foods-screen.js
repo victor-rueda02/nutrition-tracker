@@ -20,7 +20,7 @@ export function alimentosScreen(ui) {
       h('button', { type: 'button', class: 'icon', 'aria-label': 'Buscar alimento', onclick: () => ui.openCatalog({ focus: true }) }, icon(doc, 'search'))),
     state.status ? h('p', { class: 'ok', role: 'status' }, state.status) : null,
     u && !u.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
-      h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados${u.plan.conflictos.length ? `, ${u.plan.conflictos.length} con conflicto` : ''}.`),
+      h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${u.plan.nuevos.length} nuevos, ${u.plan.actualizados.length} actualizados${u.plan.conflictos.length ? `, ${u.plan.conflictos.length} con conflicto` : ''}${u.plan.eliminados?.length ? `, ${u.plan.eliminados.length} retirados por eliminar` : ''}.`),
       h('div', { class: 'row' },
         h('button', { type: 'button', class: 'secondary', onclick: ui.reviewUpdate }, 'Revisar'),
         h('button', { type: 'button', class: 'link', onclick: ui.postponeUpdate }, 'Ahora no'))) : null,

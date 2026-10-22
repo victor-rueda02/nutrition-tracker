@@ -6,7 +6,9 @@
 // Solo cambió el publicado -> se actualiza; solo cambiaste tú -> se conserva; los dos -> conflicto (eliges tú).
 // Sin base (instalaciones anteriores a esto), lo único que se ha podido cambiar desde la app es activar alimentos:
 // solo "incluir" puede dar conflicto y el resto viene del publicado. Nunca se borra un alimento (puede estar en el
-// diario): los que ya no están publicados se mantienen. Funciones puras, sin DOM.
+// diario): los que ya no están publicados se mantienen. Única excepción: los de data/retirados.json que ya no están
+// en el publicado, que Victor ha pedido borrar (se enseñan en la revisión antes de aplicar; el diario no se toca).
+// Funciones puras, sin DOM.
 import { serializePortions } from './portions.js';
 
 // Huella de un texto (FNV-1a de 32 bits): no necesita crypto.subtle (que exige https).
@@ -60,11 +62,52 @@ export function etiquetaCampo(campo, catalog) {
 // trae el mismo id, lo publicado es el revisado.
 export const anadidoConIA = (food) => food?.extra?.tipo === 'usda_app' || String(food?.extra?.pendiente_revisar ?? '').trim().toLowerCase() === 'si';
 
+// Lista de retirados (data/retirados.json: { version, retirados: [{ id, fecha, motivo }] }) -> [{ id, fecha, motivo }].
+// Tolerante: sin fichero o con otro formato, lista vacía (la actualización sigue como siempre).
+export function cleanRetirados(json) {
+  const lista = Array.isArray(json) ? json : Array.isArray(json?.retirados) ? json.retirados : [];
+  const vistos = new Set();
+  const out = [];
+  for (const r of lista) {
+    const id = typeof r === 'string' ? r.trim() : typeof r?.id === 'string' ? r.id.trim() : '';
+    if (!id || vistos.has(id)) continue;
+    vistos.add(id);
+    out.push({ id, fecha: typeof r?.fecha === 'string' ? r.fecha : '', motivo: typeof r?.motivo === 'string' ? r.motivo : '' });
+  }
+  return out;
+}
+
+// Dónde se usan los alimentos que se van a eliminar (para avisar en la revisión; no se toca nada):
+// { lineas (líneas del diario), comidas (comidas con alguna), recetas: [{ id, nombre, ingredientes: [nombre de cada retirado] }] }.
+// meals = comidas del diario ({ lines: [{ food_id }] }); recetas = las del dispositivo; eliminados = [{ id, nombre }].
+export function usoDeRetirados({ eliminados = [], meals = [], recetas = [] }) {
+  const nombres = new Map(eliminados.map((e) => [e.id, e.nombre]));
+  let lineas = 0;
+  let comidas = 0;
+  for (const m of meals) {
+    const n = (m.lines ?? []).filter((l) => nombres.has(l.food_id)).length;
+    lineas += n;
+    if (n) comidas++;
+  }
+  const usan = [];
+  for (const r of recetas) {
+    const ing = [...new Set((r.ingredientes ?? []).map((i) => i.food_id).filter((id) => nombres.has(id)))];
+    if (ing.length) usan.push({ id: r.id, nombre: r.nombre ?? r.id, ingredientes: ing.map((id) => nombres.get(id)) });
+  }
+  return { lineas, comidas, recetas: usan };
+}
+
 // Plan de actualización. Devuelve { foods (con los conflictos resueltos como "mío"), nuevos, actualizados,
-// retirados, propios (creados en el dispositivo), conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
-export function planCatalogUpdate({ local, remote, base = null, catalog }) {
+// retirados (ya no publicados, se mantienen), eliminados (los de data/retirados.json que se borran), propios (creados en
+// el dispositivo), conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
+// retirados = lo de data/retirados.json (lista o ya limpiado): se borra el que está en el dispositivo y NO en lo publicado,
+// aunque lo hubieras cambiado. Uno que lo publicado sí trae no se borra nunca.
+export function planCatalogUpdate({ local, remote, base = null, catalog, retirados: retiradosJson = [] }) {
   const L = new Map(local.map((f) => [f.id, f]));
   const R = new Map(remote.map((f) => [f.id, f]));
+  const aBorrar = new Set(cleanRetirados(retiradosJson).map((r) => r.id));
+  const eliminados = local.filter((l) => aBorrar.has(l.id) && !R.has(l.id)).map((l) => ({ id: l.id, nombre: l.nombre }));
+  const sale = new Set(eliminados.map((e) => e.id));
   const B = base ? new Map(base.map((f) => [f.id, f])) : null;
   const fusion = new Map(); // id -> alimento resultante, de los que están en el dispositivo y publicados
   const nuevos = [];
@@ -99,7 +142,7 @@ export function planCatalogUpdate({ local, remote, base = null, catalog }) {
   // En el orden del documento publicado; los que ya no están publicados, al final.
   const foods = remote.map((r) => fusion.get(r.id) ?? copia(r));
   for (const r of remote) if (!L.has(r.id)) nuevos.push({ id: r.id, nombre: r.nombre });
-  const quedan = local.filter((l) => !R.has(l.id));
+  const quedan = local.filter((l) => !R.has(l.id) && !sale.has(l.id));
   foods.push(...quedan);
   // Creados en el dispositivo (Estimar con IA, Guardar como receta): nunca estuvieron publicados, así que no se
   // cuentan como "ya no publicados". Sin base, se reconocen por tipo=usda_app.
@@ -113,7 +156,7 @@ export function planCatalogUpdate({ local, remote, base = null, catalog }) {
     if (!a) { a = { id: c.id, nombre: c.nombre, campos: 0, anadidoConIA: anadidoConIA(L.get(c.id)) }; alimentosConflicto.push(a); }
     a.campos++;
   }
-  return { foods, nuevos, actualizados, retirados, propios, conflictos, alimentosConflicto, hayCambios: nuevos.length + actualizados.length + conflictos.length > 0 };
+  return { foods, nuevos, actualizados, retirados, eliminados, propios, conflictos, alimentosConflicto, hayCambios: nuevos.length + actualizados.length + conflictos.length + eliminados.length > 0 };
 }
 
 // Aplica tus elecciones en los conflictos: elecciones = { "id|campo": "publicado" | "mio" } (por defecto, "mío").

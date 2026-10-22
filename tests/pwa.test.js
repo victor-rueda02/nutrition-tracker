@@ -14,7 +14,16 @@ test('service worker: precachea TODOS los ficheros de la app (y solo ficheros qu
   const list = [...sw.match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
   for (const a of list) if (a !== './') assert.ok(existsSync(resolve(fe, a)), `no existe: ${a}`);
   for (const f of walk(fe).map(rel).filter((p) => p !== 'sw.js')) assert.ok(list.includes(f), `falta en ASSETS: ${f}`);
-  for (const d of ['../data/nutrients.json', '../data/settings.json', '../data/targets.json', '../data/foods.csv']) assert.ok(list.includes(d), d);
+  for (const d of ['../data/nutrients.json', '../data/settings.json', '../data/targets.json', '../data/foods.csv', '../data/retirados.json']) assert.ok(list.includes(d), d);
+});
+
+test('data/retirados.json: se carga como los demás data/*.json y, si falta o no se puede leer, la app arranca igual', () => {
+  const main = readFileSync(join(fe, 'js', 'main.js'), 'utf8');
+  assert.match(main, /try \{ retirados = JSON\.parse\(await fetchText\('retirados\.json'\)\); \} catch/);
+  assert.match(main, /mountApp\(root, \{[^}]*\bretirados\b/);
+  const r = JSON.parse(readFileSync(join(root, 'data', 'retirados.json'), 'utf8'));
+  assert.equal(r.version, 1);
+  assert.ok(Array.isArray(r.retirados) && r.retirados.every((x) => typeof x.id === 'string' && /^\d{4}-\d\d-\d\d$/.test(x.fecha) && typeof x.motivo === 'string'));
 });
 
 test('manifiesto e iconos: iOS/Android instalable (PNG con el tamaño declarado)', () => {

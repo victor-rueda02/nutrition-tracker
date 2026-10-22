@@ -16,20 +16,8 @@
       ]
     },
     {
-      "fecha": "2026-09-19",
-      "lineas": [
-        { "food_id": "tortilla_patata", "gramos": null },
-        { "food_id": "pan_blanco_barra", "gramos": 50 },
-        { "food_id": "pepino", "gramos": 50 },
-        { "food_id": "crema_calabacin", "gramos": 300 },
-        { "food_id": "pera_cruda", "gramos": 70 },
-        { "food_id": "yogur_griego_vainilla", "gramos": 125 }
-      ]
-    },
-    {
       "fecha": "2026-09-21",
       "lineas": [
-        { "food_id": "crema_calabacin", "gramos": 250 },
         { "food_id": "arroz_blanco_crudo", "gramos": 175 },
         { "food_id": "nueces", "gramos": 10 },
         { "food_id": "huevo", "gramos": 62 },
@@ -76,7 +64,6 @@
         { "food_id": "sardina_lata_aceite", "gramos": 65 },
         { "food_id": "aceite_oliva", "gramos": 22.46 },
         { "food_id": "pan_blanco_barra", "gramos": 167 },
-        { "food_id": "queso_monterey_jack", "gramos": 25 },
         { "food_id": "yogur_griego_natural", "gramos": 125 },
         { "food_id": "semillas_chia", "gramos": 3 }
       ]

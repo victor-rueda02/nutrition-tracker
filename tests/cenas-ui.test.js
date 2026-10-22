@@ -199,7 +199,7 @@ test('«Más ideas» envía solo alimentos (lista compacta) y deficits (nombres 
   const porId = new Map(realFoods.map((f) => [f.id, f]));
   assert.ok(ids.length > 30);
   for (const id of ids) { const f = porId.get(id); assert.ok(f.extra.incluir !== 'no' && !foodSinDatos(f), id); }
-  for (const id of ['tortilla_patata', 'crema_calabacin', 'yogur_griego_vainilla', 'merluza_cocida']) assert.ok(!ids.includes(id), id);
+  for (const id of ['merluza_cocida', 'patata_asada', 'morro_cerdo']) assert.ok(!ids.includes(id), id); // incluir=no
   for (const a of body.alimentos) assert.ok(Object.keys(a).every((k) => ['id', 'nombre', 'alias', 'porciones', 'estado', 'grupo', 'defecto', 'peso_en_crudo', 'rol'].includes(k)), JSON.stringify(Object.keys(a)));
   // el papel en la cena (rol_cena) viaja con cada alimento: es un dato del catálogo, y solo se envían los que lo tienen
   for (const a of body.alimentos) assert.equal(a.rol, porId.get(a.id).extra.rol_cena, a.id);
