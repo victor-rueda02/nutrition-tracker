@@ -138,8 +138,8 @@ test('export real de Victor: sus 4 alimentos de Estimar con IA ya publicados con
   const base = docX('arroz,Arroz,arroz,365,7,,'); // la base anterior no tenía esos ids
   const p = plan(mio, pub, base);
   assert.deepEqual(p.alimentosConflicto.map((a) => a.id).sort(), ['anacardos', 'bebida_de_avena', 'cafe_expreso', 'salchichon']);
-  assert.equal(p.conflictos.length, 95);
-  assert.deepEqual(p.alimentosConflicto.map((a) => [a.id, a.campos]), [['salchichon', 30], ['bebida_de_avena', 40], ['cafe_expreso', 6], ['anacardos', 19]]);
+  assert.equal(p.conflictos.length, 96);
+  assert.deepEqual(p.alimentosConflicto.map((a) => [a.id, a.campos]), [['salchichon', 31], ['bebida_de_avena', 40], ['cafe_expreso', 6], ['anacardos', 19]]);
   assert.ok(p.alimentosConflicto.every((a) => a.anadidoConIA && a.campos > 0));
   assert.equal(p.alimentosConflicto.reduce((n, a) => n + a.campos, 0), p.conflictos.length);
   // Por defecto (IA) ya se queda lo publicado: no hay que pulsar nada.

@@ -96,7 +96,7 @@ export function mountApp(root, deps) {
   const state = {
     screen: 'diary', sheet: null, menu: false, docSection: 'documento', catQuery: '', catFilter: 'todos', catFocus: false, addDate: null, plantillasBack: 'alimentos', recetasBack: 'alimentos', foods: deps.initial.foods, extraHeaders: deps.initial.extraHeaders ?? [], docName: deps.initial.docName ?? '',
     text: '', meal: defaultMeal(now()), draft: null, busy: false, error: '', status: '', importResult: null, conn: { ...(deps.conn ?? {}) }, allMeals: [], backupImport: null, docMsg: '',
-    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catConfirmarTodos: false, catMsg: '', catBack: 'diary',
+    day: madridNow(now()).date, dayMeals: [], objetivos: { ...(deps.objetivos ?? {}) }, diaryMsg: '', pendingDelete: null, repeat: null, repeatBack: null, plantillas: [], plantillasMsg: '', templateForm: null, registro: [], logMsg: '', catUpdate: null, catEleccion: {}, catAbiertos: {}, catConfirmarTodos: false, catMsg: '', catBack: 'diary',
     detalle: null, estimate: null, cenas: null, recetas: [], recetasPropias: [], recetaForm: null, recetasMsg: '', // «Estimar con IA» y recetas (ui/estimate-screen.js, ui/recetas-screen.js)
   };
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
@@ -296,6 +296,7 @@ export function mountApp(root, deps) {
       const ignorado = (await deps.store.getSetting('catalogo_ignorado')) === hash;
       state.catUpdate = { hash, text, remote, plan, ignorado };
       state.catEleccion = eleccionesPorDefecto(plan);
+      state.catAbiertos = {};
       state.catConfirmarTodos = false;
       state.catMsg = '';
       if (manual) { state.catBack = volver; state.screen = 'catalogo'; }
@@ -322,6 +323,7 @@ export function mountApp(root, deps) {
     return track((async () => {
       await deps.store.setSetting('catalogo_ignorado', state.catUpdate.hash);
       state.catUpdate = { ...state.catUpdate, ignorado: true };
+      state.catConfirmarTodos = false;
       if (state.screen === 'catalogo') state.screen = state.catBack;
       render();
     })());
@@ -857,7 +859,7 @@ export function mountApp(root, deps) {
       dayHeader(),
       state.diaryMsg ? h('p', { class: 'ok', role: 'status' }, state.diaryMsg) : null,
       state.catUpdate && !state.catUpdate.ignorado ? h('section', { class: 'panel aviso-catalogo', 'aria-label': 'Documento nuevo' },
-        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} con conflicto` : ''}.`),
+        h('p', {}, `Hay una versión nueva de tu documento de alimentos: ${state.catUpdate.plan.nuevos.length} nuevos, ${state.catUpdate.plan.actualizados.length} actualizados${state.catUpdate.plan.conflictos.length ? `, ${state.catUpdate.plan.conflictos.length} ${state.catUpdate.plan.conflictos.length === 1 ? 'campo' : 'campos'} en conflicto en ${state.catUpdate.plan.alimentosConflicto.length} ${state.catUpdate.plan.alimentosConflicto.length === 1 ? 'alimento' : 'alimentos'}` : ''}.`),
         h('div', { class: 'row' },
           h('button', { class: 'secondary', onclick: () => { state.catBack = 'diary'; state.screen = 'catalogo'; render(); } }, 'Revisar'),
           h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,
@@ -975,8 +977,8 @@ export function mountApp(root, deps) {
       },
     });
     const catalogo = () => catalogUpdateScreen({
-      h, state, header, render, applyCatalogUpdate, postponeCatalogUpdate,
-      back: () => { state.screen = state.catBack; render(); },
+      h, doc, state, header, render, applyCatalogUpdate, postponeCatalogUpdate,
+      back: () => { state.catConfirmarTodos = false; state.screen = state.catBack; render(); },
     });
     const registro = () => phraseLogScreen({
       h, state, byId, header, MOTIVO_TEXT, render, removeLogEntry, clearLog, exportLog,

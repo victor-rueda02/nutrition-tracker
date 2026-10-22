@@ -8,15 +8,17 @@ const valor = (campo, v) => {
   return v === '' || v === null || v === undefined ? '(vacío)' : String(v).split('|').join(' | ');
 };
 
-// ui: { h, state, header, render, applyCatalogUpdate, postponeCatalogUpdate, back }
+// ui: { h, doc, state, header, render, applyCatalogUpdate, postponeCatalogUpdate, back }
 export function catalogUpdateScreen(ui) {
   const { h, state } = ui;
   const { plan, remote } = state.catUpdate;
   const lista = (titulo, items, texto) => (items.length ? h('details', { class: 'panel' }, h('summary', {}, `${titulo} (${items.length})`),
     h('ul', {}, items.map((i) => h('li', {}, texto(i))))) : null);
   const eleccion = (c) => state.catEleccion[`${c.id}|${c.campo}`] ?? 'mio';
-  const elegir = (c, que) => { state.catEleccion = { ...state.catEleccion, [`${c.id}|${c.campo}`]: que }; ui.render(); };
-  const elegirUno = (id, que) => { state.catEleccion = elegirAlimento(plan, state.catEleccion, id, que); ui.render(); };
+  // Repinta sin que la pantalla salte: se recuerda el scroll y se devuelve tras pintar (los desplegables conservan su estado en state.catAbiertos).
+  const repinta = () => { const sc = ui.doc?.scrollingElement; const y = sc?.scrollTop ?? 0; ui.render(); if (sc) sc.scrollTop = y; };
+  const elegir = (c, que) => { state.catEleccion = { ...state.catEleccion, [`${c.id}|${c.campo}`]: que }; repinta(); };
+  const elegirUno = (id, que) => { state.catEleccion = elegirAlimento(plan, state.catEleccion, id, que); repinta(); };
   const pedirTodos = (v) => { state.catConfirmarTodos = v; ui.render(); };
   const todosPublicado = () => { state.catEleccion = elegirTodos(plan, state.catEleccion, 'publicado'); state.catConfirmarTodos = false; ui.render(); };
   const conflictoCampo = (c) => h('li', { class: 'card conflicto', 'data-campo': c.campo },
@@ -33,7 +35,7 @@ export function catalogUpdateScreen(ui) {
       h('div', { class: 'chips', role: 'group', 'aria-label': `${a.nombre}: todo el alimento` },
         h('button', { type: 'button', class: 'chip', 'aria-pressed': String(marca === 'publicado'), onclick: () => elegirUno(a.id, 'publicado') }, 'Usar el publicado en todo el alimento'),
         h('button', { type: 'button', class: 'chip', 'aria-pressed': String(marca === 'mio'), onclick: () => elegirUno(a.id, 'mio') }, 'Mantener el mío en todo el alimento')),
-      h('details', { class: 'campos', open: campos.length <= 3 },
+      h('details', { class: 'campos', open: state.catAbiertos[a.id] ?? campos.length <= 3, ontoggle: (e) => { state.catAbiertos = { ...state.catAbiertos, [a.id]: e.target.open }; } },
         h('summary', {}, marca === 'mixto' ? 'Elegir campo a campo (mezcla de elecciones)' : 'Elegir campo a campo'),
         h('ul', { class: 'cards' }, campos.map(conflictoCampo))));
   };

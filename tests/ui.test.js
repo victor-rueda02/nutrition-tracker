@@ -1041,7 +1041,7 @@ test('documento publicado nuevo (sin base): aviso en el inicio, revisar y actual
   const publicado = csvDoc('arroz,Arroz,arroz|arroz largo,360,si', 'mayonesa,Mayonesa,mayonesa|mahonesa,680,si', 'merluza_cocida,Merluza cocida,merluza,116,no', 'brocoli,Brócoli,brócoli,34,si');
   const t = await setup({ foods: mio, publicado, enDiario: true });
   const aviso = t.$('section[aria-label="Documento nuevo"]');
-  assert.match(aviso.textContent, /Hay una versión nueva de tu documento de alimentos: 1 nuevos, 2 actualizados, 1 con conflicto/);
+  assert.match(aviso.textContent, /Hay una versión nueva de tu documento de alimentos: 1 nuevos, 2 actualizados, 1 campo en conflicto en 1 alimento/);
   await t.act(() => t.btn('Revisar').click());
   assert.match(t.root.textContent, /4 alimentos/);
   assert.match(t.$('.conflicto').textContent, /Merluza cocida · incluir/);
@@ -1119,6 +1119,35 @@ test('botones por alimento: publicado en todo uno y mantener lo mío en el otro;
   assert.deepEqual([de('pasta').nutrients.energia_kcal, de('pasta').nutrients.proteina_g, de('pasta').extra.tipo], [340, 11, 'usda_app']);
 });
 
+const esperaToggle = async (t, id, valor) => { for (let i = 0; i < 100 && t.app.state.catAbiertos[id] !== valor; i++) await new Promise((r) => setTimeout(r, 10)); };
+
+test('regresión: el desplegable «campo a campo» de un alimento con más de 3 conflictos sigue abierto al elegir un campo; la confirmación global se cierra al salir', { skip }, async () => {
+  const { base, mio, publicado } = escenarioIA();
+  const t = await setup({ foods: mio, publicado, enDiario: true, ajustes: { catalogo_base: { hash: 'x', text: base } } });
+  await t.act(() => t.btn('Revisar').click());
+  const det = (id) => t.$(`[data-id="${id}"] details.campos`);
+  assert.equal(det('pasta').open, false); // más de 3 campos: plegado
+  assert.equal(det('arroz').open, true); // 3 campos: abierto
+  det('pasta').open = true;
+  await esperaToggle(t, 'pasta', true); // el evento toggle llega después
+  const campo = t.$('[data-id="pasta"] [data-campo="nutriente:energia_kcal"]');
+  await t.act(() => [...campo.querySelectorAll('button')].find((b) => b.textContent.startsWith('Mío')).click());
+  assert.equal(det('pasta').open, true, 'sigue abierto tras elegir un campo');
+  assert.equal(det('arroz').open, true);
+  assert.equal([...t.$('[data-id="pasta"] [data-campo="nutriente:energia_kcal"]').querySelectorAll('button')].find((b) => b.textContent.startsWith('Mío')).getAttribute('aria-pressed'), 'true');
+  // cerrarlo a mano también se recuerda
+  det('arroz').open = false;
+  await esperaToggle(t, 'arroz', false);
+  await t.act(() => enAlimento(t, 'arroz', 'Usar el publicado en todo el alimento').click());
+  assert.equal(det('arroz').open, false);
+  // la pregunta de «en todos» no se queda pendiente al salir y volver
+  await t.act(() => t.btn('Usar el publicado en todos').click());
+  assert.ok(t.$('[role=alertdialog]'));
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.btn('Revisar').click());
+  assert.equal(t.$('[role=alertdialog]'), null);
+});
+
 test('«Usar el publicado en todos» pide confirmación dentro de la app y no cambia nada hasta confirmar y actualizar', { skip }, async () => {
   const { base, mio, publicado } = escenarioIA();
   const t = await setup({ foods: mio, publicado, enDiario: true, ajustes: { catalogo_base: { hash: 'x', text: base } } });
@@ -1141,14 +1170,14 @@ test('«Usar el publicado en todos» pide confirmación dentro de la app y no ca
   assert.equal((await t.store.getSetting('catalogo_base')).text, publicado);
 });
 
-test('export real de Victor: 95 conflictos en 4 alimentos añadidos con IA; «Actualizar» sin tocar nada trae los datos publicados', { skip }, async () => {
+test('export real de Victor: 96 conflictos en 4 alimentos añadidos con IA; «Actualizar» sin tocar nada trae los datos publicados', { skip }, async () => {
   const mio = parseFoodsCSV(readFile('./fixtures/actualizar_local_ia.csv'), { catalog }).foods;
   const publicado = readFile('./fixtures/actualizar_publicado_ia.csv');
   const t = await setup({ foods: mio, publicado, enDiario: true, ajustes: { catalogo_base: { hash: 'x', text: csvX('arroz,Arroz,arroz,365,7,,') } } });
   await t.act(() => t.btn('Revisar').click());
-  assert.match(t.root.textContent, /95 conflictos en 4 alimentos/);
+  assert.match(t.root.textContent, /96 conflictos en 4 alimentos/);
   assert.equal(t.$$('.aviso-ia').length, 4);
-  assert.match(t.$('[data-id="salchichon"]').textContent, /30 campos en conflicto/);
+  assert.match(t.$('[data-id="salchichon"]').textContent, /31 campos en conflicto/);
   assert.match(t.$('[data-id="bebida_de_avena"]').textContent, /40 campos en conflicto/);
   assert.equal(t.$$('.conflicto-alimento button[aria-pressed="true"]').filter((b) => b.textContent.startsWith('Usar el publicado')).length, 4);
   await t.act(() => t.btn('Actualizar').click());
