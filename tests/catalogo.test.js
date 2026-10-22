@@ -45,6 +45,18 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   assert.match(byId.get('jamon_cocido').extra.fuente_usda, /^Etiqueta Jamon cocido Hacendado .*BEDCA 965 .*USDA Pork, cured, ham/);
 });
 
+test('queso_fresco (etiqueta Hacendado + BEDCA 2507): «queso fresco» y «queso de burgos» casan; «queso» a secas del tierno avisa de alias más específico', () => {
+  const q = byId.get('queso_fresco');
+  assert.deepEqual([q.extra.incluir, q.estado, q.extra.rol_cena, q.extra.termino_busqueda_usda, q.extra.fdc_id], ['si', 'procesado', 'proteina', undefined, '172223']);
+  assert.deepEqual(['energia_kcal', 'proteina_g', 'grasa_total_g', 'calcio_mg', 'fosforo_mg', 'sodio_mg', 'vitamina_d_ug'].map((k) => q.nutrients[k]), [157, 11, 10.9, 320, 230, 372, 0.07]);
+  for (const text of ['100 g de queso fresco', '100 g de queso de burgos']) {
+    const r = normalizeAiResponse({ items: [{ food_id: 'queso_fresco', cantidad: 100, unidad: 'g', source_text: text, confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
+    assert.deepEqual([r.items[0].food_id, r.items[0].confidence, r.items[0].flags], ['queso_fresco', 'alta', []], text);
+  }
+  const mal = normalizeAiResponse({ items: [{ food_id: 'queso_tierno_loncha', cantidad: 100, unidad: 'g', source_text: '100 g de queso fresco', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList).items[0];
+  assert.ok(mal.flags.includes('alias_mas_especifico'));
+});
+
 test('alias: regla de cortes y especies, sin genéricos de especie o de corte', () => {
   const terms = new Set(realFoods.flatMap((f) => [f.nombre, ...f.alias]).map(normalizeText));
   for (const generic of ['pollo', 'pavo', 'pechuga', 'ternera', 'solomillo', 'jamon']) assert.ok(!terms.has(generic), generic);
