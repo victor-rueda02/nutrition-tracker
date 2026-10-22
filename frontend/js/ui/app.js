@@ -424,11 +424,15 @@ export function mountApp(root, deps) {
 
   // "Repetir": comidas de otro día con ajuste rápido de gramos, sin IA (ver ui/repeat-screen.js).
   // Desde el inicio: el día entero de ayer, cada grupo a su comida. Desde el Diario: esa comida, a la comida de la hora.
-  function openRepeat({ sourceDate, recordId = null, targetDate = today(), targetMeal = DESTINO_ORIGEN, back = state.repeatBack }) {
+  // marcadoInicial: «Repetir de ayer» abre sin nada marcado (por defecto, salvo una comida elegida con recordId); «Copiar día anterior»
+  // pasa true. Se conserva al cambiar de día con las flechas (state.repeatMarcarDia); desde una sola comida, las flechas llevan al
+  // día entero sin marcar.
+  function openRepeat({ sourceDate, recordId = null, targetDate = today(), targetMeal = DESTINO_ORIGEN, back = state.repeatBack, marcadoInicial = marcadoInicialPara({ recordId }) }) {
     return track((async () => {
       const day = await deps.store.listMealsByDate(sourceDate);
       const meals = recordId ? day.filter((m) => m.id === recordId) : day;
-      state.repeat = createRepeat({ meals, sourceDate, recordId, foodsById: byId(), targetDate, targetMeal, marcadoInicial: marcadoInicialPara({ recordId }) });
+      state.repeat = createRepeat({ meals, sourceDate, recordId, foodsById: byId(), targetDate, targetMeal, marcadoInicial });
+      state.repeatMarcarDia = recordId ? false : marcadoInicial;
       state.repeatBack = back;
       state.screen = 'repeat'; render();
     })(), 'No se pudo abrir');
@@ -1024,7 +1028,7 @@ export function mountApp(root, deps) {
     if (state.menu && state.screen === 'diary') {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },
-        { label: 'Copiar día anterior', icon: 'copy', onclick: () => { state.menu = false; openRepeat({ sourceDate: shiftDate(state.day, -1), targetDate: state.day, back: 'diaryTarget' }); } },
+        { label: 'Copiar día anterior', icon: 'copy', onclick: () => { state.menu = false; openRepeat({ sourceDate: shiftDate(state.day, -1), targetDate: state.day, back: 'diaryTarget', marcadoInicial: true }); } },
         { label: '¿Qué ceno?', icon: 'spark', onclick: () => { state.menu = false; cenas.open(state.day); } },
         ...(state.day !== today() ? [{ label: 'Ir a hoy', icon: 'diario', onclick: () => { state.menu = false; openDay(today()); } }] : []),
       ] }));

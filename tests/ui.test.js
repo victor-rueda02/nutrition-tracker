@@ -757,6 +757,25 @@ test('Repetir: "Añadir" con nada marcado está desactivado, lo dice y no guarda
   assert.match(t.$('.bar').textContent, /Marca al menos un alimento/);
 });
 
+test('«Copiar día anterior» (tres puntos del Diario) abre con TODO marcado y lo conserva al cambiar de día con las flechas', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER, MEAL('a2', '2026-10-14', 'cena', [['huevo', 100]])] });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => t.$('button[aria-label="Más opciones del día"]').click());
+  await t.act(() => t.btn('Copiar día anterior').click());
+  assert.equal(t.$('.source-label').textContent, 'De: Ayer');
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 4 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.deepEqual(t.$$('.repeat-group input.meal-check').map(estadoCasilla), ['all', 'all']);
+  assert.match(t.$('.bar button.primary').textContent, /^Añadir 4 alimentos$/);
+  // flechas: el día anterior (anteayer) también llega con todo marcado, y volver a ayer igual
+  await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 1 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
+  assert.equal(t.$$('.repeat-item input[type=checkbox]').length, 4);
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  await t.act(() => t.btn('Añadir 4 alimentos').click());
+  assert.equal((await t.store.allMeals()).filter((m) => m.date === '2026-10-16').reduce((a, m) => a + m.lines.length, 0), 4);
+});
+
 test('Repetir esta comida (desde el Diario): solo esa comida, destino la comida de la hora; volver regresa al Diario', { skip }, async () => {
   const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
   await t.act(() => t.btn('Diario').click());

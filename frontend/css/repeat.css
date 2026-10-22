@@ -10,7 +10,8 @@
 .repeat .repeat-meal-name input[type=checkbox] { flex:none; }
 .repeat .repeat-item { padding:10px 0; border-bottom:1px solid var(--line); }
 .repeat .repeat-item:last-child { border-bottom:none; }
-.repeat .repeat-item.off .repeat-name > span:not(.tag), .repeat .repeat-item.off .repeat-qty { opacity:.5; }
+.repeat .repeat-item.off .repeat-name > span:not(.tag) { color:var(--muted); } /* color, no opacidad: el contraste se mantiene (AA) */
+.repeat .repeat-item.off .repeat-qty { opacity:.5; }
 .repeat .repeat-name { gap:10px; margin:0 0 8px; min-height:44px; font-weight:600; cursor:pointer; }
 .repeat .repeat-name input[type=checkbox] { flex:none; }
 .repeat .repeat-qty { gap:6px; margin:0; justify-content:flex-start; }

@@ -122,6 +122,18 @@ test('casilla de comida: pulsarla marca todos si no lo estaban (vacía o indeter
   // desmarcar un alimento suelto de una comida completa la deja indeterminada
   r = toggleItem(r, r.groups[1].items[1].key, false);
   assert.equal(estadoComida(r, 'comida'), 'some');
+  // los gramos editados no cambian al marcar ni desmarcar la comida
+  const arroz = r.groups[1].items[0].key;
+  r = setItemGrams(r, arroz, '175');
+  const gramos = () => allItems(r).map((i) => i.grams);
+  const antesGramos = gramos();
+  r = toggleComida(r, 'comida');
+  assert.equal(estadoComida(r, 'comida'), 'all');
+  assert.deepEqual(gramos(), antesGramos);
+  r = toggleComida(r, 'comida');
+  assert.equal(estadoComida(r, 'comida'), 'none');
+  assert.deepEqual(gramos(), antesGramos);
+  assert.equal(findItem(r, arroz).grams, 175);
   // es puro: no modifica el estado anterior
   const antes = nuevo({ marcadoInicial: false });
   toggleComida(antes, 'desayuno');
