@@ -45,15 +45,15 @@ test('desde Mi catálogo: 100 g por defecto, fuente, completitud, resumen de mac
   assert.equal(t.$('header.top strong').textContent, 'Aceite de oliva');
   assert.equal(t.$('input.detalle-cantidad').value, '100');
   assert.match(t.$('.detalle-por').textContent, /^Información nutricional por 100 g$/);
-  assert.match(t.$('.detalle-fuente').textContent, /Fuente de datos: USDA FoodData Central \(SR Legacy\) · fdcId 171413/);
+  assert.match(t.$('.detalle-fuente').textContent, /Fuente de datos: Etiqueta del producto/);
   assert.match(t.$('.detalle-comp').textContent, /^\d+\/31 nutrientes obligatorios con dato/);
   assert.match(t.$('.detalle-fuente-completa p').textContent, /Oil, olive/);
   assert.deepEqual([...t.$('select.detalle-porcion').options].map((o) => o.textContent), ['g', '1 cucharada (13,5 g)', '1 cucharadita (4,5 g)']);
   // resumen de energía y macros: valor / objetivo, % y barra
   const kcal = t.$('.detalle-resumen [data-clave="energia_kcal"]');
-  assert.match(kcal.querySelector('.nut-valor').textContent, /884 kcal/);
+  assert.match(kcal.querySelector('.nut-valor').textContent, /903 kcal/);
   assert.match(kcal.querySelector('.nut-valor').textContent, /2000 kcal/);
-  assert.match(kcal.querySelector('.nut-pct').textContent, /44 %/);
+  assert.match(kcal.querySelector('.nut-pct').textContent, /45 %/);
   assert.ok(kcal.querySelector('.meter'));
   assert.deepEqual(t.$$('.detalle-resumen .nut').map((x) => x.dataset.clave), ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']);
   // todos los nutrientes, por grupos
@@ -72,7 +72,7 @@ test('cantidad no redonda y porciones: los valores se recalculan sin guardar nad
   await t.act(() => t.ver('Aceite de oliva').click());
   t.type(t.$('input.detalle-cantidad'), '37,5');
   assert.match(t.$('.detalle-por').textContent, /por 37,5 g$/);
-  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /332 kcal/); // 884 × 37,5 / 100 = 331,5
+  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /339 kcal/); // 903,3 × 37,5 / 100 = 338,7
   // porción: 1 cucharada = 13,5 g; 2 cucharadas = 27 g
   t.choose(t.$('select.detalle-porcion'), 'p0');
   assert.equal(t.$('input.detalle-cantidad').value, '1');
@@ -196,7 +196,7 @@ test('desde el Diario: gramos de la línea, sin «Guardar» hasta cambiarlos, y 
   assert.match(t.$('header.top .title-block small').textContent, /Desayuno/);
   assert.equal(t.$('footer.bar'), null); // sin cambios no se muestra «Guardar»
   assert.equal(t.$('nav.tabbar'), null); // y la pantalla puede llevar pie fijo: sin barra inferior
-  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /303 kcal/); // 379 × 80 / 100
+  assert.match(fila(t, 'energia_kcal').querySelector('.nut-valor').textContent, /307 kcal/); // 384 × 80 / 100
   t.type(t.$('input.detalle-cantidad'), '37,5');
   assert.equal(t.$('footer.bar button').textContent, 'Guardar');
   assert.equal(t.$('nav.tabbar'), null);
@@ -222,7 +222,7 @@ test('desde el Diario: «Volver» sin guardar deja la comida como estaba; el nut
   t.type(t.$('input.detalle-cantidad'), '50');
   await t.act(() => t.ver('Calcio').click());
   const hoy = t.$('.rango-tabla tr[data-fila="hoy"] td').textContent;
-  assert.match(hoy, /107 mg/); // otros alimentos 80,7 (almendras 30 g) + este alimento con la cantidad nueva (50 g = 26)
+  assert.match(hoy, /98 mg/); // otros alimentos 72 (almendras 30 g) + este alimento con la cantidad nueva (50 g = 26)
   assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (con esta cantidad)');
   assert.equal(t.$('.ley-otros').textContent, 'Llevas hoy (sin este alimento)');
   assert.match(t.$('.ley-aporte').textContent, /^Este alimento · \d+ % del objetivo$/);

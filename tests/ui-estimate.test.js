@@ -195,7 +195,7 @@ test('Diario -> «Guardar como receta»: formulario con los ingredientes, cálcu
   assert.match(t.root.textContent, /Receta «Arroz blanco con aceite» guardada .*Ya puedes dictar «arroz con aceite»/);
   const fila = (await t.store.getCatalogRecord()).foods.find((f) => f.id === 'arroz_blanco_con_aceite');
   assert.equal(fila.extra.tipo, 'receta');
-  assert.ok(Math.abs(fila.nutrients.energia_kcal - (365 + 88.4) / 3.3) < 2); // (arroz + aceite) / 330 g × 100
+  assert.ok(Math.abs(fila.nutrients.energia_kcal - (347 + 90.33) / 3.3) < 2); // (arroz + aceite) / 330 g × 100
   // Alimentos -> Recetas: las del repositorio (sin el ejemplo) y la nueva; exportar recetas.json
   await t.act(() => t.btn('Alimentos').click());
   await t.act(() => t.btn('Ver recetas').click());

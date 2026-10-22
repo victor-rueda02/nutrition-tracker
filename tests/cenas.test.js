@@ -176,7 +176,7 @@ test('cada propuesta normal lleva yogur griego natural; proteína e hidrato entr
     for (const p of r.propuestas) {
       assert.ok(p.lineas.some((l) => l.food_id === 'yogur_griego_natural'), p.origen);
       for (const l of p.lineas.filter((x) => ['proteina', 'hidrato', 'plato'].includes(x.rol))) {
-        assert.equal(l.gramos % 5, 0, `${l.food_id} ${l.gramos}`);
+        assert.equal(l.gramos % (l.food_id === 'huevo' ? 54 : 5), 0, `${l.food_id} ${l.gramos}`);
         assert.ok(l.gramos >= 0.6 * l.base - 1e-9 && l.gramos <= 1.5 * l.base + 1e-9, `${l.food_id}: ${l.gramos} vs base ${l.base}`);
       }
     }
@@ -599,7 +599,7 @@ test('«más habitual»: más cenas; empate, más gramos habituales; empate, id'
 
 test('huevo: una proteína con porción en el catálogo se redondea a un número entero de su primera porción (mínimo 1)', () => {
   const huevo = foodsById.get('huevo').porciones[0].gramos;
-  assert.equal(huevo, 50);
+  assert.equal(huevo, 54);
   const ideas = [100, 150, 40, 200].map((g, i) => ({ nombre: `Huevos ${i}`, lineas: [{ food_id: 'huevo', gramos: g }, { food_id: 'arroz_blanco_crudo', gramos: 80 }, { food_id: 'calabacin', gramos: 100 }] }));
   let vistos = 0;
   for (const R of [450, 600, 800, 1000, 1400]) {
@@ -611,9 +611,9 @@ test('huevo: una proteína con porción en el catálogo se redondea a un número
     }
   }
   assert.ok(vistos > 0);
-  // una cena de 62 g de huevo sale con 50 g (1 huevo), no con 40 ni 45
+  // una cena de 62 g de huevo sale con 54 g (1 huevo), no con 40 ni 45
   const huevos = proponer({ historial: [cena('2026-10-18', [['huevo', 62], ['arroz_blanco_crudo', 100], ['calabacin', 80]])], semilla: sinCenasSemilla }).propuestas.flatMap((p) => p.lineas).filter((l) => l.food_id === 'huevo');
-  assert.ok(huevos.length > 0 && huevos.every((l) => l.gramos === 50));
+  assert.ok(huevos.length > 0 && huevos.every((l) => l.gramos === 54));
 });
 
 test('etiquetas: el postre habitual es «postre habitual»; «añadida para completar» solo es de la verdura y el hidrato', () => {
@@ -730,7 +730,7 @@ test('rol_cena sale de data/foods.csv (columna opcional): rolesDe solo da roles 
   assert.equal(roles.merluza_cruda, 'proteina');
   assert.equal(roles.lentejas_caseras, 'plato');
   assert.equal(roles.semillas_chia, 'postre_extra');
-  assert.equal(Object.keys(roles).length, 50);
+  assert.equal(Object.keys(roles).length, 53);
   // vacío o inválido: sin rol (un alimento sin rol cuenta como «otro»; una receta, como «plato»)
   const f = (extra) => new Map([['a', { id: 'a', extra }]]);
   assert.deepEqual(rolesDe(f({ rol_cena: ' Proteina ' })), { a: 'proteina' });
@@ -787,7 +787,7 @@ test('actualizar el documento en el iPhone: un documento sin rol_cena recibe las
     assert.equal(final.size, nuevo.length, nombre); // no se pierde ningún alimento (y entran los nuevos del publicado)
     assert.ok(antiguo.every((f) => final.has(f.id)), nombre);
     assert.equal(rolesDe(final).merluza_cruda, 'proteina', nombre);
-    assert.equal(Object.keys(rolesDe(final)).length, 50, nombre);
+    assert.equal(Object.keys(rolesDe(final)).length, 53, nombre);
   }
   // y lo que cambié yo en el dispositivo (un alias) se conserva junto a los roles nuevos
   const conAlias = antiguo.map((f) => (f.id === 'huevo' ? { ...f, alias: [...f.alias, 'huevos de casa'] } : f));

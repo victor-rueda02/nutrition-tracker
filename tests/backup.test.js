@@ -62,7 +62,7 @@ test('documento para Excel en español: punto y coma, coma decimal y BOM; se vue
   assert.ok(excel.startsWith('﻿id;nombre;alias;'));
   const aceite = excel.split('\n').find((l) => l.startsWith('aceite_oliva;'));
   assert.match(aceite, /;0,91;/); // densidad con coma decimal
-  assert.match(aceite, /;884;/);
+  assert.match(aceite, /;903,297;/);
   const again = parseFoodsCSV(excel, { catalog });
   assert.equal(again.report.ok, true);
   assert.deepEqual(again.report.warnings, []);
