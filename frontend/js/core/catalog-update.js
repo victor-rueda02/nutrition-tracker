@@ -10,6 +10,7 @@
 // en el publicado, que Victor ha pedido borrar (se enseñan en la revisión antes de aplicar; el diario no se toca).
 // Funciones puras, sin DOM.
 import { serializePortions } from './portions.js';
+import { TIPO_RECETA } from './recetas.js';
 
 // Huella de un texto (FNV-1a de 32 bits): no necesita crypto.subtle (que exige https).
 export function hashText(text) {
@@ -105,10 +106,13 @@ export function usoDeRetirados({ eliminados = [], meals = [], recetas = [] }) {
 export function planCatalogUpdate({ local, remote, base = null, catalog, retirados: retiradosJson = [] }) {
   const L = new Map(local.map((f) => [f.id, f]));
   const R = new Map(remote.map((f) => [f.id, f]));
-  const aBorrar = new Set(cleanRetirados(retiradosJson).map((r) => r.id));
-  const eliminados = local.filter((l) => aBorrar.has(l.id) && !R.has(l.id)).map((l) => ({ id: l.id, nombre: l.nombre }));
-  const sale = new Set(eliminados.map((e) => e.id));
   const B = base ? new Map(base.map((f) => [f.id, f])) : null;
+  const aBorrar = new Set(cleanRetirados(retiradosJson).map((r) => r.id));
+  // Solo se borra lo que vino de lo publicado: un alimento con un id retirado que creaste después en la app («Estimar con
+  // IA», «Guardar como receta») es tuyo. Con base, lo que la base tenía; sin base, ante la duda no se borra lo creado en la app.
+  const vinoDeLoPublicado = (l) => (B ? B.has(l.id) : l.extra?.tipo !== 'usda_app' && l.extra?.tipo !== TIPO_RECETA);
+  const eliminados = local.filter((l) => aBorrar.has(l.id) && !R.has(l.id) && vinoDeLoPublicado(l)).map((l) => ({ id: l.id, nombre: l.nombre }));
+  const sale = new Set(eliminados.map((e) => e.id));
   const fusion = new Map(); // id -> alimento resultante, de los que están en el dispositivo y publicados
   const nuevos = [];
   const actualizados = [];

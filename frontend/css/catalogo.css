@@ -16,3 +16,4 @@
 .catalogo-update .confirm-delete { margin:6px 0 10px; }
 .catalogo-update .confirm-delete button { min-height:44px; }
 .catalogo-update .confirm-delete .row { flex-direction:column; align-items:stretch; }
+.catalogo-update .aviso-retirados .aviso-uso { margin:6px 0 2px; color:var(--fg); border-left:4px solid var(--warn); padding-left:8px; }

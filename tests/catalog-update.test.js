@@ -246,3 +246,24 @@ test('export real de Victor (22-10-2026): al actualizar desaparecen los 11 retir
     for (const f of sinCambios) assert.deepEqual(porId.get(f.id), f, `${nombre}: ${f.id}`);
   }
 });
+
+test('retirados: un alimento con un id retirado que creaste después en la app (Estimar con IA, receta) no se borra', () => {
+  const base = docX('arroz,Arroz,arroz,365,7,,');
+  const publicado = docX('arroz,Arroz,arroz,365,7,,');
+  const mio = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron casero,ron,230,0,usda_app,si', 'coca,Mi receta de cola,cola,40,0,receta,');
+  // con base: lo que la base no tenía es tuyo (propios) y no se elimina
+  const p = planCatalogUpdate({ local: mio, remote: publicado, base, catalog, retirados: RET });
+  assert.deepEqual(p.eliminados, []);
+  assert.deepEqual(p.propios.map((x) => x.id), ['ron', 'coca']);
+  assert.deepEqual(p.foods.map((f) => f.id), ['arroz', 'ron', 'coca']);
+  assert.equal(p.hayCambios, false);
+  // sin base, ante la duda no se borra lo creado en la app (tipo usda_app o receta)
+  const q = planCatalogUpdate({ local: mio, remote: publicado, base: null, catalog, retirados: RET });
+  assert.deepEqual(q.eliminados, []);
+  assert.deepEqual(q.foods.map((f) => f.id), ['arroz', 'ron', 'coca']);
+  // pero el mismo id, cuando venía de lo publicado (la base lo tenía), sí se borra
+  const baseConRon = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron,ron,,,,', 'coca,Coca-Cola,coca,,,,');
+  const viejo = docX('arroz,Arroz,arroz,365,7,,', 'ron,Ron,ron,,,,', 'coca,Coca-Cola,coca,,,,');
+  assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: baseConRon, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
+  assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: null, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
+});

@@ -1237,7 +1237,8 @@ const escenarioRetirados = () => {
   const publicado = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si');
   // el dispositivo tiene lo mismo + Coca-Cola y Ron (sin datos); Ron además lo cambió Victor (alias propio)
   const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron|ron añejo,,si'));
-  return { publicado, mio, ajustes: { catalogo_base: { hash: hashText(publicado), text: publicado } } }; // lo publicado no cambió desde la última vez
+  const baseVieja = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron,,no'); // lo que copió el dispositivo cuando aún se publicaban
+  return { publicado, mio, ajustes: { catalogo_base: { hash: hashText(publicado), text: baseVieja } } }; // el hash coincide: el foods.csv no cambió, pero hay retirados
 };
 
 test('retirados: aunque el foods.csv no haya cambiado se ofrece la actualización; la revisión los nombra y, al aplicar, desaparecen', { skip }, async () => {
@@ -1272,8 +1273,8 @@ test('retirados: la revisión avisa de las líneas del diario y de las recetas q
   await t.act(() => t.btn('Revisar').click());
   const avisos = t.$$('section[aria-label="Alimentos retirados"] .aviso-uso').map((x) => x.textContent);
   assert.equal(avisos.length, 2);
-  assert.equal(avisos[0], 'Hay 3 líneas del diario que usan alimentos retirados; seguirán en el diario como «alimento borrado».');
-  assert.equal(avisos[1], 'La receta «Mi cena» usa un alimento retirado (Ron); no se borra: revísala en Recetas.');
+  assert.equal(avisos[0], '⚠ Hay 3 líneas del diario que usan alimentos retirados; seguirán en el diario con su id y sin datos nutricionales.');
+  assert.equal(avisos[1], '⚠ La receta «Mi cena» usa un alimento retirado (Ron); no se borra: revísala en Recetas.');
   await t.act(() => t.btn('Actualizar').click());
   assert.deepEqual(t.app.state.foods.map((f) => f.id), ['arroz', 'kiwi_verde']);
   const guardadas = await t.store.allMeals();
@@ -1290,7 +1291,7 @@ test('retirados: «Ahora no» se recuerda; uno ya publicado no se borra; sin ret
   assert.equal(t.app.state.foods.length, 4);
   // si lo publicado SÍ trae uno de la lista, ese no se borra (el otro, sí)
   const conRon = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'ron,Ron,ron,,no');
-  const t2 = await setup({ foods: mio, publicado: conRon, ajustes: { catalogo_base: { hash: hashText(conRon), text: conRon } }, retirados: RETIRADOS, enDiario: true });
+  const t2 = await setup({ foods: mio, publicado: conRon, ajustes: { catalogo_base: { hash: hashText(conRon), text: csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron,,no') } }, retirados: RETIRADOS, enDiario: true });
   await t2.act(() => t2.btn('Revisar').click());
   assert.match(t2.$('section[aria-label="Alimentos retirados"]').textContent, /Se eliminarán 1 alimento retirado del documento[\s\S]*Coca-Cola Classic\./);
   // sin el fichero o con otro formato: nada que eliminar, y con el publicado al día no hay aviso
