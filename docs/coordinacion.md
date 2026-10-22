@@ -19,7 +19,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-21 | K2 · Info de nutrientes: vitaminas y minerales | redactor-salud (emulado) | salud/k2-vitaminas-minerales | 2 | integrado (fusionado con K1 por clave; "completo": true) | – |
 | 2026-10-21 | L · Detalle de alimento y detalle de nutriente (pantallas, navegación, cálculo, rango, «En tu catálogo») | desarrollador | dev/l-detalle-alimento-nutriente | 2 | integrado | – (decidido por el coordinador: «Guardar» de gramos desde el Diario) |
 | 2026-10-21 | M · UL de vitamina A y folato solo informativo (no avisa en Diario ni descarta en ¿Qué ceno?) + menores de L | desarrollador | dev/m-ul-informativo | 1 | integrado | – (Victor: opción b) |
-| 2026-10-22 | N · «Repetir de ayer» sin nada marcado y casilla por comida (tri-estado) | desarrollador | dev/n-repetir-casillas | 1 | aprobado con retoques (ronda 2: contraste, Copiar día anterior todo marcado) | – (coordinador: «Repetir esta comida» y plantillas siguen todo marcado) |
+| 2026-10-22 | N · «Repetir de ayer» sin nada marcado y casilla por comida (tri-estado) | desarrollador | dev/n-repetir-casillas | 2 | integrado | – (coordinador: «Repetir esta comida» y plantillas siguen todo marcado) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
