@@ -633,21 +633,39 @@ const gramosDe = (t) => t.$$('.repeat-item input.grams').map((i) => i.value);
 const itemDe = (t, nombre) => t.$$('.repeat-item').find((li) => li.textContent.includes(nombre));
 const kcal = (id, g) => (realFoods.find((f) => f.id === id).nutrients.energia_kcal * g) / 100;
 
-test('Repetir de ayer: agrupado, todo marcado, ajuste rápido y totales en vivo; "Añadir" guarda sin IA', { skip }, async () => {
+// Casilla de una comida del origen (a la izquierda del nombre) y de un alimento; estado de ambas.
+const casillaComida = (t, nombre) => t.$$('.repeat-group').find((g) => g.querySelector('h2').textContent === nombre).querySelector('input.meal-check');
+const casillaItem = (t, nombre) => itemDe(t, nombre).querySelector('input[type=checkbox]');
+const estadoCasilla = (c) => (c.indeterminate ? 'some' : c.checked ? 'all' : 'none');
+const sinMarcar = (t) => t.$$('.repeat-item input[type=checkbox]').every((c) => !c.checked);
+
+test('Repetir de ayer: agrupado y SIN nada marcado; la casilla de cada comida marca; ajuste rápido y totales en vivo; "Añadir" guarda sin IA', { skip }, async () => {
   const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
   await t.act(() => t.btn('Repetir de ayer').click());
   assert.equal(t.$('.source-label').textContent, 'De: Ayer');
   assert.deepEqual(t.$$('.repeat-group h2').map((x) => x.textContent), ['Desayuno', 'Comida']);
   assert.deepEqual(gramosDe(t), ['80', '150', '69', '10']);
-  assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.ok(sinMarcar(t));
+  assert.deepEqual(t.$$('.repeat-group input.meal-check').map(estadoCasilla), ['none', 'none']);
+  assert.ok(t.$$('.repeat-item').every((li) => li.classList.contains('off')));
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  assert.equal(t.$('.bar button.primary').textContent, 'Añadir');
+  assert.match(t.$('.bar').textContent, /Marca al menos un alimento/);
+  assert.match(t.$('.bar .totals').textContent, /^Total: nada marcado$/); // sin «sin dato» engañoso
   assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'origen');
   assert.equal(t.$('input[aria-label="Fecha de destino"]').value, '2026-10-16');
+  // las casillas de las dos comidas marcan todo
+  casillaComida(t, 'Desayuno').click();
+  casillaComida(t, 'Comida').click();
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
   assert.match(t.$('.bar .totals').textContent, new RegExp(`Total: ${Math.round(kcal('avena_copos', 80) + kcal('arroz_blanco_crudo', 150) + kcal('kiwi_verde', 69) + kcal('aceite_oliva', 10))} kcal`));
-  // quitar el kiwi, +10 al arroz, teclear la avena
+  // quitar el kiwi (la casilla de su comida queda indeterminada), +10 al arroz, teclear la avena
   const kiwi = itemDe(t, 'Kiwi');
   kiwi.querySelector('input[type=checkbox]').checked = false;
   kiwi.querySelector('input[type=checkbox]').dispatchEvent(new t.document.defaultView.Event('change', { bubbles: true }));
   assert.ok(kiwi.classList.contains('off'));
+  assert.equal(estadoCasilla(casillaComida(t, 'Comida')), 'some');
+  assert.equal(estadoCasilla(casillaComida(t, 'Desayuno')), 'all');
   itemDe(t, 'Arroz').querySelector('button[aria-label^="+10"]').click();
   t.type(itemDe(t, 'Avena').querySelector('input.grams'), '90,5');
   assert.deepEqual(gramosDe(t), ['90,5', '160', '69', '10']);
@@ -677,6 +695,87 @@ test('Repetir: tocar el campo selecciona el número; −10 no baja de 1 g', { sk
   assert.equal(input.value, '1');
 });
 
+test('Repetir: la casilla de la comida marca y desmarca todos, es indeterminada con algunos y se actualiza sola; accesible', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  const comida = casillaComida(t, 'Comida');
+  const desayuno = casillaComida(t, 'Desayuno');
+  // input real con su etiqueta (el nombre de la comida), a la izquierda del nombre
+  assert.equal(comida.type, 'checkbox');
+  const etiqueta = comida.closest('label');
+  assert.equal(etiqueta.textContent, 'Comida');
+  assert.equal(etiqueta.firstElementChild, comida);
+  assert.equal(etiqueta.closest('h2').textContent, 'Comida');
+  // vacía -> pulsar marca todos los de esa comida (y solo esos)
+  comida.click();
+  assert.deepEqual(['arroz', 'kiwi', 'aceite'].map((n) => casillaItem(t, n.charAt(0).toUpperCase() + n.slice(1)).checked), [true, true, true]);
+  assert.equal(casillaItem(t, 'Avena').checked, false);
+  assert.equal(estadoCasilla(comida), 'all');
+  assert.equal(estadoCasilla(desayuno), 'none');
+  assert.equal(itemDe(t, 'Kiwi').classList.contains('off'), false);
+  assert.match(t.$('.bar button.primary').textContent, /^Añadir 3 alimentos$/);
+  // marcada -> pulsar desmarca todos
+  comida.click();
+  assert.ok(sinMarcar(t));
+  assert.equal(estadoCasilla(comida), 'none');
+  assert.equal(itemDe(t, 'Kiwi').classList.contains('off'), true);
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  // un alimento suelto -> indeterminada; pulsarla marca todos; los sueltos la actualizan
+  casillaItem(t, 'Kiwi').click();
+  assert.equal(estadoCasilla(comida), 'some');
+  assert.equal(comida.indeterminate, true);
+  comida.click();
+  assert.equal(estadoCasilla(comida), 'all');
+  assert.ok(['Arroz', 'Kiwi', 'Aceite'].every((n) => casillaItem(t, n).checked));
+  casillaItem(t, 'Aceite').click();
+  assert.equal(estadoCasilla(comida), 'some');
+  casillaItem(t, 'Aceite').click();
+  assert.equal(estadoCasilla(comida), 'all');
+  for (const n of ['Arroz', 'Kiwi', 'Aceite']) casillaItem(t, n).click();
+  assert.equal(estadoCasilla(comida), 'none');
+  assert.equal(comida.indeterminate, false);
+  // marcar una línea con los gramos vacíos desde la casilla de la comida avisa y no deja añadir
+  t.type(itemDe(t, 'Kiwi').querySelector('input.grams'), '');
+  comida.click();
+  assert.equal(itemDe(t, 'Kiwi').querySelector('input.grams').classList.contains('bad'), true);
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  assert.match(t.$('.bar').textContent, /Pon los gramos de las líneas marcadas/);
+});
+
+test('Repetir: "Añadir" con nada marcado está desactivado, lo dice y no guarda nada', { skip }, async () => {
+  const t = await setup({ meals: [AYER] });
+  await t.act(() => t.btn('Repetir de ayer').click());
+  const boton = t.$('.bar button.primary');
+  assert.equal(boton.disabled, true);
+  assert.match(t.$('.bar').textContent, /Marca al menos un alimento/);
+  await t.act(() => boton.click());
+  assert.match(t.$('header').textContent, /Repetir/); // sigue en la pantalla
+  assert.equal((await t.store.allMeals()).filter((m) => m.date === '2026-10-16').length, 0);
+  casillaComida(t, 'Comida').click();
+  casillaComida(t, 'Comida').click(); // marcar y desmarcar vuelve a dejarlo sin nada que añadir
+  assert.equal(t.$('.bar button.primary').disabled, true);
+  assert.match(t.$('.bar').textContent, /Marca al menos un alimento/);
+});
+
+test('«Copiar día anterior» (tres puntos del Diario) abre con TODO marcado y lo conserva al cambiar de día con las flechas', { skip }, async () => {
+  const t = await setup({ meals: [AYER, DESAYUNO_AYER, MEAL('a2', '2026-10-14', 'cena', [['huevo', 100]])] });
+  await t.act(() => t.btn('Diario').click());
+  await t.act(() => t.$('button[aria-label="Más opciones del día"]').click());
+  await t.act(() => t.btn('Copiar día anterior').click());
+  assert.equal(t.$('.source-label').textContent, 'De: Ayer');
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 4 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.deepEqual(t.$$('.repeat-group input.meal-check').map(estadoCasilla), ['all', 'all']);
+  assert.match(t.$('.bar button.primary').textContent, /^Añadir 4 alimentos$/);
+  // flechas: el día anterior (anteayer) también llega con todo marcado, y volver a ayer igual
+  await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 1 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
+  assert.equal(t.$$('.repeat-item input[type=checkbox]').length, 4);
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  await t.act(() => t.btn('Añadir 4 alimentos').click());
+  assert.equal((await t.store.allMeals()).filter((m) => m.date === '2026-10-16').reduce((a, m) => a + m.lines.length, 0), 4);
+});
+
 test('Repetir esta comida (desde el Diario): solo esa comida, destino la comida de la hora; volver regresa al Diario', { skip }, async () => {
   const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
   await t.act(() => t.btn('Diario').click());
@@ -687,6 +786,10 @@ test('Repetir esta comida (desde el Diario): solo esa comida, destino la comida 
   await t.act(repetir);
   assert.deepEqual(t.$$('.repeat-group h2').map((x) => x.textContent), ['Comida']);
   assert.match(t.root.textContent, /Solo la comida que elegiste en el Diario/);
+  // una sola comida elegida a propósito: llega con todo marcado (y la casilla de la comida marcada)
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 3 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.equal(estadoCasilla(casillaComida(t, 'Comida')), 'all');
+  assert.equal(t.$('.bar button.primary').disabled, false);
   assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'desayuno'); // 09:30 en Madrid
   await t.act(() => t.btn('‹ Volver').click());
   assert.equal(t.$('.daylabel').textContent, 'Ayer');
@@ -700,15 +803,20 @@ test('Repetir: flechas del día de origen, día sin comidas, y destino a una com
   const t = await setup({ meals: [AYER, DESAYUNO_AYER] });
   await t.act(() => t.btn('Repetir de ayer').click());
   assert.equal(t.$('button[aria-label="Día de origen siguiente"]').disabled, false);
+  casillaComida(t, 'Comida').click(); // marcado a mano; al cambiar de día se parte de cero
   await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
   assert.match(t.root.textContent, /No hay comidas guardadas ese día/);
   assert.equal(t.$('.bar button.primary').disabled, true);
   await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
   assert.equal(t.$('.source-label').textContent, 'De: Ayer');
+  assert.ok(sinMarcar(t)); // al volver con las flechas sigue sin marcar nada
+  assert.equal(t.$('.bar button.primary').disabled, true);
   await t.act(() => t.$('button[aria-label="Día de origen siguiente"]').click());
   assert.equal(t.$('.source-label').textContent, 'De: Hoy');
   assert.equal(t.$('button[aria-label="Día de origen siguiente"]').disabled, true);
   await t.act(() => t.$('button[aria-label="Día de origen anterior"]').click());
+  assert.ok(sinMarcar(t));
+  casillaComida(t, 'Desayuno').click(); casillaComida(t, 'Comida').click();
   const sel = t.$('select[aria-label="Comida de destino"]');
   sel.value = 'cena'; sel.dispatchEvent(new t.document.defaultView.Event('change', { bubbles: true }));
   await t.act(() => t.btn('Añadir 4 alimentos').click());
@@ -719,6 +827,7 @@ test('Repetir: flechas del día de origen, día sin comidas, y destino a una com
 test('Repetir: sin gramos o con más de 2000 g no se puede añadir, y se dice por qué', { skip }, async () => {
   const t = await setup({ meals: [DESAYUNO_AYER] });
   await t.act(() => t.btn('Repetir de ayer').click());
+  casillaComida(t, 'Desayuno').click();
   const input = t.$('.repeat-item input.grams');
   t.type(input, '');
   assert.equal(t.$('.bar button.primary').disabled, true);
@@ -761,6 +870,9 @@ test('plantillas: guardar una comida del Diario, verla en Plantillas y usarla co
   assert.equal(t.$('.source-label').textContent, 'De: plantilla «Arroz con kiwi»');
   assert.equal(t.$('button[aria-label="Día de origen anterior"]'), null);
   assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'origen');
+  // una plantilla es una sola comida elegida a propósito: todo marcado desde el principio
+  assert.ok(t.$$('.repeat-item input[type=checkbox]').length === 3 && t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked));
+  assert.equal(estadoCasilla(casillaComida(t, 'Comida')), 'all');
   t.type(t.$$('.repeat-item input.grams')[0], '100');
   await t.act(() => t.btn('Añadir 3 alimentos').click());
   assert.match(t.$('p.ok[role=status]').textContent, /Añadidos 3 alimentos de la plantilla «Arroz con kiwi»/);
@@ -893,6 +1005,7 @@ test('también en Repetir: un fallo al guardar se ve y la pantalla se conserva',
   const t = await setup({ meals: [AYER], alterStore: (st) => ({ ...st, addMeal: async (rec) => { if (romper) throw new Error('sin espacio'); return st.addMeal(rec); } }) });
   romper = true;
   await t.act(() => t.btn('Repetir de ayer').click());
+  casillaComida(t, 'Comida').click();
   await t.act(() => t.btn('Añadir 3 alimentos').click());
   assert.match(t.$('[role=alert]').textContent, /No se pudo guardar: sin espacio/);
   assert.match(t.$('header').textContent, /Repetir/);

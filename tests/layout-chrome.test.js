@@ -81,6 +81,26 @@ const AYUDA = `window.H = {
     }
     return { ok: motivos.length === 0, motivos, rect: [r.left, r.top, r.width, r.height].map(Math.round) };
   },
+  // Casilla (input checkbox) con su etiqueta: la etiqueta entera es la zona táctil (≥ 44 px), se ve y no la tapa nada (cabecera, pie fijo).
+  async verificarCasilla(sel, indice = 0) {
+    const c = document.querySelectorAll(sel)[indice];
+    if (!c) return { ok: false, motivos: ['no existe la casilla ' + sel] };
+    const el = c.closest('label') || c;
+    el.scrollIntoView({ block: 'center' }); await this.w(60);
+    const cab = document.querySelector('header.top'); const cabAbajo = cab ? cab.getBoundingClientRect().bottom : 0;
+    const pie = document.querySelector('footer.bar'); const pieArriba = pie ? pie.getBoundingClientRect().top : innerHeight;
+    const r = el.getBoundingClientRect(); const motivos = [];
+    if (r.height < 43.5 || r.width < 43.5) motivos.push('zona táctil de ' + Math.round(r.width) + '×' + Math.round(r.height) + ' px (< 44)');
+    if (r.top < cabAbajo - 0.5) motivos.push('queda debajo de la cabecera');
+    if (r.bottom > pieArriba + 0.5) motivos.push('queda debajo del pie fijo');
+    const cr = c.getBoundingClientRect();
+    const e = document.elementFromPoint(cr.left + cr.width / 2, cr.top + cr.height / 2);
+    if (!e || !(e === c || el.contains(e))) motivos.push('el centro de la casilla lo ocupa ' + (e ? e.tagName.toLowerCase() : 'nada'));
+    c.click(); await this.w(30); // y se puede pulsar: marca la comida
+    if (!c.checked) motivos.push('pulsarla no la marca');
+    c.click(); await this.w(30);
+    return { ok: motivos.length === 0, motivos, rect: [r.left, r.top, r.width, r.height].map(Math.round) };
+  },
 };`;
 
 // Cada pantalla: fases con pasos (JS que navega, se ejecuta en la página tras cargar) y el botón que debe quedar a mano
@@ -107,6 +127,10 @@ const ESCENARIOS = [
     { pasos: `await H.click('Usar', true);`, boton: { re: '^Añadir( [0-9]+ alimentos?)?$' } }] },
   { nombre: 'Repetir esta comida', fases: [{ pasos: `await H.click('Repetir esta comida');`, boton: { re: '^Añadir( [0-9]+ alimentos?)?$' } }] },
   { nombre: 'Repetir de ayer (desde el dictado)', fases: [{ pasos: `await H.click('Añadir comida'); await H.click('Repetir de ayer');`, boton: { re: '^Añadir( [0-9]+ alimentos?)?$' } }] },
+  // El día de hoy como origen (con la comida guardada) y sin nada marcado: «Añadir» a la vista (desactivado) y la casilla de la comida
+  // visible, de ≥ 44 px y pulsable.
+  { nombre: 'Repetir de ayer: casilla de comida (origen con comidas, nada marcado)', fases: [{ pasos: `await H.click('Añadir comida'); await H.click('Repetir de ayer'); await H.click('Día de origen siguiente');`,
+    boton: { re: '^Añadir( [0-9]+ alimentos?)?$' }, casilla: '.repeat-group input.meal-check' }] },
   { nombre: 'objetivos: editar y guardar', fases: [{ pasos: `await H.click('Más', true); await H.click('Objetivos');`, boton: 'Guardar' }] },
   { nombre: 'importar documento (informe de la importación)', fases: [{ pasos: `await H.click('Más', true); await H.click('Documento'); await H.archivo('input[aria-label="Elegir documento de alimentos"]', 'foods.csv', (await (await fetch('../data/foods.csv')).text()) + String.fromCharCode(10) + 'leche_entera,Una fila con el id repetido');`, boton: { re: '^Importar [0-9]+ alimentos' } }] },
   { nombre: 'copia de seguridad: importar con resumen', fases: [{ pasos: `await H.click('Más', true); await H.click('Copia de seguridad'); await H.archivo('input[aria-label="Elegir copia del diario"]', 'copia.json', %COPIA%);`, boton: { re: '^Importar [0-9]+ comida' } }] },
@@ -121,7 +145,7 @@ const ESCENARIOS = [
 // 375×667 (iPhone SE) con todas las pantallas; 375×812 con la zona segura de abajo (34 px, iPhone con barra de inicio) solo con las
 // que llevan pie fijo o acaban en su botón, que son las que dependen de ese margen.
 const TAMANOS = [{ ancho: 375, alto: 667, margenInferior: 0, todas: true }, { ancho: 375, alto: 812, margenInferior: 34, todas: false }];
-const CON_MARGEN = ['detalle de', 'confirmación de un dictado', 'receta nueva (con ingredientes)', 'receta: editar', 'Repetir esta comida', 'Estimar con IA', 'copia de seguridad', 'objetivos', 'actualizar documento'];
+const CON_MARGEN = ['detalle de', 'confirmación de un dictado', 'receta nueva (con ingredientes)', 'receta: editar', 'Repetir esta comida', 'Repetir de ayer: casilla', 'Estimar con IA', 'copia de seguridad', 'objetivos', 'actualizar documento'];
 
 test('layout en Chrome: el botón principal de cada pantalla se ve entero y se puede pulsar (375×667 y 375×812 con zona segura)', { skip, timeout: 240000 }, async (t) => {
   const tmp = await mkdtemp(join(tmpdir(), 'nt-layout-'));
@@ -159,6 +183,10 @@ test('layout en Chrome: el botón principal de cada pantalla se ve entero y se p
             const r = await p.evaluar(`H.verificar(${JSON.stringify(fase.boton)}, true)`);
             const nombre = typeof fase.boton === 'string' ? fase.boton : fase.boton.re;
             if (!r.ok) fallos.push(`${etiqueta} · ${esc.nombre} · «${nombre}»: ${r.motivos.join('; ')}`);
+            if (fase.casilla) {
+              const c = await p.evaluar(`H.verificarCasilla(${JSON.stringify(fase.casilla)})`);
+              if (!c.ok) fallos.push(`${etiqueta} · ${esc.nombre} · casilla «${fase.casilla}»: ${c.motivos.join('; ')}`);
+            }
             if (fase.despues) await p.evaluar(`(async () => { ${fase.despues} })()`);
           }
         } catch (e) { fallos.push(`${etiqueta} · ${esc.nombre}: no se pudo recorrer (${e.message})`); } finally { await p.cerrar(); }
