@@ -34,7 +34,7 @@ export function lineaAEstimar(d, key, foodsById) {
 //    ("lentejas con chorizo", "300 g de lasaña con carne"; "170 g de arroz con 2 huevos" pesa cada cosa: no es un plato), o
 //  · lleva «casero/a(s)» y la IA lo repartió en 2 o más alimentos. Una sola línea (la receta "lentejas caseras"
 //    resuelta como tal) no es un plato partido.
-// Las líneas ya estimadas con IA no cuentan, ni al editar una comida guardada.
+// Las líneas ya estimadas con IA no cuentan. Al editar una comida guardada solo cuenta lo que entró por «Dictar más».
 const SEPARADOR = /\s*(?:,|;|\+|\s+y\s+|\s+e\s+)\s*/i;
 const NUMERO_PALABRA = new Set(['dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'medio', 'media']);
 const cantidades = (ws) => ws.filter((w) => /^\d+$/.test(w) || NUMERO_PALABRA.has(w)).length;
@@ -46,12 +46,14 @@ const conUnaCantidad = (seg) => {
 };
 const esCasero = (seg) => words(seg).some((w) => /^caser[oa]s?$/.test(w));
 
+// Al editar una comida guardada solo cuenta lo que entró por «Dictar más» (su texto y sus líneas): lo anterior ya estaba guardado.
 export function detectarPlatos(d, foodsById) {
-  if (d.editing || !d.text) return [];
-  const candidatas = d.lines.filter((l) => foodsById.has(l.food_id) && !l.flags.includes('estimado_ia'));
+  const texto = d.editing ? d.textoMas : d.text;
+  if (!texto) return [];
+  const candidatas = d.lines.filter((l) => foodsById.has(l.food_id) && !l.flags.includes('estimado_ia') && (!d.editing || l.deMas));
   const usadas = new Set();
   const platos = [];
-  for (const seg of d.text.split(SEPARADOR).map((s) => s.trim()).filter(Boolean)) {
+  for (const seg of texto.split(SEPARADOR).map((s) => s.trim()).filter(Boolean)) {
     const lleva = (l) => {
       if (usadas.has(l.key)) return false;
       const f = foodsById.get(l.food_id);

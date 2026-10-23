@@ -217,3 +217,89 @@ test('Dictar más conserva la comida elegida y no cambia «Añadir alimento»', 
   assert.equal(t.$$('li.card[data-key]').length, 5);
   assert.equal(t.calls.length, 2);
 });
+
+// ---------- ronda 1 del revisor ----------
+const AYER = () => ({ id: 'r1', date: '2026-10-15', meal: 'comida', createdAt: '2026-10-15T12:00:00Z', text: '150 g de arroz y un kiwi', lines: [{ food_id: 'arroz_blanco_crudo', grams: 150, source_text: '150 g de arroz' }, { food_id: 'kiwi_verde', grams: 69, source_text: 'un kiwi' }] });
+const editarAyer = async (t) => { await t.act(() => t.$('button[aria-label="Día anterior"]').click()); await t.act(() => t.btn('Editar').click()); };
+
+test('editar + Dictar más con un excluido: «Activar» resuelve solo esa línea en local (sin IA, sin duplicar la comida)', { skip }, async () => {
+  const t = await setup({ meals: [AYER()], respuestas: [RES([ITEM('huevo', 100, '2 huevos')], [{ text: '100 g de morro de cerdo', motivo: 'no_en_catalogo' }])] });
+  await editarAyer(t);
+  t.type(t.$$('input.grams')[0], '120');
+  await t.act(() => t.btn('Dictar más').click());
+  t.type(t.masTexto(), '2 huevos y 100 g de morro de cerdo');
+  await t.act(() => t.btn('Interpretar').click());
+  assert.match(t.root.textContent, /Excluido del catálogo/);
+  await t.act(() => t.btn('Activar').click());
+  assert.equal(t.calls.length, 1); // sin segunda llamada
+  assert.match(t.$('header').textContent, /Editar comida/);
+  assert.equal(t.$('input[aria-label="Fecha"]').value, '2026-10-15');
+  assert.deepEqual(t.$$('input.grams').map((i) => i.value), ['120', '69', '100', '100']);
+  assert.equal(t.$$('li.card.unmatched').length, 0);
+  await t.act(() => t.btn('Guardar cambios').click());
+  const comidas = await t.store.allMeals();
+  assert.equal(comidas.length, 1);
+  assert.deepEqual([comidas[0].id, comidas[0].date, comidas[0].createdAt], ['r1', '2026-10-15', '2026-10-15T12:00:00Z']);
+  assert.deepEqual(comidas[0].lines.map((l) => [l.food_id, l.grams]), [['arroz_blanco_crudo', 120], ['kiwi_verde', 69], ['huevo', 100], ['morro_cerdo', 100]]);
+});
+
+test('dictado nuevo + Dictar más con un excluido: «Activar» no reinterpreta todo ni pierde gramos editados', { skip }, async () => {
+  const t = await setup({ respuestas: [RES([ITEM('avena_copos', 80, '80 g de avena')]), RES([], [{ text: '100 g de morro de cerdo', motivo: 'no_en_catalogo' }])] });
+  await t.dictar('80 g de avena');
+  t.type(t.$$('input.grams')[0], '95');
+  await t.act(() => t.btn('Dictar más').click());
+  t.type(t.masTexto(), '100 g de morro de cerdo');
+  await t.act(() => t.btn('Interpretar').click());
+  await t.act(() => t.btn('Activar').click());
+  assert.equal(t.calls.length, 2);
+  assert.deepEqual(t.$$('input.grams').map((i) => i.value), ['95', '100']);
+  assert.equal(t.$$('li.card.unmatched').length, 0);
+});
+
+test('«Activar» está desactivado con una llamada en vuelo (regla 10)', { skip }, async () => {
+  let abrir;
+  const t = await setup({ respuestas: [RES([], [{ text: '100 g de morro de cerdo', motivo: 'no_en_catalogo' }]), () => new Promise((res) => { abrir = () => res(RES([ITEM('huevo', 100, '2 huevos')])); })] });
+  await t.dictar('100 g de morro de cerdo');
+  await t.act(() => t.btn('Dictar más').click());
+  t.type(t.masTexto(), '2 huevos');
+  t.btn('Interpretar').click();
+  assert.equal(t.btn('Activar').disabled, true);
+  t.btn('Activar').click();
+  await Promise.resolve();
+  assert.equal(t.calls.length, 2);
+  abrir();
+  await t.app.whenIdle();
+  assert.equal(t.calls.length, 2);
+  assert.equal(t.btn('Activar').disabled, false);
+});
+
+test('si sales de la confirmación con la llamada en vuelo, el resultado no se añade a otro borrador', { skip }, async () => {
+  let abrir;
+  const t = await setup({ respuestas: [PRIMERA, () => new Promise((res) => { abrir = () => res(SEGUNDA); })] });
+  await t.dictar('x');
+  await t.act(() => t.btn('Dictar más').click());
+  t.type(t.masTexto(), '2 huevos');
+  t.btn('Interpretar').click();
+  t.$('header button.back').click(); // vuelve al dictado (sin whenIdle: la llamada sigue retenida)
+  t.btn('Añadir a mano').click(); // otra confirmación, vacía
+  assert.equal(t.$$('li.card[data-key]').length, 0);
+  abrir();
+  await t.app.whenIdle();
+  assert.equal(t.$$('li.card[data-key]').length, 0);
+  assert.equal(t.$$('li.card.unmatched').length, 0);
+  assert.equal(t.btn('Guardar').disabled, true);
+  assert.equal(t.calls.length, 2);
+});
+
+test('al editar una comida, «Tratar como un plato» aparece para lo dictado con Dictar más y no para lo que ya estaba', { skip }, async () => {
+  const A = AYER(); A.text = '150 g de arroz con kiwi';
+  const t = await setup({ meals: [A], respuestas: [RES([ITEM('arroz_blanco_crudo', 200, '200 g de arroz'), ITEM('pechuga_pollo_cruda', 150, 'pollo')])] });
+  await editarAyer(t);
+  assert.equal(t.btn('Tratar como un plato'), undefined);
+  await t.act(() => t.btn('Dictar más').click());
+  t.type(t.masTexto(), '200 g de arroz con pollo');
+  await t.act(() => t.btn('Interpretar').click());
+  assert.equal(t.$$('li.card.plato').length, 1);
+  assert.match(t.$('li.card.plato').textContent, /200 g de arroz con pollo/);
+  assert.ok(t.btn('Tratar como un plato'));
+});

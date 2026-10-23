@@ -64,11 +64,11 @@ export function draftFromLines({ lines, meal, text = '', sourceText = '', foodsB
 export function appendDictation(d, { text, result, foodsById }) {
   const nuevo = createDraft({ text, meal: d.meal, result, foodsById });
   let nextKey = d.nextKey;
-  const lines = nuevo.lines.map((l) => ({ ...l, key: `l${nextKey++}` }));
+  const lines = nuevo.lines.map((l) => ({ ...l, key: `l${nextKey++}`, deMas: true }));
   const texto = [d.text, text].map((t) => (t ?? '').trim()).filter(Boolean).join(', ');
   const warnings = [...d.warnings, ...nuevo.warnings.filter((w) => !d.warnings.includes(w))];
   return {
-    draft: { ...d, text: texto, lines: [...d.lines, ...lines], unmatched: [...d.unmatched, ...nuevo.unmatched], warnings, nextKey },
+    draft: { ...d, text: texto, textoMas: [d.textoMas, text].map((t) => (t ?? '').trim()).filter(Boolean).join(', '), lines: [...d.lines, ...lines], unmatched: [...d.unmatched, ...nuevo.unmatched], warnings, nextKey },
     lineKeys: lines.map((l) => l.key),
     unmatchedFrom: d.unmatched.length,
   };

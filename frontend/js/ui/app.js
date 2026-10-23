@@ -191,6 +191,7 @@ export function mountApp(root, deps) {
 
   // Tras activar un alimento excluido: se vuelve a interpretar la misma frase con la lista ampliada.
   function reprocess() {
+    if (state.busy) return undefined; // regla 10: con una llamada en vuelo no sale otra
     state.busy = true; state.error = ''; render();
     return track((async () => {
       const { text, meal } = state.draft;
@@ -202,6 +203,20 @@ export function mountApp(root, deps) {
         state.busy = false; render();
       }
     })());
+  }
+
+  // «Activar «X»» de un no reconocido excluido. Si el borrador viene de una comida editada o se amplió con «Dictar más»,
+  // reinterpretar el texto entero lo reharía de cero (perdería gramos editados, `editing` y la fecha): se activa el alimento
+  // y se resuelve SOLO esa línea en local (gramos del fragmento dicho), sin llamar a la IA. El dictado normal sigue con reprocess.
+  async function activarExcluido(id, u) {
+    if (state.busy) return;
+    await activate(id);
+    const d = state.draft;
+    if (!d || !(d.editing || d.textoMas)) { await reprocess(); return; }
+    const i = d.unmatched.indexOf(u);
+    const f = byId().get(id);
+    if (i >= 0 && f) state.draft = resolveUnmatched(d, i, id, null, f);
+    render();
   }
 
   function startManual() {
@@ -228,18 +243,19 @@ export function mountApp(root, deps) {
   function dictarMas() {
     const text = (state.draft?.mas?.texto ?? '').trim();
     if (!text || state.busy) return undefined;
-    state.busy = true; setMas({ error: '' }); render();
+    const tok = {}; // testigo: si mientras esperas sales de esta confirmación (o abres otra), el resultado no se añade a otro borrador
+    state.busy = true; setMas({ error: '', enVuelo: tok }); render();
     return track((async () => {
       try {
         const result = await interpret(text);
-        if (!state.draft || state.screen !== 'confirm') return; // te fuiste de la confirmación mientras esperabas
+        if (state.screen !== 'confirm' || state.draft?.mas?.enVuelo !== tok) return;
         const entry = newEntry({ texto: text, result, now: now() });
         if (entry) await deps.store.setSetting('registro_frases', addEntry(await loadLog(), entry));
         const r = appendDictation(state.draft, { text, result, foodsById: byId() });
         state.draft = { ...r.draft, logIds: [...(state.draft.logIds ?? []), ...(entry ? [entry.id] : [])], mas: null };
         irANuevo = { lineKeys: r.lineKeys, unmatchedFrom: r.unmatchedFrom };
       } catch (e) {
-        if (state.draft) setMas({ error: e.userMessage ?? `Error inesperado: ${e.message}` });
+        if (state.draft?.mas?.enVuelo === tok) setMas({ error: e.userMessage ?? `Error inesperado: ${e.message}`, enVuelo: null });
       } finally {
         state.busy = false; render();
         if (irANuevo) { const n = irANuevo; irANuevo = null; queueMicrotask(() => verNuevo(n)); }
@@ -754,7 +770,7 @@ export function mountApp(root, deps) {
       }
       for (const id of u.candidates ?? []) {
         const f = byId().get(id);
-        if (f) actions.push(h('button', { class: 'secondary', onclick: () => track((async () => { await activate(id); await reprocess(); })()) }, `Activar «${f.nombre}»`));
+        if (f) actions.push(h('button', { class: 'secondary', disabled: state.busy, onclick: () => track(activarExcluido(id, u)) }, `Activar «${f.nombre}»`));
       }
       actions.push(h('button', { class: 'secondary', onclick: () => openPicker({ title: 'Buscar en mi documento', onPick: (f) => { state.draft = resolveUnmatched(state.draft, i, f.id, null, f); render(); } }) }, 'Buscar en mi documento'));
       if (MOTIVOS_ESTIMABLES.includes(u.motivo)) actions.push(h('button', { class: 'secondary', disabled: state.busy, onclick: () => est.start(i) }, 'Estimar con IA'));
