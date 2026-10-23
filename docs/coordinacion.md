@@ -28,7 +28,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-23 | T · Retirados no se borran en la PWA si la base ya no los tiene (actualizó el código viejo) | desarrollador | dev/t-retirados-base | 1 | integrado y publicado | Probar en la app instalada (dos aperturas, Revisar → Actualizar) |
 | 2026-10-23 | U · «Otros nutrientes» del informe con el mismo formato (filas, grupos) y referencias nuevas (aa esenciales OMS mg/kg, cafeína 400, trans <1 % kcal) | desarrollador | dev/u-otros-nutrientes | 2 | integrado (sin publicar; Victor pidió explicación antes del push) | – (aprobado por Victor) |
 | 2026-10-23 | V · Investigar referencias oficiales para nutrientes «sin referencia» (solo informe, sin cambios) | redactor-salud | – | – | hecho | – (Victor: poli 6-10 %E FAO/OMS 2024 y mono 10-20 %E NNR 2023 con apunte nórdico; nada más) |
-| 2026-10-23 | W · Referencias de mono (NNR 2023, 10-20 %E) y poliinsaturadas (FAO/OMS 2024, 6-10 %E) | desarrollador | dev/w-ref-mono-poli | 0 | en curso | – (al terminar, push de U + W sin preguntar: Victor ya dio OK) |
+| 2026-10-23 | W · Referencias de mono (NNR 2023, 10-20 %E) y poliinsaturadas (FAO/OMS 2024, 6-10 %E) | desarrollador | dev/w-ref-mono-poli | 0 | en revisión (ronda 1) | – (al terminar, push de U + W sin preguntar: Victor ya dio OK) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
