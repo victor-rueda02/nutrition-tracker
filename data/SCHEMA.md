@@ -91,7 +91,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
   `foods.csv` publicado se elimina del catálogo del dispositivo al pulsar «Actualizar», aunque se hubiera cambiado desde
   la app. La revisión los enseña antes y avisa de las líneas del diario y de las recetas que los usan. El diario y las
   recetas no se tocan (las líneas siguen en el diario con su id y sin datos nutricionales). Es la única excepción a «la actualización nunca borra
-  alimentos». Si el `foods.csv` publicado vuelve a traer un `id` de la lista, no se borra; tampoco se borra un alimento con ese `id` creado después en la app (`tipo=usda_app` o receta: solo se borra lo que la base ya tenía).
+  alimentos». Si el `foods.csv` publicado vuelve a traer un `id` de la lista, no se borra; tampoco se borra un alimento con ese `id` creado después en la app (`tipo=usda_app` o receta). Se borra lo que la base tenía o lo que no es de esos tipos, aunque la base ya no lo tenga (la pudo guardar una versión antigua de la app tras actualizar); el aviso se ofrece aunque el hash del publicado no cambie, mientras haya algo que eliminar.
 
 ## Recetas (`data/recetas.json`)
 Una receta es **una fila más del catálogo**: la app la trata como cualquier alimento (dictas "300 g de lentejas").
