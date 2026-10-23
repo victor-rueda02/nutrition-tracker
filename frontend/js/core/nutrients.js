@@ -41,3 +41,14 @@ export function sumLines(lines, keys) {
   }
   return result;
 }
+
+// Claves de `keys` cuya columna está vacía (sin dato) en TODOS los alimentos: nada que enseñar de ellas.
+// Un 0 escrito es un dato, así que cuenta como columna con dato.
+export function columnasVacias(foods, keys) {
+  const vacias = new Set(keys);
+  for (const f of foods) {
+    for (const k of vacias) if (nutrientPer100(f, k) !== null) vacias.delete(k);
+    if (!vacias.size) break;
+  }
+  return vacias;
+}

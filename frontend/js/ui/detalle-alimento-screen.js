@@ -16,7 +16,7 @@ function filaSimple(ui, r) {
 }
 
 // ui: { h, doc, state, byId, header, nutrientRow, fmtQty, nf1, required, threshold, catalog, objetivos (targetsForDate), objetivosTexto,
-//       origenTexto, guardar(gramos), abrirNutriente(clave), back }
+//       foods (documento, para ocultar lo que no tiene objetivo ni dato en ningún alimento), origenTexto, guardar(gramos), abrirNutriente(clave), back }
 export function detalleAlimentoScreen(ui) {
   const { h, state } = ui;
   const d = state.detalle;
@@ -54,7 +54,7 @@ export function detalleAlimentoScreen(ui) {
   }
 
   function contenido(gramos) {
-    const { resumen, grupos } = filasAlimento({ food, grams: gramos, objetivos: ui.objetivos.list, catalog: ui.catalog });
+    const { resumen, grupos } = filasAlimento({ food, grams: gramos, objetivos: ui.objetivos.list, catalog: ui.catalog, foods: ui.foods });
     const fila = (r) => {
       const li = r.pct !== null && r.total !== null ? ui.nutrientRow(r) : filaSimple(ui, r);
       if (r.sub) li.classList.add('sub'); // subpartida: sangría y peso normal

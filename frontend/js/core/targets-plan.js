@@ -277,6 +277,7 @@ export function targetsForDate(fecha, { plan = null, targets, catalog }) {
     let v;
     if (t.porMj !== null) v = isNum(kcal) ? round(t.porMj * kcal * KCAL_TO_MJ, 2) : null;
     else if (t.pctEnergia !== null) v = isNum(kcal) ? round((t.pctEnergia / 100) * kcal / 9, 2) : null; // grasa: 9 kcal/g
+    else if (t.porKg !== null) v = isNum(d.peso) ? round(t.porKg * d.peso, 4) : null; // aminoácidos (OMS): g/kg × el peso del plan
     else v = base(t) ?? null;
     return { ...vacio, [t.tipo]: v };
   };
@@ -302,6 +303,8 @@ export function targetsForDate(fecha, { plan = null, targets, catalog }) {
     list.push({
       ...info, clave, perfil, ...lim, valor: principal(lim), tipo: tipoDe(lim),
       origen: e ? e.origen : 'referencia', entrada: e ? e.entrada : null,
+      faltaPeso: !e && ref.porKg !== null && !isNum(d.peso), // referencia por kg sin peso en el plan: sin barra
+      soloReferencia: Boolean(info.soloReferencia) && !e, // si tu plan define el nutriente, es un objetivo tuyo como los demás
     });
   }
   return {
@@ -349,6 +352,7 @@ export function planDeReferencia({ fecha, perfil, targets, catalog }) {
   const valores = {};
   for (const t of targetsForDate(fecha, { plan, targets, catalog }).list) {
     if (t.porMj != null || t.pctEnergia != null) continue; // B1, niacina y ALA: fuera, para que sigan a las kcal del día
+    if (t.soloReferencia) continue; // aminoácidos (OMS), cafeína y trans: referencias que se enseñan, no objetivos de tu plan
     const e = Object.fromEntries(LIMITES.filter((k) => t[k] !== null).map((k) => [k, t[k]]));
     if (Object.keys(e).length) valores[t.clave] = e;
   }

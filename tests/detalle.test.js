@@ -43,7 +43,7 @@ test('sin dato es null (nunca 0, sin % ni barra) y un 0 escrito es un 0 real', (
 test('los grupos salen en el orden de la pantalla, con todos los nutrientes del catálogo una sola vez', () => {
   const { grupos } = filasAlimento({ food: rojo, grams: 100, objetivos: obj.list, catalog });
   assert.deepEqual(grupos.map((g) => g.id), GRUPOS_DETALLE.map((g) => g.id));
-  assert.equal(grupos.flatMap((g) => g.filas).length, catalog.list.length + 1); // + la fila EPA + DHA
+  assert.equal(grupos.flatMap((g) => g.filas).length, catalog.list.length + 3); // + las filas de suma: EPA + DHA, metionina + cistina y fenilalanina + tirosina
   assert.equal(grupos.find((g) => g.id === 'proteinas').filas[0].clave, 'proteina_g');
   assert.ok(grupos.find((g) => g.id === 'proteinas').filas.some((f) => f.clave === 'leucina_g'));
   assert.ok(grupos.find((g) => g.id === 'hidratos').filas.some((f) => f.clave === 'fibra_g'));

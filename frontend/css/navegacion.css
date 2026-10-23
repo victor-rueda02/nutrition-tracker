@@ -90,7 +90,10 @@ main { padding-bottom:calc(120px + env(safe-area-inset-bottom)); }
 .kv { display:flex; justify-content:space-between; gap:12px; align-items:baseline; min-height:44px; padding:10px 0; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
 .kv:first-child { border-top:none; }
 .kv.strong { font-weight:700; }
-.grupo h3 { margin:16px 0 8px; font-size:1rem; text-transform:capitalize; color:var(--muted); }
+.grupo h3 { margin:16px 0 8px; font-size:1rem; color:var(--muted); }
+/* Informe: título de grupo plano, como el del detalle (mayúsculas solo por CSS) */
+.informe .grupo h3 { margin:16px 0 8px; padding-top:14px; border-top:1px solid var(--line); font-size:.8rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.informe .grupo:first-of-type h3 { margin-top:8px; padding-top:0; border-top:none; }
 .informe .nut-head { font-size:.95rem; }
 
 /* Alimentos: tarjetas y lista del catálogo */
@@ -289,3 +292,13 @@ button.secondary.wide { width:100%; }
 /* Ronda 5 */
 @media (prefers-color-scheme: dark) { button.review { background:#3a2f17; border-color:#f5b83d; color:#f5b83d; } }
 .menu-row .valor { font-variant-numeric:tabular-nums; font-size:1.05rem; }
+
+/* Nutriente sin referencia (informe): nombre y valor en dos columnas (el valor acaba donde el % de las filas con barra) y debajo «sin referencia» */
+.nut-sin-ref { min-height:50px; }
+.nut-sin-ref .nut-head { align-items:baseline; }
+.nut-sin-ref .nut-pct { width:auto; min-width:56px; }
+.nut-sin-ref .nut-valor { margin:0; color:var(--fg); font-weight:600; font-size:.95rem; font-variant-numeric:tabular-nums; }
+.nut-sin-ref-nota { margin-top:2px; font-size:.85rem; color:var(--muted); }
+/* Sumas de aminoácidos y EPA + DHA: sus componentes, sangrados como saturadas, azúcares y fibra */
+.informe .nut:is([data-clave="metionina_g"], [data-clave="cistina_g"], [data-clave="fenilalanina_g"], [data-clave="tirosina_g"], [data-clave="epa_g"], [data-clave="dha_g"]) { padding-left:16px; }
+.informe .nut:is([data-clave="metionina_g"], [data-clave="cistina_g"], [data-clave="fenilalanina_g"], [data-clave="tirosina_g"], [data-clave="epa_g"], [data-clave="dha_g"]) .nut-label { font-weight:500; }
