@@ -113,7 +113,7 @@ export function planCatalogUpdate({ local, remote, base = null, catalog, retirad
   // IA» = tipo usda_app, «Guardar como receta» = tipo receta) es tuyo. Vino de lo publicado si la base lo tenía o si no es
   // de esos tipos (la base puede ser posterior a la retirada, p. ej. la guardó una versión antigua de la app tras
   // actualizar, y entonces ya no los tiene).
-  const creadoEnLaApp = (l) => l.extra?.tipo === 'usda_app' || l.extra?.tipo === TIPO_RECETA;
+  const creadoEnLaApp = (l) => anadidoConIA(l) || l.extra?.tipo === TIPO_RECETA;
   const vinoDeLoPublicado = (l) => (B?.has(l.id) ?? false) || !creadoEnLaApp(l);
   const eliminados = local.filter((l) => aBorrar.has(l.id) && !R.has(l.id) && vinoDeLoPublicado(l)).map((l) => ({ id: l.id, nombre: l.nombre }));
   const sale = new Set(eliminados.map((e) => e.id));

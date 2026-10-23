@@ -299,4 +299,7 @@ test('base posterior a la retirada: un id retirado creado en la app (usda_app o 
   // con solo los propios presentes no hay nada que eliminar
   const soloPropios = local.filter((f) => !ids.includes(f.id) || f.id === 'ron' || f.id === 'coca_cola');
   assert.deepEqual(planCatalogUpdate({ local: soloPropios, remote: publicado, base: publicado, catalog, retirados }).eliminados, []);
+  // pendiente_revisar=si (añadido con IA) también cuenta como propio, aunque no lleve tipo=usda_app
+  const pendiente = exportado.map((f) => (f.id === 'ron' ? { ...f, extra: { ...f.extra, tipo: '', pendiente_revisar: 'si' } } : f));
+  assert.ok(!planCatalogUpdate({ local: pendiente, remote: publicado, base: publicado, catalog, retirados }).eliminados.some((e) => e.id === 'ron'));
 });
