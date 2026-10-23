@@ -47,6 +47,10 @@ export function loadTargets(raw, catalog) {
       valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia), pctEnergiaMin: num(t.pct_energia_min), pctEnergiaMax: num(t.pct_energia_max), porKg: num(t.por_kg), soloReferencia: t.solo_referencia === true,
       ul: num(t.ul), ulInformativo: num(t.ul) !== null && t.ul_informativo === true, nota: t.nota ?? '', notaUl: t.nota_ul ?? '', fuente: raw?.fuentes?.[t.fuente] ?? t.fuente ?? '',
     };
+    if (item.tipo === 'rango' && !esRangoEnergia(item)) {
+      warnings.push(`${clave}: tipo "rango" sin pct_energia_min y pct_energia_max válidos (el mínimo no puede superar al máximo)`);
+      continue;
+    }
     if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null && item.porKg === null && !esRangoEnergia(item)) {
       warnings.push(`${clave}: sin valor (valor, por perfil, por_mj, pct_energia, pct_energia_min y pct_energia_max o por_kg)`);
       continue;

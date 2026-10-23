@@ -52,8 +52,6 @@ export function detalleNutrienteScreen(ui) {
   // UL informativo (vitamina A, folato): se enseña con su nota, pero no avisa ni se compara con el total.
   const notaUl = fila.ulInformativo && fila.notaUl ? h('p', { class: 'muted small nota-ul-info' }, fila.notaUl) : null;
 
-  const notaRef = fila.soloReferencia && fila.nota ? h('p', { class: 'muted small nota-ref' }, fila.nota) : null; // de quién es la referencia (monoinsaturadas: nórdica)
-
   const entrada = ui.info?.[clave];
   const seccion = (titulo, contenido) => h('section', { class: 'info-seccion' }, h('h2', { class: 'caps' }, titulo), h('div', { class: 'panel' }, contenido));
   const fuentes = (refs) => (refs?.length ? seccion('Fuentes consultadas', h('ul', { class: 'fuentes' }, refs.map((r) => h('li', {},
@@ -76,8 +74,10 @@ export function detalleNutrienteScreen(ui) {
     ui.header(fila.label, ui.back, { close: true, sub: food.nombre }),
     h('section', { class: 'panel rango', 'aria-label': 'Tu rango' },
       h('h2', { class: 'caps' }, 'Tu rango'),
-      ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
-      barra(), tabla, notaRef, notaUl),
+      // una referencia que no es un objetivo (OMS, nórdica...) dice de quién es en vez de «Objetivos: referencias EFSA»; su nota va una sola vez
+      fila.soloReferencia ? h('p', { class: 'muted small objetivos-dia nota-ref' }, fila.nota || 'Referencia: no es un objetivo de tu plan')
+        : ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
+      barra(), tabla, notaUl),
     informacion,
     h('section', { class: 'catalogo-top', 'aria-label': 'En tu catálogo' },
       h('h2', { class: 'caps' }, 'En tu catálogo'),

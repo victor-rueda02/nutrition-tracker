@@ -49,10 +49,10 @@ test('targets.json: dos rangos en % de la energía, solo referencia, sin UL, cad
 });
 
 test('un rango sin los dos extremos o al revés se avisa y se ignora', () => {
-  const malo = { ...RAW, objetivos: [{ clave: CLAVES[0], tipo: 'rango', pct_energia_min: 10, pct_energia_max: 6, solo_referencia: true }, { clave: CLAVES[1], tipo: 'rango', pct_energia_min: 10, solo_referencia: true }] };
+  const malo = { ...RAW, objetivos: [{ clave: CLAVES[0], tipo: 'rango', pct_energia_min: 10, pct_energia_max: 6, solo_referencia: true }, { clave: CLAVES[1], tipo: 'rango', pct_energia_min: 10, solo_referencia: true }, { clave: 'cafeina_mg', tipo: 'rango', valor: 400, solo_referencia: true }] };
   const r = loadTargets(malo, catalog);
-  assert.deepEqual(r.targets.list, []);
-  assert.equal(r.warnings.length, 2);
+  assert.deepEqual(r.targets.list, []); // tipo rango exige los dos extremos válidos, aunque tenga otro valor
+  assert.equal(r.warnings.length, 3);
 });
 
 test('el texto de nutrientes-info dice la referencia que usa la app y de dónde sale', () => {
@@ -60,6 +60,9 @@ test('el texto de nutrientes-info dice la referencia que usa la app y de dónde 
   assert.match(info[CLAVES[1]].necesidades, /Nordic Nutrition Recommendations 2023 \(NNR\): 10-20 % de la energía \(unos 22-44 g con 2\.000 kcal\)/);
   assert.match(info[CLAVES[1]].necesidades, /referencia nórdica/);
   for (const k of CLAVES) assert.ok(info[k].referencias.some((r) => r.organismo === 'OMS' && r.url === 'https://www.who.int/publications/i/item/9789240101876' && r.consultado === '2026-10-23'), k);
+  // la cifra de la NNR (10-20 %) tiene su referencia en la entrada de monoinsaturadas, con la misma URL que targets.json
+  const urlNnr = RAW.fuentes.nnr_mono.match(/\((https:\/\/[^)]+)\)/)[1];
+  assert.ok(info[CLAVES[1]].referencias.some((r) => r.organismo === 'NNR (Consejo Nórdico)' && r.url === urlNnr && r.consultado === '2026-10-23'));
 });
 
 // ---------- targetsForDate ----------
@@ -147,6 +150,7 @@ test('detalle: mínimo y máximo del día, sin fila «Referencia» duplicada, co
     assert.equal(referencia, null);
     const rango = rangoNutriente({ fila: f, hoy: 30, referencia });
     assert.deepEqual(rango.filas.map((x) => [x.id, x.valor]), [['alimento', 10], ['hoy', 40], ['min', min], ['max', max]]);
+    assert.deepEqual(rango.filas.map((x) => x.etiqueta), ['Este alimento', 'Llevas hoy (con esta cantidad)', 'Mínimo (referencia)', 'Máximo (referencia)']); // como trans: es la referencia, no un objetivo
     assert.deepEqual(rango.marcas.map((m) => m.id), ['min', 'max']);
     assert.equal(rango.sinReferencia, false);
     assert.ok(rango.barra);
@@ -164,12 +168,12 @@ const NOW = new Date('2026-10-16T07:30:00Z');
 const PLAN_UI = { tipo: 'plan_objetivos', version: 1, nombre: 'Prueba', periodos: [{ id: 'p', nombre: 'Prueba', inicio: '2026-01-01', peso_kg: 75 }], excepciones: [] };
 const COMIDA = [{ id: 'h', date: '2026-10-16', meal: 'comida', createdAt: '2026-10-16T08:00:00Z', text: '', lines: [['pechuga_pollo_cruda', 200], ['arroz_blanco_crudo', 100]].map(([food_id, grams]) => ({ food_id, grams, source_text: '' })) }];
 
-async function setup() {
+async function setup({ plan = PLAN_UI } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const root = dom.window.document.getElementById('app');
   const store = createMemoryStore();
   for (const m of COMIDA) await store.addMeal(m);
-  await store.setSetting('plan_objetivos', PLAN_UI);
+  if (plan) await store.setSetting('plan_objetivos', plan);
   const app = mountApp(root, {
     store, createAiClient: () => ({}), catalog, settings, targets: RAW, objetivos: {},
     initial: { foods: realFoods, extraHeaders: [], docName: 'doc.csv' }, conn: {}, now: () => NOW,
@@ -208,4 +212,23 @@ test('detalle de nutriente de las monoinsaturadas: barra con mínimo y máximo, 
   assert.deepEqual(t.$$('.rango-tabla tr').map((r) => r.dataset.fila), ['alimento', 'hoy', 'min', 'max']);
   assert.match(t.$('.rango-tabla tr[data-fila="max"] td').textContent, /44,4/);
   assert.match(t.$('.nota-ref').textContent, /Referencia nórdica \(NNR 2023\)/);
+});
+
+test('detalle de nutriente sin plan: en vez de «Objetivos: referencias EFSA», la nota de la referencia nórdica, una sola vez', { skip }, async () => {
+  const t = await setup({ plan: null });
+  await t.act(() => t.$('button[aria-label^="Ver detalle de Pechuga"]').click());
+  await t.act(() => t.$(`.detalle-todos [data-clave="${CLAVES[1]}"] .abre-detalle`).click());
+  const nota = RAW.objetivos.find((o) => o.clave === CLAVES[1]).nota;
+  assert.equal(t.$('.rango .objetivos-dia').textContent, nota);
+  assert.equal(t.$$('.nota-ref').length, 1);
+  assert.doesNotMatch(t.$('.rango').textContent, /Objetivos: referencias EFSA/);
+  assert.deepEqual(t.$$('.rango-tabla th').map((x) => x.textContent), ['Este alimento', 'Llevas hoy', 'Mínimo (referencia)', 'Máximo (referencia)']);
+  // un aminoácido (sin nota propia): «Referencia: no es un objetivo de tu plan»
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.$('.detalle-todos [data-clave="leucina_g"] .abre-detalle').click());
+  assert.equal(t.$('.rango .objetivos-dia').textContent, 'Referencia: no es un objetivo de tu plan');
+  // y un nutriente con objetivo de verdad sigue con el texto de siempre
+  await t.act(() => t.btn('‹ Volver').click());
+  await t.act(() => t.$('.detalle-todos [data-clave="calcio_mg"] .abre-detalle').click());
+  assert.equal(t.$('.rango .objetivos-dia').textContent, 'Objetivos: referencias EFSA');
 });

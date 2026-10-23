@@ -215,7 +215,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
   let refFundida = false;
   for (const [id, etiqueta, valor] of [['min', 'Mínimo', fila.min], ['objetivo', 'Objetivo', fila.objetivo], ['max', 'Máximo', fila.max]]) {
     if (!esNum(valor)) continue;
-    const funde = !refFundida && esNum(refValor) && Math.abs(valor - refValor) <= 1e-9 * Math.max(1, Math.abs(valor));
+    const funde = fila.soloReferencia || (!refFundida && esNum(refValor) && Math.abs(valor - refValor) <= 1e-9 * Math.max(1, Math.abs(valor))); // una referencia solo_referencia ya ES la referencia: sus filas lo dicen
     if (funde) refFundida = true;
     filas.push({ id, etiqueta: funde ? `${etiqueta} (referencia)` : etiqueta, valor });
   }

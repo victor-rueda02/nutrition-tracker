@@ -13,8 +13,8 @@ const claves = JSON.parse(readFileSync(resolve(root, 'data/nutrients.json'), 'ut
 
 const TEXTOS = ['resumen', 'necesidades', 'deficit', 'exceso', 'fuentes_alimentos', 'consejos'];
 const OPCIONALES = ['discrepancias'];
-const ORGANISMOS = ['EFSA', 'NIH ODS', 'AESAN', 'BEDCA', 'OMS', 'Harvard T.H. Chan'];
-const DOMINIOS = ['efsa.europa.eu', 'efsa.onlinelibrary.wiley.com', 'ods.od.nih.gov', 'aesan.gob.es', 'bedca.net', 'who.int', 'hsph.harvard.edu', 'nutritionsource.hsph.harvard.edu'];
+const ORGANISMOS = ['EFSA', 'NIH ODS', 'AESAN', 'BEDCA', 'OMS', 'Harvard T.H. Chan', 'NNR (Consejo Nórdico)'];
+const DOMINIOS = ['efsa.europa.eu', 'efsa.onlinelibrary.wiley.com', 'ods.od.nih.gov', 'aesan.gob.es', 'bedca.net', 'who.int', 'hsph.harvard.edu', 'nutritionsource.hsph.harvard.edu', 'livsmedelsverket.se', 'norden.org'];
 const MAX_PALABRAS = 220; // objetivo 150-200 por nutriente, con algo de margen
 const palabras = (s) => s.trim().split(/\s+/).filter(Boolean).length;
 
