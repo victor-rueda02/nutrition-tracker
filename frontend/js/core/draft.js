@@ -57,6 +57,23 @@ export function draftFromLines({ lines, meal, text = '', sourceText = '', foodsB
   return d;
 }
 
+// «Dictar más» en la confirmación: el resultado de dictar OTRA frase se AÑADE al final del borrador (líneas, sin resolver
+// y avisos). Lo que ya había no cambia: ni líneas, ni gramos editados, ni líneas confirmadas, ni comida ni fecha. Un
+// alimento repetido es una línea aparte (no se suma). El texto dictado se acumula (lo usan «Tratar como un plato» y el
+// registro de la comida). Devuelve { draft, lineKeys, unmatchedFrom } para llevar la vista a lo nuevo.
+export function appendDictation(d, { text, result, foodsById }) {
+  const nuevo = createDraft({ text, meal: d.meal, result, foodsById });
+  let nextKey = d.nextKey;
+  const lines = nuevo.lines.map((l) => ({ ...l, key: `l${nextKey++}`, deMas: true }));
+  const texto = [d.text, text].map((t) => (t ?? '').trim()).filter(Boolean).join(', ');
+  const warnings = [...d.warnings, ...nuevo.warnings.filter((w) => !d.warnings.includes(w))];
+  return {
+    draft: { ...d, text: texto, textoMas: [d.textoMas, text].map((t) => (t ?? '').trim()).filter(Boolean).join(', '), lines: [...d.lines, ...lines], unmatched: [...d.unmatched, ...nuevo.unmatched], warnings, nextKey },
+    lineKeys: lines.map((l) => l.key),
+    unmatchedFrom: d.unmatched.length,
+  };
+}
+
 export const setMeal = (d, meal) => ({ ...d, meal });
 
 // Acepta "80", "80,5" o "80.5". Vacío o inválido -> null (la línea queda sin gramos y no se puede guardar).
