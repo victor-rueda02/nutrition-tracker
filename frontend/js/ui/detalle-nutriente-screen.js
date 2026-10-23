@@ -90,7 +90,7 @@ export function detalleNutrienteScreen(ui) {
       h('div', { class: 'panel' },
         con.length || sin.length ? h('ul', { class: 'top-lista aportes-lista' },
           con.map((a) => item(a, `${base(a)} ${nb(q(a.valor))}${a.parcial ? ' (parcial)' : ''}${pctTxt(a.pct)}`, 'con-dato')),
-          sin.map((a) => item(a, `${base(a)} sin dato`, 'sin-dato')))
+          sin.map((a) => item(a, `${base(a)} sin dato`, 'sin-dato')))
           : h('p', { class: 'muted' }, 'Sin registros este día.')));
   };
 
