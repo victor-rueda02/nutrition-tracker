@@ -1282,6 +1282,30 @@ test('retirados: la revisión avisa de las líneas del diario y de las recetas q
   assert.deepEqual(await t.store.getSetting('recetas'), [receta]); // la receta, también
 });
 
+test('retirados: con la base ya sin ellos (la guardó la app antigua) se ofrece igualmente, se eliminan al aplicar y el aviso no vuelve; los creados en la app no cuentan', { skip }, async () => {
+  const publicado = csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si');
+  const mio = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola Classic,coca-cola,,no', 'ron,Ron,ron,,si'));
+  const ajustes = { catalogo_base: { hash: hashText(publicado), text: publicado } }; // base = publicado: no contiene coca ni ron
+  const t = await setup({ foods: mio, publicado, ajustes, retirados: RETIRADOS, enDiario: true });
+  const aviso = t.$('section[aria-label="Documento nuevo"]');
+  assert.ok(aviso, 'el aviso se ofrece aunque la base ya no los tenga');
+  assert.match(aviso.textContent, /0 nuevos, 0 actualizados, 2 alimentos retirados por eliminar/);
+  await t.act(() => t.btn('Revisar').click());
+  assert.match(t.$('section[aria-label="Alimentos retirados"]').textContent, /Coca-Cola Classic, Ron\./);
+  await t.act(() => t.btn('Actualizar').click());
+  assert.deepEqual(t.app.state.foods.map((f) => f.id), ['arroz', 'kiwi_verde']);
+  assert.equal(t.$('section[aria-label="Documento nuevo"]'), null);
+  // con lo ya aplicado, al arrancar otra vez no hay aviso
+  const t2 = await setup({ foods: t.app.state.foods, publicado, ajustes, retirados: RETIRADOS, enDiario: true });
+  assert.equal(t2.$('section[aria-label="Documento nuevo"]'), null);
+  // un id retirado creado en la app (usda_app y receta): no se ofrece ni se pierde
+  const propios = docDe(csvDoc('arroz,Arroz,arroz,365,si', 'kiwi_verde,Kiwi,kiwi,61,si', 'coca,Coca-Cola casera,coca-cola,40,no', 'ron,Ron,ron,230,si')).map((f) => (f.id === 'ron' ? { ...f, extra: { ...f.extra, tipo: 'usda_app', pendiente_revisar: 'si' } } : f.id === 'coca' ? { ...f, extra: { ...f.extra, tipo: 'receta' } } : f));
+  const t3 = await setup({ foods: propios, publicado, ajustes, retirados: RETIRADOS, enDiario: true });
+  assert.equal(t3.$('section[aria-label="Documento nuevo"]'), null, 'sin nada que eliminar no se ofrece');
+  assert.deepEqual(t3.app.state.foods.map((f) => f.id), ['arroz', 'kiwi_verde', 'coca', 'ron']);
+  assert.equal(t3.$('[role=alert]'), null);
+});
+
 test('retirados: «Ahora no» se recuerda; uno ya publicado no se borra; sin retirados.json (o con basura) la app sigue como antes', { skip }, async () => {
   const { publicado, mio, ajustes } = escenarioRetirados();
   const t = await setup({ foods: mio, publicado, ajustes, retirados: RETIRADOS, enDiario: true });

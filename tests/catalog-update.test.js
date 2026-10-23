@@ -267,3 +267,36 @@ test('retirados: un alimento con un id retirado que creaste después en la app (
   assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: baseConRon, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
   assert.deepEqual(planCatalogUpdate({ local: viejo, remote: publicado, base: null, catalog, retirados: RET }).eliminados.map((x) => x.id), ['ron', 'coca']);
 });
+
+// ---------- Fallo del iPhone (23-10-2026): la base ya no tiene los retirados (la guardó la app antigua tras actualizar) ----------
+test('base posterior a la retirada (la guardó la app antigua): se eliminan exactamente los 11 del export real', () => {
+  const retirados = JSON.parse(readFile('../data/retirados.json'));
+  const ids = retirados.retirados.map((r) => r.id);
+  const exportado = parseFoodsCSV(readFile('./fixtures/export_iphone_2026-10-22.csv'), { catalog }).foods;
+  const publicado = parseFoodsCSV(readFile('../data/foods.csv'), { catalog }).foods;
+  const base = publicado; // lo que dejó el código antiguo en catalogo_base: el foods.csv nuevo, sin los 11
+  const p = planCatalogUpdate({ local: exportado, remote: publicado, base, catalog, retirados });
+  assert.deepEqual(p.eliminados.map((e) => e.id).sort(), [...ids].sort());
+  const final = applyChoices(p, publicado, {});
+  assert.ok(ids.every((id) => !final.some((f) => f.id === id)));
+  assert.equal(p.hayCambios, true);
+  // aplicado el plan, la siguiente vez no queda nada por eliminar
+  const q = planCatalogUpdate({ local: final, remote: publicado, base, catalog, retirados });
+  assert.deepEqual(q.eliminados, []);
+});
+
+test('base posterior a la retirada: un id retirado creado en la app (usda_app o receta) no se elimina', () => {
+  const retirados = JSON.parse(readFile('../data/retirados.json'));
+  const ids = retirados.retirados.map((r) => r.id);
+  const publicado = parseFoodsCSV(readFile('../data/foods.csv'), { catalog }).foods;
+  const exportado = parseFoodsCSV(readFile('./fixtures/export_iphone_2026-10-22.csv'), { catalog }).foods;
+  const local = exportado.map((f) => (f.id === 'ron' ? { ...f, extra: { ...f.extra, tipo: 'usda_app' } } : f.id === 'coca_cola' ? { ...f, extra: { ...f.extra, tipo: 'receta' } } : f));
+  const p = planCatalogUpdate({ local, remote: publicado, base: publicado, catalog, retirados });
+  assert.deepEqual(p.eliminados.map((e) => e.id).sort(), ids.filter((id) => id !== 'ron' && id !== 'coca_cola').sort());
+  assert.ok(['ron', 'coca_cola'].every((id) => p.propios.some((x) => x.id === id)));
+  const final = applyChoices(p, publicado, {});
+  assert.ok(['ron', 'coca_cola'].every((id) => final.some((f) => f.id === id)));
+  // con solo los propios presentes no hay nada que eliminar
+  const soloPropios = local.filter((f) => !ids.includes(f.id) || f.id === 'ron' || f.id === 'coca_cola');
+  assert.deepEqual(planCatalogUpdate({ local: soloPropios, remote: publicado, base: publicado, catalog, retirados }).eliminados, []);
+});

@@ -102,15 +102,19 @@ export function usoDeRetirados({ eliminados = [], meals = [], recetas = [] }) {
 // retirados (ya no publicados, se mantienen), eliminados (los de data/retirados.json que se borran), propios (creados en
 // el dispositivo), conflictos: [{ id, nombre, campo, etiqueta, mio, publicado }], hayCambios }.
 // retirados = lo de data/retirados.json (lista o ya limpiado): se borra el que está en el dispositivo y NO en lo publicado,
-// aunque lo hubieras cambiado. Uno que lo publicado sí trae no se borra nunca.
+// aunque lo hubieras cambiado. Uno que lo publicado sí trae no se borra nunca, ni uno creado en la app (usda_app o receta)
+// que no estaba en la base.
 export function planCatalogUpdate({ local, remote, base = null, catalog, retirados: retiradosJson = [] }) {
   const L = new Map(local.map((f) => [f.id, f]));
   const R = new Map(remote.map((f) => [f.id, f]));
   const B = base ? new Map(base.map((f) => [f.id, f])) : null;
   const aBorrar = new Set(cleanRetirados(retiradosJson).map((r) => r.id));
   // Solo se borra lo que vino de lo publicado: un alimento con un id retirado que creaste después en la app («Estimar con
-  // IA», «Guardar como receta») es tuyo. Con base, lo que la base tenía; sin base, ante la duda no se borra lo creado en la app.
-  const vinoDeLoPublicado = (l) => (B ? B.has(l.id) : l.extra?.tipo !== 'usda_app' && l.extra?.tipo !== TIPO_RECETA);
+  // IA» = tipo usda_app, «Guardar como receta» = tipo receta) es tuyo. Vino de lo publicado si la base lo tenía o si no es
+  // de esos tipos (la base puede ser posterior a la retirada, p. ej. la guardó una versión antigua de la app tras
+  // actualizar, y entonces ya no los tiene).
+  const creadoEnLaApp = (l) => l.extra?.tipo === 'usda_app' || l.extra?.tipo === TIPO_RECETA;
+  const vinoDeLoPublicado = (l) => (B?.has(l.id) ?? false) || !creadoEnLaApp(l);
   const eliminados = local.filter((l) => aBorrar.has(l.id) && !R.has(l.id) && vinoDeLoPublicado(l)).map((l) => ({ id: l.id, nombre: l.nombre }));
   const sale = new Set(eliminados.map((e) => e.id));
   const fusion = new Map(); // id -> alimento resultante, de los que están en el dispositivo y publicados
