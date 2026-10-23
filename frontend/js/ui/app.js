@@ -800,15 +800,14 @@ export function mountApp(root, deps) {
   // Una fila de nutriente: valor / objetivo, barra y estado. Superar el UL es un aviso aparte (no "cumplido").
   const nutrientRow = (r) => nutrientRowCon(r, fmtQty, true);
   function nutrientRowCon(r, fmtQty, conUlInformativo = false) { // fmtQty propio: el detalle usa uno que no confunde lo muy pequeño con un 0
-    // Sin referencia: el valor («—» si no hay dato, nunca 0) y «sin referencia», sin barra ni %. Con una referencia por kg sin peso en el plan, se dice qué falta.
+    // Sin referencia: nombre a la izquierda y el valor (en la columna del %; «—» si no hay dato, nunca 0) a la derecha, sin barra ni %,
+    // y debajo «sin referencia» (con una referencia por kg sin peso en el plan, se dice qué falta).
     if (sinReferencia(r)) {
       return h('li', { class: `nut nut-sin-ref${r.total === null ? ' sin-dato' : ''}`, 'data-clave': r.clave },
         h('div', { class: 'row between nut-head' },
-          h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), ' ', h('span', { class: 'nut-tail' },
-            h('span', { class: 'nut-valor' }, r.total === null ? h('span', { 'aria-label': 'sin dato' }, '—') : fmtQty(r.total, r.unit), r.faltaPeso ? null : h('span', { class: 'muted' }, ' · sin referencia')),
-            r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null)),
-          h('span', { class: 'nut-pct sin_objetivo' }, '')),
-        r.faltaPeso ? h('div', { class: 'small muted nut-sin-ref-nota' }, 'sin referencia: falta tu peso en Objetivos') : null);
+          h('span', { class: 'nut-main' }, h('span', { class: 'nut-label' }, r.label), r.parcial && r.total !== null ? h('span', { class: 'tag' }, 'parcial') : null),
+          h('span', { class: 'nut-pct sin_objetivo' }, h('span', { class: 'nut-valor' }, r.total === null ? h('span', { 'aria-label': 'sin dato' }, '—') : fmtQty(r.total, r.unit)))),
+        h('div', { class: 'nut-sin-ref-nota' }, r.faltaPeso ? 'sin referencia: falta tu peso en Objetivos' : 'sin referencia'));
     }
     const valor = r.total === null ? 'sin dato' : fmtQty(r.total, r.unit);
     const objetivo = r.valor === null ? '' : r.objetivo === null && r.min != null && r.max != null ? ` / ${fmtNum(r.min, r.unit)}–${fmtQty(r.max, r.unit)}` : ` / ${fmtQty(r.valor, r.unit)}`;

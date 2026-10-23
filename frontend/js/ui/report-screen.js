@@ -112,7 +112,7 @@ export function reportScreen(ui) {
           h('span', { class: 'legend-pct' }, m.kcal === null || !total ? '' : `${nf0.format((m.kcal / total) * 100)} %`))))),
       energia,
       h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Objetivos de macronutrientes')), h('ul', { class: 'nuts' }, macroFilas.map(ui.nutrientRow))),
-      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Resto de nutrientes')),
+      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Todos los nutrientes')),
         grupos.map((g) => h('div', { class: 'grupo', 'data-grupo': g.id }, h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(ui.nutrientRow))))),
       h('section', { class: 'panel' }, h('h2', {}, 'Comidas del día'),
         h('ul', { class: 'kvs' }, rep.comidas.map((c) => fila(ui.MEAL_LABEL[c.meal], ui.fmtKcal(c)))))]);

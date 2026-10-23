@@ -255,3 +255,16 @@ test('«¿Qué ceno?» no usa estas referencias: ni como metas (déficit) ni com
   for (const k of [...Object.keys(AMINOS), ...Object.keys(SUMAS), 'cafeina_mg', 'grasas_trans_g']) assert.ok(!claves(con).includes(k), k);
   assert.deepEqual(con.propuestas.map((p) => p.lineas?.map((l) => l.food_id)), sin.propuestas.map((p) => p.lineas?.map((l) => l.food_id)));
 });
+
+test('detalle de nutriente: si el objetivo del día es la referencia, una sola cifra (trans con otras kcal) y sin «sin referencia» repetido', () => {
+  // plan de 2700 kcal: máximo de trans 3 g; resolveTargets (2000 kcal) daría 2,22 g, que no debe salir como segunda cifra
+  const objetivos = en(plan({ valores: { energia_kcal: { objetivo: 2700 } } })).list;
+  const fila_ = filasAlimento({ food: A, grams: 100, objetivos, catalog }).filas.get('grasas_trans_g');
+  assert.equal(fila_.origen, 'referencia');
+  const rango = rangoNutriente({ fila: fila_, referencia: { valor: 2.22, tipo: 'max' } });
+  assert.deepEqual(rango.filas.map((f) => [f.id, f.etiqueta, f.valor]), [['alimento', 'Este alimento', 0.5], ['max', 'Máximo (referencia)', 3]]);
+  assert.deepEqual(rango.marcas.map((m) => [m.valor, m.etiqueta]), [[3, 'Máx. y ref.']]);
+  // si el plan define el nutriente (origen distinto), la referencia sigue siendo otra fila
+  const propio = filasAlimento({ food: A, grams: 100, objetivos: en(plan({ valores: { grasas_trans_g: { max: 1 } } })).list, catalog }).filas.get('grasas_trans_g');
+  assert.deepEqual(rangoNutriente({ fila: propio, referencia: { valor: 2.22, tipo: 'max' } }).filas.map((f) => f.id), ['alimento', 'max', 'referencia']);
+});

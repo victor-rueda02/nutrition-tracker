@@ -185,7 +185,10 @@ const TIPO_TEXTO = { min: 'mínimo', max: 'máximo', objetivo: 'objetivo' };
 //   etiquetaHoy: «Llevas hoy» o «Llevas ese día» (si el día no es hoy)
 // «Llevas hoy» de la tabla es el total del día CON la cantidad elegida (lo de otros alimentos + este alimento); la leyenda
 // de la barra da las dos partes por separado: `leyenda.otros` (el día sin este alimento) y `leyenda.aporte`.
-export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, referencia = null, etiquetaHoy = 'Llevas hoy' }) {
+export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, referencia: referenciaDada = null, etiquetaHoy = 'Llevas hoy' }) {
+  // Si el objetivo del día ya ES la referencia (origen 'referencia'), una sola cifra: la del día, que puede diferir de la de
+  // resolveTargets (trans, ALA, B1 y niacina dependen de las kcal del plan). Se funde con su límite, sin fila «Referencia» aparte.
+  const referencia = referenciaDada && fila.origen === 'referencia' && esNum(fila[referenciaDada.tipo]) ? { ...referenciaDada, valor: fila[referenciaDada.tipo] } : referenciaDada;
   const aporte = fila.total;
   const hayHoy = esNum(hoy);
   const otros = hayHoy ? Math.max(0, hoy - (esNum(aporteOriginal) ? aporteOriginal : 0)) : 0;

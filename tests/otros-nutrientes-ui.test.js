@@ -70,20 +70,29 @@ test('informe: aminoácido con su barra y % (39 mg/kg × 75 kg = 2,925 g); sin r
   assert.ok(leu.querySelector('.meter'));
   assert.match(leu.querySelector('.nut-valor').textContent, /\/ 2,9/);
   assert.match(leu.querySelector('.nut-pct').textContent, /^\d+ %$/);
-  const alm = fila(t, 'almidon_g');
+  const alm = fila(t, 'grasas_monoinsaturadas_g');
   assert.ok(alm.classList.contains('nut-sin-ref'));
   assert.equal(alm.querySelector('.meter'), null);
-  assert.equal(alm.querySelector('.nut-pct').textContent, '');
-  assert.match(alm.querySelector('.nut-valor').textContent, /sin referencia/);
+  // dos columnas: nombre a la izquierda y el valor en la columna del % (sin %); debajo, «sin referencia»
+  assert.match(alm.querySelector('.nut-head > .nut-pct .nut-valor').textContent, /^\d[\d,.]* g$/);
+  assert.equal(alm.querySelector('.nut-head > .nut-main .nut-valor'), null);
+  assert.equal(alm.querySelector('.nut-sin-ref-nota').textContent, 'sin referencia');
   // trans con su máximo y cafeína con el suyo
   assert.ok(fila(t, 'grasas_trans_g').querySelector('.meter'));
   assert.ok(fila(t, 'cafeina_mg').querySelector('.meter'));
   // sin dato: «—», nunca 0
   const sinDato = t.$$('main.informe li.nut-sin-ref.sin-dato');
   assert.ok(sinDato.length > 0, 'con este día hay nutrientes sin dato y sin referencia');
-  for (const li of sinDato) assert.equal(li.querySelector('.nut-valor').textContent, '— · sin referencia');
+  for (const li of sinDato) assert.deepEqual([li.querySelector('.nut-valor').textContent, li.querySelector('.nut-sin-ref-nota').textContent], ['—', 'sin referencia']);
   // los que tienen valor no son un 0 inventado: o traen su cantidad o es un 0 escrito en el documento
-  for (const li of t.$$('main.informe li.nut-sin-ref:not(.sin-dato)')) assert.match(li.querySelector('.nut-valor').textContent, /^[<\d].* · sin referencia$/);
+  for (const li of t.$$('main.informe li.nut-sin-ref:not(.sin-dato)')) {
+    assert.match(li.querySelector('.nut-valor').textContent, /^[<\d]/);
+    assert.equal(li.querySelector('.nut-sin-ref-nota').textContent, 'sin referencia');
+  }
+  // «Todos los nutrientes» (como en el detalle de alimento) y los componentes de una suma, sangrados por CSS (siguen en su sitio, antes de la suma)
+  assert.match(t.$('main.informe details.plegable:last-of-type summary h2').textContent, /^Todos los nutrientes$/);
+  const orden = t.$$('main.informe li.nut').map((x) => x.dataset.clave);
+  assert.deepEqual(orden.slice(orden.indexOf('metionina_g'), orden.indexOf('metionina_cistina') + 1), ['metionina_g', 'cistina_g', 'metionina_cistina']);
 });
 
 test('informe sin peso en el plan: el aminoácido dice «sin referencia: falta tu peso en Objetivos» y no lleva barra', { skip }, async () => {
@@ -91,7 +100,7 @@ test('informe sin peso en el plan: el aminoácido dice «sin referencia: falta t
   await informe(t);
   const leu = fila(t, 'leucina_g');
   assert.equal(leu.querySelector('.meter'), null);
-  assert.match(leu.textContent, /sin referencia: falta tu peso en Objetivos/);
+  assert.equal(leu.querySelector('.nut-sin-ref-nota').textContent, 'sin referencia: falta tu peso en Objetivos');
   assert.match(leu.querySelector('.nut-valor').textContent, /\d/); // su valor sigue ahí
   // cafeína y trans no necesitan el peso
   assert.ok(fila(t, 'cafeina_mg').querySelector('.meter'));

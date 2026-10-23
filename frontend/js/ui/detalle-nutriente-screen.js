@@ -23,7 +23,7 @@ export function detalleNutrienteScreen(ui) {
     // Sin ninguna referencia (ni objetivo, ni mín./máx., ni UL): el valor y «sin referencia», sin barra.
     if (rango.sinReferencia) {
       return h('div', { class: 'rango-sin-ref rango-leyenda small' },
-        h('p', { class: 'ley ley-aporte' }, `Este alimento · ${fila.total === null ? '—' : q(fila.total)} · sin referencia`),
+        h('p', { class: 'ley ley-aporte' }, `Este alimento · ${fila.total === null ? '—' : q(fila.total)}${rango.faltaPeso ? '' : ' · sin referencia'}`),
         rango.faltaPeso ? h('p', { class: 'muted small' }, 'sin referencia: falta tu peso en Objetivos') : null);
     }
     if (!rango.barra) return h('p', { class: 'muted small' }, 'Sin objetivo ni aporte que dibujar para este nutriente.');
