@@ -68,7 +68,7 @@ export function objetivosScreen(ui) {
         Object.keys(periodo.tipos).map((k) => h('option', { value: k, selected: k === actual }, nombreTipo(periodo, k)))));
   };
   const macros = t.list.filter((x) => ui.MACROS.includes(x.clave));
-  const micros = t.list.filter((x) => !ui.MACROS.includes(x.clave));
+  const micros = t.list.filter((x) => !ui.MACROS.includes(x.clave) && !x.soloReferencia); // las referencias solo_referencia (OMS, cafeína, trans) viven en el informe
   const deTuPlan = micros.filter((x) => x.origen !== 'referencia').length;
   const notasHoy = [t.peso_kg !== null ? `Peso: ${numTexto(t.peso_kg)} kg` : '', t.excepcion ? `Excepción de hoy${t.excepcion.nota ? `: ${t.excepcion.nota}` : ''}` : ''].filter(Boolean);
   const seccionHoy = h('section', { class: 'panel objetivos-hoy', 'aria-label': 'Hoy' },

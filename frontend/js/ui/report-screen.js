@@ -1,6 +1,8 @@
 // Informe diario (detrás de los tres puntos del Diario): kcal y macros con anillos, objetivo de energía, todos los nutrientes
 // con barras y % de objetivo, avisos de UL y comidas del día. Solo presentación: los números vienen de core/diary.js.
 // También exporta ring() y energySummary(), que usa el Diario. Estilos en css/navegacion.css.
+import { gruposInforme } from '../core/detalle.js';
+
 const KCAL_POR_G = { proteina_g: 4, hidratos_g: 4, grasa_total_g: 9 };
 const MACRO_NOMBRE = { proteina_g: 'Proteína', hidratos_g: 'Hidratos', grasa_total_g: 'Grasa' };
 const MACRO_VAR = { proteina_g: 'var(--c-proteina)', hidratos_g: 'var(--c-hidratos)', grasa_total_g: 'var(--c-grasa)' };
@@ -73,19 +75,13 @@ export function parcialesInforme(ui, aviso) {
     bloque(aviso.menor, 'Menor: no afecta a kcal ni a proteína, hidratos o grasa'));
 }
 
-const GRUPO_TITULO = (g) => g.charAt(0).toUpperCase() + g.slice(1);
-
 // ui: { h, state, deps, rep, obj, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel, header, back }
 export function reportScreen(ui) {
   const { h, rep, nf0 } = ui;
   const d = energyData(rep);
   const macroFilas = rep.rows.filter((r) => ui.MACROS.includes(r.clave));
-  const micros = rep.rows.filter((r) => !ui.MACROS.includes(r.clave));
-  const porGrupo = new Map();
-  for (const r of micros) {
-    const g = ui.deps.catalog.byKey.get(r.clave)?.group ?? 'otros';
-    (porGrupo.get(g) ?? porGrupo.set(g, []).get(g)).push(r);
-  }
+  // Todos los demás nutrientes del catálogo, en sus grupos (los mismos del detalle de un alimento); sin referencia, solo el valor.
+  const grupos = gruposInforme({ rep, catalog: ui.deps.catalog, excluir: new Set(ui.MACROS) });
   const total = d.macros.reduce((a, m) => a + (m.kcal ?? 0), 0);
   const fila = (nombre, valor, { fuerte = false, aviso = false } = {}) => h('li', { class: `kv${fuerte ? ' strong' : ''}` }, h('span', {}, nombre), h('span', { class: aviso ? 'warn' : null }, valor));
   const energia = d.objetivo
@@ -116,10 +112,8 @@ export function reportScreen(ui) {
           h('span', { class: 'legend-pct' }, m.kcal === null || !total ? '' : `${nf0.format((m.kcal / total) * 100)} %`))))),
       energia,
       h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Objetivos de macronutrientes')), h('ul', { class: 'nuts' }, macroFilas.map(ui.nutrientRow))),
-      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Micronutrientes')),
-        [...porGrupo].map(([g, rows]) => h('div', { class: 'grupo' }, h('h3', {}, GRUPO_TITULO(g)), h('ul', { class: 'nuts' }, rows.map(ui.nutrientRow))))),
-      h('details', { class: 'panel' }, h('summary', {}, 'Otros nutrientes'),
-        h('ul', {}, rep.otros.map((o) => h('li', {}, `${o.label}: ${o.total === null ? 'sin dato' : ui.fmtQty(o.total, o.unit)}${o.parcial && o.total !== null ? ' (parcial)' : ''}`)))),
+      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Resto de nutrientes')),
+        grupos.map((g) => h('div', { class: 'grupo', 'data-grupo': g.id }, h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(ui.nutrientRow))))),
       h('section', { class: 'panel' }, h('h2', {}, 'Comidas del día'),
         h('ul', { class: 'kvs' }, rep.comidas.map((c) => fila(ui.MEAL_LABEL[c.meal], ui.fmtKcal(c)))))]);
 }

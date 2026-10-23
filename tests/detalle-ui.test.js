@@ -57,7 +57,7 @@ test('desde Mi catálogo: 100 g por defecto, fuente, completitud, resumen de mac
   assert.ok(kcal.querySelector('.meter'));
   assert.deepEqual(t.$$('.detalle-resumen .nut').map((x) => x.dataset.clave), ['energia_kcal', 'proteina_g', 'hidratos_g', 'grasa_total_g']);
   // todos los nutrientes, por grupos
-  assert.deepEqual(t.$$('.detalle-todos .grupo h3').map((x) => x.textContent), ['General', 'Hidratos de carbono', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
+  assert.deepEqual(t.$$('.detalle-todos .grupo h3').map((x) => x.textContent), ['General', 'Hidratos', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
   assert.equal(t.$$('.detalle-todos .nut').length, catalog.list.length + 1); // + EPA + DHA
   assert.equal(t.$('.aviso-sanitario').textContent, 'Información general; no sustituye al consejo de un profesional sanitario.');
   // solo ver: sin «Guardar» y con la barra inferior
@@ -286,7 +286,7 @@ test('secciones plegables como el informe (abiertas) y grupos plegables; lo cerr
     assert.equal(det.querySelector(':scope > summary > h2').tagName, 'H2');
   }
   const grupos = t.$$('.detalle-todos details.grupo');
-  assert.deepEqual(grupos.map((g) => g.querySelector('summary h3').textContent), ['General', 'Hidratos de carbono', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
+  assert.deepEqual(grupos.map((g) => g.querySelector('summary h3').textContent), ['General', 'Hidratos', 'Lípidos', 'Proteínas y aminoácidos', 'Vitaminas', 'Minerales']);
   assert.ok(grupos.every((g) => g.open));
   const lip = t.$('.grupo[data-grupo="lipidos"]');
   lip.open = false; lip.dispatchEvent(new t.root.ownerDocument.defaultView.Event('toggle'));

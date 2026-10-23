@@ -75,6 +75,7 @@ function especsDe(objetivos, totals) {
   };
   const out = [];
   for (const t of objetivos?.list ?? []) {
+    if (t.soloReferencia) continue; // aminoácidos (OMS), cafeína y trans: referencias del informe, no metas de la cena ni UL
     const keys = Array.isArray(t.suma) ? t.suma : [t.clave];
     if (keys.some((k) => !totals[k])) continue;
     const total = combine(keys.map((k) => totals[k]));

@@ -77,8 +77,8 @@ test('periodo sin fin hasta el siguiente; %kcal y kcal/kg; un día sin periodo u
 });
 
 test('sin plan, targetsForDate da lo mismo que la referencia de siempre (resolveTargets), con el perfil del plan', () => {
-  const ref = resolveTargets(targets);
-  const sin = en(null, '2026-10-18');
+  const ref = resolveTargets(targets).filter((t) => !t.soloReferencia); // las referencias solo_referencia (aminoácidos, cafeína, trans) tienen su propio test
+  const sin = { list: en(null, '2026-10-18').list.filter((t) => !t.soloReferencia) };
   assert.deepEqual(sin.list.map((t) => [t.clave, t.valor, t.tipo, t.ul]), ref.map((t) => [t.clave, t.valor, t.tipo, t.ul]));
   assert.equal(lim(en(PLAN({ perfil: 'mujer' }), '2026-10-18'), 'hierro_mg')[0], 16);
   assert.equal(en(PLAN({ perfil: 'mujer' }), '2026-10-18').perfil, 'mujer');
@@ -317,7 +317,7 @@ test('«Crear plan»: periodo abierto desde hoy con la referencia explícita y t
   assert.deepEqual([plan.periodos.length, p.id, p.nombre, p.inicio, p.fin], [1, 'objetivos_20261018', 'Mis objetivos', '2026-10-18', undefined]);
   // los objetivos de targets.json, escritos con su valor de referencia, salvo los que dependen de las kcal
   const segunKcal = ['vitamina_b1_mg', 'vitamina_b3_mg', 'ala_g'];
-  assert.deepEqual(Object.keys(p.valores), targets.list.map((t) => t.clave).filter((k) => !segunKcal.includes(k)));
+  assert.deepEqual(Object.keys(p.valores), targets.list.filter((t) => !t.soloReferencia).map((t) => t.clave).filter((k) => !segunKcal.includes(k))); // las referencias de la OMS, cafeína y trans no entran en tu plan
   assert.deepEqual(p.valores.energia_kcal, { objetivo: 2000 });
   assert.deepEqual(p.valores.proteina_g, { min: 50 });
   assert.deepEqual(p.valores.sodio_mg, { max: 2000 });

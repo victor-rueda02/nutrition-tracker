@@ -40,11 +40,11 @@ export function loadTargets(raw, catalog) {
     const porPerfil = Object.fromEntries(Object.keys(perfiles).filter((p) => num(t[p]) !== null).map((p) => [p, t[p]]));
     const item = {
       clave, label, unit, tipo: t.tipo, suma: Array.isArray(t.suma) ? [...t.suma] : null,
-      valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia),
+      valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia), porKg: num(t.por_kg), soloReferencia: t.solo_referencia === true,
       ul: num(t.ul), ulInformativo: num(t.ul) !== null && t.ul_informativo === true, nota: t.nota ?? '', notaUl: t.nota_ul ?? '', fuente: raw?.fuentes?.[t.fuente] ?? t.fuente ?? '',
     };
-    if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null) {
-      warnings.push(`${clave}: sin valor (valor, por perfil, por_mj o pct_energia)`);
+    if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null && item.porKg === null) {
+      warnings.push(`${clave}: sin valor (valor, por perfil, por_mj, pct_energia o por_kg)`);
       continue;
     }
     list.push(item);
@@ -53,7 +53,8 @@ export function loadTargets(raw, catalog) {
 }
 
 // Objetivos efectivos. user = { perfil, valores: { clave: número } } (lo que guardas en Objetivos): tus valores
-// mandan; si no, el del perfil; por_mj y pct_energia se calculan con tu objetivo de kcal. "origen": 'tuyo' | 'referencia'.
+// mandan; si no, el del perfil; por_mj y pct_energia se calculan con tu objetivo de kcal y por_kg con user.peso_kg (sin peso, null).
+// "origen": 'tuyo' | 'referencia'.
 export function resolveTargets(targets, user = {}) {
   const perfil = targets.perfiles[user?.perfil] ? user.perfil : targets.perfilPorDefecto;
   const own = user?.valores ?? {};
@@ -66,6 +67,7 @@ export function resolveTargets(targets, user = {}) {
     if (pos(own[t.clave])) { valor = own[t.clave]; origen = 'tuyo'; }
     else if (t.porMj !== null) valor = pos(kcal) ? round2(t.porMj * kcal * KCAL_TO_MJ) : null;
     else if (t.pctEnergia !== null) valor = pos(kcal) ? round2((t.pctEnergia / 100) * kcal / 9) : null; // grasa: 9 kcal/g
+    else if (t.porKg !== null) valor = pos(user?.peso_kg) ? Math.round(t.porKg * user.peso_kg * 1e4) / 1e4 : null;
     else valor = base(t) ?? null;
     return { ...t, perfil, valor, origen };
   });

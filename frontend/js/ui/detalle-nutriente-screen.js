@@ -20,6 +20,12 @@ export function detalleNutrienteScreen(ui) {
   // mismo comparten etiqueta). Las etiquetas cercanas se escalonan en dos niveles para que no se pisen. Superar el UL se dice
   // además con texto (nunca solo con el color).
   const barra = () => {
+    // Sin ninguna referencia (ni objetivo, ni mín./máx., ni UL): el valor y «sin referencia», sin barra.
+    if (rango.sinReferencia) {
+      return h('div', { class: 'rango-sin-ref rango-leyenda small' },
+        h('p', { class: 'ley ley-aporte' }, `Este alimento · ${fila.total === null ? '—' : q(fila.total)} · sin referencia`),
+        rango.faltaPeso ? h('p', { class: 'muted small' }, 'sin referencia: falta tu peso en Objetivos') : null);
+    }
     if (!rango.barra) return h('p', { class: 'muted small' }, 'Sin objetivo ni aporte que dibujar para este nutriente.');
     const orden = [...rango.marcas].sort((a, b) => a.pos - b.pos);
     let previa = -1; let nivel = 0;

@@ -361,7 +361,7 @@
     },
     "grasas_trans_g": {
       "resumen": "Grasas con doble enlace «trans»: las industriales (aceites parcialmente hidrogenados) y las naturales de rumiantes (carne y lácteos). El cuerpo no las fabrica ni las necesita.",
-      "necesidades": "Ninguna. EFSA: lo más bajo posible dentro de una dieta adecuada. OMS: menos del 1 % de la energía (unos 2 g con 2.000 kcal). La app no tiene objetivo para trans.",
+      "necesidades": "Ninguna. EFSA: lo más bajo posible dentro de una dieta adecuada. OMS: menos del 1 % de la energía (unos 2 g con 2.000 kcal). La app usa ese 1 % de la energía como máximo de referencia en el informe.",
       "deficit": "No aplica.",
       "exceso": "Suben el LDL, bajan el HDL y se asocian a más enfermedad coronaria; las de rumiantes afectan igual a los lípidos. Cada 2 % más de la energía se asoció a un 23 % más de riesgo coronario.",
       "fuentes_alimentos": "Aceites parcialmente hidrogenados de bollería, fritos industriales, snacks y margarinas; pequeñas cantidades en grasa de vacuno y lácteos.",

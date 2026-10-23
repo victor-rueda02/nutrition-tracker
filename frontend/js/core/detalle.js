@@ -1,7 +1,7 @@
 // Detalle de un alimento y de un nutriente: lógica pura, sin DOM (las pantallas están en ui/detalle-*-screen.js).
 // Los números son siempre los del código: valor por 100 g del documento × gramos / 100 (nutrients.js). Sin dato = null,
 // nunca 0; el % y el estado de la barra son los del informe diario (evaluate de diary.js).
-import { sumLines } from './nutrients.js';
+import { sumLines, columnasVacias } from './nutrients.js';
 import { evaluate } from './diary.js';
 import { foodCompleteness } from './completeness.js';
 import { isExcluded } from './excluded.js';
@@ -38,7 +38,7 @@ export const cantidadDeGramos = (gramos, opcion = { gramos: 1 }) => String(redon
 // Grupos de la pantalla (los de data/nutrients.json, con proteína y aminoácidos juntos y los hidratos aparte de ellos).
 export const GRUPOS_DETALLE = [
   { id: 'general', titulo: 'General' },
-  { id: 'hidratos', titulo: 'Hidratos de carbono' },
+  { id: 'hidratos', titulo: 'Hidratos' },
   { id: 'lipidos', titulo: 'Lípidos' },
   { id: 'proteinas', titulo: 'Proteínas y aminoácidos' },
   { id: 'vitaminas', titulo: 'Vitaminas' },
@@ -54,9 +54,37 @@ export function grupoDetalle(n) {
   return GRUPOS_DETALLE.some((g) => g.id === n.group) ? n.group : 'otros';
 }
 
+// Agrupa filas por el grupo de la pantalla, en el orden del catálogo (el mismo del informe diario y del detalle de un alimento).
+//   filas: Map clave -> fila (las que no estén no se enseñan); sumas: filas de un objetivo que es suma (EPA + DHA, metionina +
+//   cistina), cada una justo detrás de su última parte; excluir: claves que se enseñan en otro sitio; sub(clave): subpartida.
+export function agruparFilas({ catalog, filas, sumas = [], excluir = new Set(), sub = () => false }) {
+  const grupos = [];
+  const grupoDe = (id) => {
+    let g = grupos.find((x) => x.id === id);
+    if (!g) { g = { id, titulo: GRUPOS_DETALLE.find((x) => x.id === id)?.titulo ?? 'Otros', filas: [] }; grupos.push(g); }
+    return g;
+  };
+  for (const n of catalog.list) {
+    const fila = filas.get(n.key);
+    if (fila && !excluir.has(n.key)) grupoDe(grupoDetalle(n)).filas.push({ ...fila, sub: sub(n.key) });
+    for (const t of sumas) if (t.suma[t.suma.length - 1] === n.key) grupoDe(grupoDetalle(n)).filas.push({ ...t, sub: false });
+  }
+  grupos.sort((a, b) => { const ia = GRUPOS_DETALLE.findIndex((x) => x.id === a.id); const ib = GRUPOS_DETALLE.findIndex((x) => x.id === b.id); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  return grupos;
+}
+
+// Los grupos del informe diario: todos los nutrientes que no son los macros del panel de arriba (`excluir`), con las filas
+// de diaryReport (rows y otros). Mismos títulos y orden que el detalle de un alimento.
+export function gruposInforme({ rep, catalog, excluir = new Set() }) {
+  const todas = [...rep.rows, ...rep.otros];
+  return agruparFilas({ catalog, filas: new Map(todas.filter((r) => !r.suma).map((r) => [r.clave, r])), sumas: todas.filter((r) => r.suma), excluir });
+}
+
 // Una fila por nutriente del catálogo: { clave, label, unit, total (null = sin dato), pct, estado, superaUl, ul, min, objetivo, max, valor }.
 // objetivos = targetsForDate(...).list (los de ese día); lo que no tiene objetivo queda 'sin_objetivo' (sin % ni barra).
-export function filasAlimento({ food, grams, objetivos, catalog }) {
+// foods (opcional): los alimentos del documento; sin objetivo y con la columna vacía en todos, el nutriente no sale en `grupos`
+// (sí en `filas`).
+export function filasAlimento({ food, grams, objetivos, catalog, foods = null }) {
   const sums = sumLines([{ food, grams }], catalog.keys);
   const porClave = new Map((objetivos ?? []).filter((t) => !t.suma).map((t) => [t.clave, t]));
   const filas = new Map();
@@ -72,19 +100,11 @@ export function filasAlimento({ food, grams, objetivos, catalog }) {
     filas.set(t.clave, { ...t, ...evaluate(total, t), missing: total.missing });
   }
   const resumen = MACROS_RESUMEN.map((k) => filas.get(k)).filter(Boolean);
-  const grupos = [];
-  const grupoDe = (id) => {
-    let g = grupos.find((x) => x.id === id);
-    if (!g) { g = { id, titulo: GRUPOS_DETALLE.find((x) => x.id === id)?.titulo ?? 'Otros', filas: [] }; grupos.push(g); }
-    return g;
-  };
-  for (const n of catalog.list) {
-    const g = grupoDe(grupoDetalle(n));
-    g.filas.push({ ...filas.get(n.key), sub: SUBPARTIDAS.has(n.key) });
-    // la suma va justo detrás de su última parte (EPA + DHA, tras DHA)
-    for (const t of sumas) if (t.suma[t.suma.length - 1] === n.key) g.filas.push({ ...filas.get(t.clave), sub: false });
-  }
-  grupos.sort((a, b) => { const ia = GRUPOS_DETALLE.findIndex((x) => x.id === a.id); const ib = GRUPOS_DETALLE.findIndex((x) => x.id === b.id); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  const ocultos = foods ? new Set([...columnasVacias(foods, catalog.keys)].filter((k) => !porClave.has(k))) : new Set();
+  const grupos = agruparFilas({
+    catalog, excluir: ocultos, sub: (k) => SUBPARTIDAS.has(k),
+    filas: new Map([...filas].filter(([k]) => catalog.byKey.has(k))), sumas: sumas.map((t) => filas.get(t.clave)),
+  });
   return { filas, resumen, grupos };
 }
 
@@ -182,7 +202,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
   }
   for (const m of marcas) m.etiqueta = m.etiquetas.map((e, i) => (i === 0 || e === 'UL' ? e : e.charAt(0).toLowerCase() + e.slice(1))).join(' y ');
   const tope = Math.max(...marcas.map((m) => m.valor), total, hayHoy ? hoy : 0);
-  const escala = tope > 0 ? tope * 1.15 : null;
+  const escala = marcas.length && tope > 0 ? tope * 1.15 : null; // sin ninguna referencia no hay barra: solo el valor
   const pos = (v) => Math.min(1, Math.max(0, v / escala));
   // Tabla: «Referencia» se funde con el mínimo, el objetivo o el máximo si vale lo mismo («Mínimo (referencia)»).
   const filas = [{ id: 'alimento', etiqueta: 'Este alimento', valor: aporte }];
@@ -202,6 +222,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
   const ev = escala ? evaluate({ value: total > 0 || aporte !== null || hayHoy ? total : null, missing: [] }, fila) : null;
   return {
     filas,
+    sinReferencia: marcas.length === 0, faltaPeso: marcas.length === 0 && Boolean(fila.faltaPeso),
     marcas: escala ? marcas.map((m) => ({ ...m, pos: pos(m.valor) })) : [],
     escala,
     leyenda: { otros: hayHoy ? { etiqueta: `${etiquetaHoy} (sin este alimento)`, valor: otros } : null, aporte: { etiqueta: 'Este alimento', valor: aporte } },

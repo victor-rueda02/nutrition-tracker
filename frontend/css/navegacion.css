@@ -90,7 +90,7 @@ main { padding-bottom:calc(120px + env(safe-area-inset-bottom)); }
 .kv { display:flex; justify-content:space-between; gap:12px; align-items:baseline; min-height:44px; padding:10px 0; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
 .kv:first-child { border-top:none; }
 .kv.strong { font-weight:700; }
-.grupo h3 { margin:16px 0 8px; font-size:1rem; text-transform:capitalize; color:var(--muted); }
+.grupo h3 { margin:16px 0 8px; font-size:1rem; color:var(--muted); }
 .informe .nut-head { font-size:.95rem; }
 
 /* Alimentos: tarjetas y lista del catálogo */
@@ -289,3 +289,8 @@ button.secondary.wide { width:100%; }
 /* Ronda 5 */
 @media (prefers-color-scheme: dark) { button.review { background:#3a2f17; border-color:#f5b83d; color:#f5b83d; } }
 .menu-row .valor { font-variant-numeric:tabular-nums; font-size:1.05rem; }
+
+/* Nutriente sin referencia (informe): el valor y «sin referencia», sin barra ni %; el aviso de peso va debajo, en pequeño */
+.nut-sin-ref { padding-bottom:4px; }
+.nut-sin-ref .nut-valor .muted { font-weight:400; }
+.nut-sin-ref-nota { margin-top:2px; }

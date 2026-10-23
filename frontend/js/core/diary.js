@@ -1,6 +1,6 @@
 // Diario: totales de un día frente a los objetivos. Funciones puras, sin DOM.
 // Sin dato NO es 0: un alimento sin el nutriente deja el total "parcial" y se dice cuál falta.
-import { sumLines, nutrientsForGrams } from './nutrients.js';
+import { sumLines, nutrientsForGrams, columnasVacias } from './nutrients.js';
 import { unitOf } from './catalog.js';
 import { MEALS } from './meal-defaults.js';
 import { foodSinDatos } from './completeness.js';
@@ -63,17 +63,35 @@ export function evaluate(total, target) {
   return { total: value, pct, estado, superaUl: ulVigilado(target) !== null && value > ulVigilado(target), parcial };
 }
 
+// Un nutriente sin nada con qué compararlo (ni mínimo, ni objetivo, ni máximo): se enseña su valor y «sin referencia».
+export const sinReferencia = (r) => [r.min, r.objetivo, r.max, r.valor].every((x) => x === null || x === undefined);
+
 // Todo lo que muestra la pantalla Diario para un día.
+// rows: los nutrientes con objetivo (los que cuentan para los avisos y los totales parciales). otros: el resto del catálogo
+// en el mismo formato de fila y en el orden del catálogo, con su `group`: los que solo tienen una referencia (`solo_referencia`
+// de targets.json: aminoácidos de la OMS, cafeína, trans) llevan su estado frente a ella; los demás, 'sin_objetivo' (o
+// 'sin_dato'). Se omiten los que no tienen objetivo y cuya columna está vacía en todos los alimentos del documento (omega-3
+// y omega-6 hoy; si algún día tienen dato, aparecen solos). Las referencias que son suma (metionina + cistina) van tras su última parte.
 export function diaryReport(meals, foodsById, resolved, catalog) {
   const totals = dayTotals(meals, foodsById, catalog.keys);
-  const rows = resolved.map((t) => {
+  const filaDe = (t) => {
     const total = t.suma ? combine(t.suma.map((k) => totals[k])) : totals[t.clave];
     return { ...t, ...evaluate(total, t), missing: total.missing };
-  });
-  const conObjetivo = new Set(resolved.filter((t) => !t.suma).map((t) => t.clave));
-  const otros = catalog.list.filter((n) => !conObjetivo.has(n.key)).map((n) => ({
-    clave: n.key, label: n.label, group: n.group, unit: unitOf(n.key), total: totals[n.key].value, parcial: totals[n.key].missing.length > 0,
-  }));
+  };
+  const principales = resolved.filter((t) => !t.soloReferencia);
+  const rows = principales.map(filaDe);
+  const conObjetivo = new Set(principales.filter((t) => !t.suma).map((t) => t.clave));
+  const referencias = new Map(resolved.filter((t) => t.soloReferencia && !t.suma).map((t) => [t.clave, t]));
+  const sumasRef = resolved.filter((t) => t.soloReferencia && t.suma?.length && t.suma.every((k) => totals[k]));
+  const vacias = columnasVacias(foodsById.values(), catalog.keys);
+  const otros = [];
+  for (const n of catalog.list) {
+    const ref = referencias.get(n.key);
+    if (!conObjetivo.has(n.key) && (ref || !vacias.has(n.key))) {
+      otros.push({ ...filaDe(ref ?? { clave: n.key, label: n.label, unit: unitOf(n.key), min: null, objetivo: null, max: null, valor: null, ul: null }), group: n.group });
+    }
+    for (const s of sumasRef) if (s.suma[s.suma.length - 1] === n.key) otros.push({ ...filaDe(s), group: n.group });
+  }
   const ids = [...new Set(meals.flatMap((m) => m.lines.map((l) => l.food_id)))];
   const nombre = (id) => foodOf(foodsById, id).nombre ?? id;
   const sinDatos = ids.filter((id) => foodSinDatos(foodOf(foodsById, id))).map(nombre);
