@@ -25,7 +25,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-22 | Q · Queso fresco Hacendado (fila nueva, etiqueta) | catalogo | cat/q-queso-fresco | 1 | integrado y publicado | – (rol_cena proteina, decidido por el coordinador) |
 | 2026-10-23 | R · Bebida de avena completa (CIQUAL sin enriquecer) | catalogo | cat/r-bebida-avena | 1 | integrado y publicado | – |
 | 2026-10-23 | S · Retirar 11 alimentos sin datos (repo + iPhone con data/retirados.json; el diario no se toca) | desarrollador | dev/s-retirar-alimentos | 2 | integrado y publicado | – (Victor: «bórralos, como si no hubiesen estado nunca») |
-| 2026-10-23 | T · Retirados no se borran en la PWA si la base ya no los tiene (actualizó el código viejo) | desarrollador | dev/t-retirados-base | 1 | integrado | Probar en la app instalada tras publicar |
+| 2026-10-23 | T · Retirados no se borran en la PWA si la base ya no los tiene (actualizó el código viejo) | desarrollador | dev/t-retirados-base | 1 | integrado y publicado | Probar en la app instalada (dos aperturas, Revisar → Actualizar) |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
@@ -47,3 +47,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-23: git push de O, P y Q (catálogo con etiquetas, 80 alimentos; «Usar el publicado»; queso fresco). Worker sin cambios. Victor debe: exportar diario, aceptar actualización (96 campos en 4 alimentos, «Publicado» por defecto), recalcular o borrar las 3 recetas de un ingrediente.
 - 2026-10-23, S: Victor decide dejar en el iPhone las 3 recetas de un ingrediente (no se retiran); no reutilizar los ids retirados.
 - 2026-10-23: git push de R y S (bebida de avena completa; 11 alimentos retirados con data/retirados.json). Worker sin cambios.
+- 2026-10-23: git push de T (retirados en la PWA). Worker sin cambios.
