@@ -10,12 +10,13 @@ import { parseFoodsDocument, parseFoodsCSV, formatIssue, foodsToCSV } from '../c
 import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
 import { foodCompleteness, isIncomplete } from '../core/completeness.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
-import { cantidadDeGramos, registroConGramos, limpiarInfoNutrientes, cantidadLegible } from '../core/detalle.js';
+import { cantidadDeGramos, registroConGramos, limpiarInfoNutrientes, cantidadLegible, aportesDelDia } from '../core/detalle.js';
 import { looseKey } from '../core/text.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
 import { loadTargets } from '../core/targets.js';
+import { unitOf } from '../core/catalog.js';
 import { targetsForDate, planFromLegacy, validatePlan } from '../core/targets-plan.js';
-import { diaryReport, dayTotals, shiftDate, sinReferencia } from '../core/diary.js';
+import { diaryReport, dayTotals, evaluate, shiftDate, sinReferencia } from '../core/diary.js';
 import { avisoParciales } from '../core/parciales.js';
 import { createRepeat, validateRepeat, toRecords, marcadoInicialPara, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
@@ -557,7 +558,7 @@ export function mountApp(root, deps) {
   const SIN_BARRA = ['home', 'confirm', 'repeat', 'estimar']; // llevan su propia barra de acciones
   // El detalle de una línea del Diario saca un «Guardar» fijo al cambiar la cantidad: sin barra inferior desde el principio.
   const sinBarra = () => SIN_BARRA.includes(state.screen) || (state.screen === 'detalle' && state.detalle?.origen === 'diary');
-  const tabActiva = () => (state.screen === 'catalogo' && state.catBack === 'cenas' ? 'diary' : state.screen.startsWith('detalle') && state.detalle?.origen === 'diary' ? 'diary' : TAB_OF[state.screen]) ?? null;
+  const tabActiva = () => (state.screen === 'catalogo' && state.catBack === 'cenas' ? 'diary' : state.screen.startsWith('detalle') && ['diary', 'informe'].includes(state.detalle?.origen) ? 'diary' : TAB_OF[state.screen]) ?? null;
   // Regla general: una pantalla con su propia barra fija de acciones (footer.bar) nunca lleva la barra inferior de navegación,
   // que si no la taparía (mismo bottom:0 y más z-index) y dejaría el botón de guardar fuera de alcance (recetas, y las que vengan).
   const llevaBarraPropia = (screen) => screen.querySelector(':scope > footer.bar') !== null;
@@ -901,10 +902,11 @@ export function mountApp(root, deps) {
   function informeScreen() {
     const obj = targetsFor(state.day);
     const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
-    return reportScreen({ h, state, deps, rep, parciales: avisoParciales(state.dayMeals, byId(), rep.rows), MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), header,
-      objetivosTexto: objetivosTexto(obj),
+    return reportScreen({ h, state, deps, rep, parciales: avisoParciales(state.dayMeals, byId(), rep.rows), MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel: diaTexto, header,
+      objetivosTexto: objetivosTexto(obj), abrirNutriente: abrirNutrienteDia,
       back: () => { state.screen = 'diary'; render(); } });
   }
+  const diaTexto = (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d));
   const objetivosTexto = (obj) => (obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA');
 
   // ---------- detalle de un alimento y de un nutriente (ui/detalle-*-screen.js; cuentas en core/detalle.js) ----------
@@ -922,15 +924,31 @@ export function mountApp(root, deps) {
     state.detalle.nutriente = clave; state.screen = 'detalle-nutriente';
     irA(0); render();
   }
+  // Desde el informe diario: detalle de un nutriente del día (sin alimento). «Volver» regresa al informe donde estaba; una línea de
+  // «Qué te ha aportado hoy» abre el detalle de su alimento (padre = este detalle, al que vuelve su «Volver»).
+  function abrirNutrienteDia(clave) {
+    state.detalle = { modo: 'dia', origen: 'informe', nutriente: clave, fecha: state.day, scrollY: scrollActual(), scrollDetalle: 0, plegados: {}, padre: null };
+    state.screen = 'detalle-nutriente'; state.pendingDelete = null;
+    irA(0); render();
+  }
+  function abrirAlimentoDeDia(aporte) {
+    const padre = state.detalle;
+    const record = state.dayMeals.find((m) => m.id === aporte.recordId);
+    if (!record || !byId().has(aporte.foodId)) return;
+    abrirDetalle({ foodId: aporte.foodId, origen: 'diary', record, lineIndex: aporte.lineIndex }); // guarda en scrollY dónde estaba este detalle
+    state.detalle.padre = padre;
+  }
   const scrollActual = () => doc.scrollingElement?.scrollTop ?? 0;
   const irA = (y) => { if (doc.scrollingElement) doc.scrollingElement.scrollTop = y; };
   // «Volver» del detalle de alimento: a Mi catálogo o al Diario, en la posición en que estaban.
   function cerrarDetalle() {
-    const { origen, scrollY } = state.detalle;
+    const { origen, scrollY, padre } = state.detalle;
+    if (padre) { state.detalle = padre; state.screen = 'detalle-nutriente'; render(); irA(scrollY); return; } // abierto desde «Qué te ha aportado hoy»
     state.detalle = null; state.screen = origen === 'diary' ? 'diary' : 'micatalogo'; render(); irA(scrollY);
   }
   function volverDeNutriente() {
     const d = state.detalle;
+    if (d.modo === 'dia') { state.detalle = null; state.screen = 'informe'; render(); irA(d.scrollY); return; }
     d.nutriente = null; state.screen = 'detalle'; render(); irA(d.scrollDetalle);
   }
   // Como fmtQty, pero lo muy pequeño y no nulo se ve «<0,01 g» y no «0 g» (que sería un 0 real).
@@ -945,8 +963,23 @@ export function mountApp(root, deps) {
     })(), 'No se pudo guardar');
   }
   const infoNutrientes = limpiarInfoNutrientes(deps.nutrientesInfo);
+  // Detalle de un nutriente del día (desde el informe): la fila del informe de ese día, con los objetivos de ese día.
+  function detalleDiaCtx() {
+    const d = state.detalle;
+    const obj = targetsFor(d.fecha);
+    const rep = diaryReport(state.dayMeals, byId(), obj.list, deps.catalog);
+    // (si el plan cambió y la fila ya no está, queda sin referencia y con el total del día)
+    const filaDia = [...rep.rows, ...rep.otros].find((r) => r.clave === d.nutriente)
+      ?? { clave: d.nutriente, label: deps.catalog.byKey.get(d.nutriente)?.label ?? d.nutriente, unit: unitOf(d.nutriente), min: null, objetivo: null, max: null, valor: null, ul: null, ...evaluate(dayTotals(state.dayMeals, byId(), [d.nutriente])[d.nutriente], {}) };
+    const esHoy = d.fecha === today();
+    return { h, doc, state, byId, header, fmtQty: fmtQtyDet, nf0, nf1, catalog: deps.catalog, objetivos: obj, objetivosTexto: objetivosTexto(obj), targets, foods: state.foods, info: infoNutrientes,
+      modo: 'dia', filaDia, aportes: aportesDelDia({ meals: state.dayMeals, byId: byId(), clave: d.nutriente, suma: filaDia.suma ?? null }),
+      MEAL_LABEL, fechaTexto: diaTexto(d.fecha), etiquetaHoy: esHoy ? 'Llevas hoy' : 'Llevas ese día', tituloAportes: esHoy ? 'Qué te ha aportado hoy' : 'Qué te aportó ese día',
+      abrirAlimento: abrirAlimentoDeDia };
+  }
   function detalleCtx() {
     const d = state.detalle;
+    if (d.modo === 'dia') return detalleDiaCtx();
     const obj = targetsFor(d.fecha);
     // Total del día de un nutriente (o de una suma, EPA + DHA) y lo que aportaba la línea guardada.
     const suma = (clave) => obj.list.find((t) => t.clave === clave)?.suma ?? null;

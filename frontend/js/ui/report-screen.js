@@ -75,9 +75,15 @@ export function parcialesInforme(ui, aviso) {
     bloque(aviso.menor, 'Menor: no afecta a kcal ni a proteína, hidratos o grasa'));
 }
 
-// ui: { h, state, deps, rep, obj, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel, header, back }
+// ui: { h, state, deps, rep, obj, MACROS, MEAL_LABEL, nf0, fmtQty, fmtKcal, nutrientRow, dayLabel, header, back, abrirNutriente(clave) }
 export function reportScreen(ui) {
   const { h, rep, nf0 } = ui;
+  // Cada fila de nutriente (macros, resto, sumas y «sin referencia») abre su detalle del día: el mismo botón superpuesto que en el detalle de un alimento.
+  const nutrientRow = (r) => {
+    const li = ui.nutrientRow(r);
+    li.append(h('button', { type: 'button', class: 'abre-detalle', 'aria-label': `Ver detalle de ${r.label}`, onclick: () => ui.abrirNutriente(r.clave) }));
+    return li;
+  };
   const d = energyData(rep);
   const macroFilas = rep.rows.filter((r) => ui.MACROS.includes(r.clave));
   // Todos los demás nutrientes del catálogo, en sus grupos (los mismos del detalle de un alimento); sin referencia, solo el valor.
@@ -111,9 +117,9 @@ export function reportScreen(ui) {
           h('span', { class: 'dot', style: `background:${m.color}` }), h('strong', {}, m.nombre), h('span', { class: 'muted' }, m.kcal === null ? 'sin dato' : `${nf0.format(m.kcal)} kcal`),
           h('span', { class: 'legend-pct' }, m.kcal === null || !total ? '' : `${nf0.format((m.kcal / total) * 100)} %`))))),
       energia,
-      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Objetivos de macronutrientes')), h('ul', { class: 'nuts' }, macroFilas.map(ui.nutrientRow))),
+      h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Objetivos de macronutrientes')), h('ul', { class: 'nuts' }, macroFilas.map(nutrientRow))),
       h('details', { class: 'panel plegable', open: true }, h('summary', {}, h('h2', {}, 'Todos los nutrientes')),
-        grupos.map((g) => h('div', { class: 'grupo', 'data-grupo': g.id }, h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(ui.nutrientRow))))),
+        grupos.map((g) => h('div', { class: 'grupo', 'data-grupo': g.id }, h('h3', {}, g.titulo), h('ul', { class: 'nuts' }, g.filas.map(nutrientRow))))),
       h('section', { class: 'panel' }, h('h2', {}, 'Comidas del día'),
         h('ul', { class: 'kvs' }, rep.comidas.map((c) => fila(ui.MEAL_LABEL[c.meal], ui.fmtKcal(c)))))]);
 }

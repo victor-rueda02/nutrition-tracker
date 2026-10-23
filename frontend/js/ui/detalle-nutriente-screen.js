@@ -1,20 +1,26 @@
-// Detalle de un nutriente (al pulsar una fila del detalle de un alimento): tu rango de ese día frente a lo que aporta el
-// alimento, la información estática de data/nutrientes-info.json y los 5 alimentos de tu catálogo que más aportan.
+// Detalle de un nutriente (al pulsar una fila del detalle de un alimento o del informe diario): tu rango de ese día frente a lo
+// que aporta el alimento (o, desde el informe, lo que llevas ese día y qué alimentos lo aportaron), la información estática de
+// data/nutrientes-info.json y los 5 alimentos de tu catálogo que más aportan.
 // Solo presentación: las cuentas son de core/detalle.js; los enlaces se abren solo si los pulsas. Estilos en css/detalle.css.
 import { AVISO_SANITARIO, SECCIONES_INFO, filasAlimento, rangoNutriente, referenciaDe, topCatalogo } from '../core/detalle.js';
 
 // ui: { h, state, byId, header, fmtQty, nf0, nf1, catalog, objetivos (targetsForDate), objetivosTexto, targets, foods,
 //       info (limpiarInfoNutrientes), etiquetaHoy, hoy(clave) -> { total, aporteOriginal } | null, back }
+//   modo 'dia' (desde el informe): sin alimento; en su lugar filaDia (fila del informe), aportes (aportesDelDia), fechaTexto,
+//   MEAL_LABEL, nf1 y abrirAlimento(aporte)
 export function detalleNutrienteScreen(ui) {
   const { h, state } = ui;
   const d = state.detalle;
   const clave = d.nutriente;
-  const food = ui.byId().get(d.foodId);
-  const fila = filasAlimento({ food, grams: d.gramos, objetivos: ui.objetivos.list, catalog: ui.catalog }).filas.get(clave);
-  const hoy = ui.hoy?.(clave) ?? null;
+  const dia = ui.modo === 'dia';
+  const food = dia ? null : ui.byId().get(d.foodId);
+  const fila = dia ? ui.filaDia : filasAlimento({ food, grams: d.gramos, objetivos: ui.objetivos.list, catalog: ui.catalog }).filas.get(clave);
+  const hoy = dia ? null : ui.hoy?.(clave) ?? null;
   const referencia = referenciaDe(ui.targets, clave, ui.objetivos.perfil);
-  const rango = rangoNutriente({ fila, hoy: hoy?.total ?? null, aporteOriginal: hoy?.aporteOriginal ?? null, referencia, etiquetaHoy: ui.etiquetaHoy });
+  const rango = rangoNutriente({ fila, hoy: hoy?.total ?? null, aporteOriginal: hoy?.aporteOriginal ?? null, referencia, etiquetaHoy: ui.etiquetaHoy, modo: dia ? 'dia' : 'alimento' });
+  const quien = dia ? rango.leyenda.aporte.etiqueta : 'Este alimento'; // de quién es el valor que se compara con el rango (en modo día lleva «(parcial)» si faltan datos)
   const q = (v) => ui.fmtQty(v, fila.unit);
+  const nb = (t) => t.replace(/ /g, ' '); // espacio duro: la cifra y la unidad no se separan al partir la línea
 
   // Barra con marcas: lo que llevas (gris), lo que aporta este alimento y una marca por cada valor del rango (las que valen lo
   // mismo comparten etiqueta). Las etiquetas cercanas se escalonan en dos niveles para que no se pisen. Superar el UL se dice
@@ -23,7 +29,7 @@ export function detalleNutrienteScreen(ui) {
     // Sin ninguna referencia (ni objetivo, ni mín./máx., ni UL): el valor y «sin referencia», sin barra.
     if (rango.sinReferencia) {
       return h('div', { class: 'rango-sin-ref rango-leyenda small' },
-        h('p', { class: 'ley ley-aporte' }, `Este alimento · ${fila.total === null ? '—' : q(fila.total)}${rango.faltaPeso ? '' : ' · sin referencia'}`),
+        h('p', { class: 'ley ley-aporte' }, `${quien} · ${fila.total === null ? '—' : q(fila.total)}${rango.faltaPeso ? '' : ' · sin referencia'}`),
         rango.faltaPeso ? h('p', { class: 'muted small' }, 'sin referencia: falta tu peso en Objetivos') : null);
     }
     if (!rango.barra) return h('p', { class: 'muted small' }, 'Sin objetivo ni aporte que dibujar para este nutriente.');
@@ -33,7 +39,8 @@ export function detalleNutrienteScreen(ui) {
     for (const m of orden) { nivel = previa >= 0 && m.pos - previa < 0.22 ? 1 - nivel : 0; niveles.set(m.id, nivel); previa = m.pos; }
     const conPct = fila.pct !== null && fila.total !== null;
     const pct = conPct ? `${ui.nf0.format(fila.pct * 100)} % del objetivo` : fila.total === null ? 'sin dato' : q(fila.total);
-    const resumen = `${fila.label}: este alimento aporta ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`;
+    const resumen = dia ? `${fila.label}: ${quien.toLowerCase()} ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`
+      : `${fila.label}: este alimento aporta ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`;
     const otros = rango.barra.otros;
     return h('div', { class: 'rango-caja' },
       h('div', { class: 'rango-barra', role: 'img', 'aria-label': resumen },
@@ -43,7 +50,7 @@ export function detalleNutrienteScreen(ui) {
       rango.barra.superaUl ? h('p', { class: 'ul-aviso', role: 'alert' }, `⚠ Supera el máximo tolerable (UL: ${q(fila.ul).replace(/ /g, ' ')})`) : null, // espacio duro: la cifra y la unidad no se separan al partir la línea
       h('div', { class: 'rango-leyenda small' },
         rango.leyenda.otros && otros > 0 ? h('p', { class: 'ley ley-otros' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), rango.leyenda.otros.etiqueta) : null,
-        h('p', { class: 'ley ley-aporte' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), `Este alimento · ${pct}`)));
+        h('p', { class: 'ley ley-aporte' }, h('span', { class: 'punto', 'aria-hidden': 'true' }), `${quien} · ${pct}`)));
   };
 
   const tabla = h('table', { class: 'rango-tabla' }, h('tbody', {}, rango.filas.map((r) => h('tr', { 'data-fila': r.id },
@@ -67,17 +74,38 @@ export function detalleNutrienteScreen(ui) {
         fuentes([...new Map(partes.flatMap(([, e]) => e.referencias ?? []).map((r) => [r.url, r])).values()])]
       : seccion('Información', h('p', { class: 'muted info-no-disponible' }, 'Información aún no disponible'));
 
+  // «Qué te ha aportado hoy» (solo desde el informe): las líneas del día que aportan este nutriente, de más a menos, y al final las
+  // que no tienen dato (no son 0). Cada una abre el detalle de su alimento con los gramos de esa línea.
+  const aportes = () => {
+    const { con, sin } = ui.aportes;
+    const pctTxt = (p) => (p === null ? '' : ` (${p > 0 && p < 0.01 ? '<1' : ui.nf0.format(p * 100)} % del total del día)`);
+    const item = (a, texto, clase) => {
+      const li = h('li', { class: `aporte ${clase}`, 'data-id': a.foodId }, texto);
+      if (a.abrible) li.append(h('button', { type: 'button', class: 'abre-detalle', 'aria-label': `Ver detalle de ${a.nombre}`, onclick: () => ui.abrirAlimento(a) }));
+      return li;
+    };
+    const base = (a) => `${a.nombre} · ${ui.MEAL_LABEL[a.meal] ?? a.meal} · ${ui.nf1.format(a.grams)} g →`;
+    return h('section', { class: 'aportes-dia', 'aria-label': ui.tituloAportes },
+      h('h2', { class: 'caps' }, ui.tituloAportes),
+      h('div', { class: 'panel' },
+        con.length || sin.length ? h('ul', { class: 'top-lista aportes-lista' },
+          con.map((a) => item(a, `${base(a)} ${nb(q(a.valor))}${a.parcial ? ' (parcial)' : ''}${pctTxt(a.pct)}`, 'con-dato')),
+          sin.map((a) => item(a, `${base(a)} sin dato`, 'sin-dato')))
+          : h('p', { class: 'muted' }, 'Sin registros este día.')));
+  };
+
   const objetivoDia = fila.objetivo ?? fila.valor ?? fila.min ?? fila.max;
   const top = topCatalogo({ foods: ui.foods, clave, suma: fila.suma ?? null, objetivo: objetivoDia });
 
   return h('main', { class: 'detalle-nutriente' },
-    ui.header(fila.label, ui.back, { close: true, sub: food.nombre }),
+    ui.header(fila.label, ui.back, { close: true, sub: dia ? ui.fechaTexto : food.nombre }),
     h('section', { class: 'panel rango', 'aria-label': 'Tu rango' },
       h('h2', { class: 'caps' }, 'Tu rango'),
       // una referencia que no es un objetivo (OMS, nórdica...) dice de quién es en vez de «Objetivos: referencias EFSA»; su nota va una sola vez
       fila.soloReferencia ? h('p', { class: 'muted small objetivos-dia nota-ref' }, fila.nota || 'Referencia: no es un objetivo de tu plan')
         : ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
       barra(), tabla, notaUl),
+    dia ? aportes() : null,
     informacion,
     h('section', { class: 'catalogo-top', 'aria-label': 'En tu catálogo' },
       h('h2', { class: 'caps' }, 'En tu catálogo'),

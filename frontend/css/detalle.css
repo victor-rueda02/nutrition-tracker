@@ -76,7 +76,7 @@
 .rango-tabla tr:first-child th, .rango-tabla tr:first-child td { border-top:none; }
 .info-seccion .panel p { margin:4px 0; }
 /* Títulos de las secciones de información: 13 px, 600, --muted, 24 px de margen superior */
-.info-seccion h2.caps, .catalogo-top h2.caps { margin:24px 4px 8px; font-size:13px; font-weight:600; color:var(--muted); }
+.info-seccion h2.caps, .catalogo-top h2.caps, .aportes-dia h2.caps { margin:24px 4px 8px; font-size:13px; font-weight:600; color:var(--muted); }
 .fuentes { list-style:none; padding:0; margin:0; font-size:.95rem; }
 .fuentes li { padding:8px 0; border-top:1px solid var(--line); min-height:44px; display:block; }
 .fuentes li:first-child { border-top:none; }
@@ -89,3 +89,9 @@
 .line-name button.line-open { display:block; width:100%; min-height:44px; margin:-10px 0 -6px; padding:10px 0; border:none; border-radius:0; background:none; color:inherit; font:inherit; font-weight:600; text-align:left; }
 .food-row { position:relative; }
 .food-row .abre-detalle { inset:0; border-radius:0; }
+
+/* Informe diario: cada fila de nutriente abre su detalle del día (botón superpuesto, ≥ 44 px) */
+.informe .nut:not(.nut-sin-ref) { min-height:44px; } /* las «sin referencia» ya miden 50 px (navegacion.css) */
+/* «Qué te ha aportado hoy» (detalle de nutriente desde el informe): una línea por alimento, pulsable; sin dato al final y atenuado */
+.aportes-lista .aporte { position:relative; overflow-wrap:anywhere; }
+.aportes-lista .aporte.sin-dato { color:var(--muted); }
