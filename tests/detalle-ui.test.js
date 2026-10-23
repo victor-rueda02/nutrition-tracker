@@ -299,7 +299,7 @@ test('filas sin objetivo: el valor va en la columna del % (borde derecho); subpa
   const t = await setup();
   await t.alCatalogo();
   await t.act(() => t.ver('Salmón del Atlántico de piscifactoría crudo').click());
-  const mono = fila(t, 'grasas_monoinsaturadas_g');
+  const mono = fila(t, 'colesterol_mg'); // sin referencia (las monoinsaturadas ya tienen la nórdica)
   assert.ok(mono.classList.contains('nut-simple'));
   assert.ok(mono.querySelector('.nut-head > .nut-pct .nut-valor'), 'valor en la columna del %');
   assert.equal(mono.querySelector('.nut-head > .nut-main .nut-valor'), null);

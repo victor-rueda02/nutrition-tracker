@@ -171,7 +171,7 @@ export function topCatalogo({ foods, clave, suma = null, objetivo = null, n = 5 
 // Referencia de targets.json (EFSA/UE) de un nutriente, con el perfil del plan: { valor, tipo } o null.
 export function referenciaDe(targets, clave, perfil) {
   const t = targets?.list?.find((x) => x.clave === clave);
-  if (!t) return null;
+  if (!t || t.tipo === 'rango') return null; // un rango (poli y monoinsaturadas, % de la energía) ya es la fila Mínimo/Máximo del día: no se repite como «Referencia»
   const valor = referenceValue(targets, clave, { perfil });
   return valor === null || valor === undefined ? null : { valor, tipo: t.tipo };
 }

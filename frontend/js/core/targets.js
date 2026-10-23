@@ -3,10 +3,14 @@
 import { unitOf } from './catalog.js';
 
 export const KCAL_TO_MJ = 0.004184;
-export const TIPOS = ['objetivo', 'min', 'max'];
+export const TIPOS = ['objetivo', 'min', 'max', 'rango']; // 'rango': mínimo y máximo (hoy solo con pct_energia_min y pct_energia_max)
 const num = (x) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
 const pos = (x) => typeof x === 'number' && Number.isFinite(x) && x > 0;
 const round2 = (x) => Math.round(x * 100) / 100;
+
+// Un rango en % de la energía (pct_energia_min y pct_energia_max, los dos): sus gramos salen de las kcal del día (9 kcal/g).
+export const esRangoEnergia = (t) => t.pctEnergiaMin !== null && t.pctEnergiaMax !== null && t.pctEnergiaMin <= t.pctEnergiaMax;
+export const gramosDeEnergia = (pct, kcal) => round2((pct / 100) * kcal / 9);
 
 // UL que cuenta de verdad (avisos del Diario y del informe, detalle de nutriente y «¿Qué ceno?»): el `ul` del objetivo, salvo
 // que sea informativo (`ul_informativo` en targets.json: el de la vitamina A es solo de retinol preformado y el del folato,
@@ -23,7 +27,7 @@ export function loadTargets(raw, catalog) {
   const list = [];
   for (const t of Array.isArray(raw?.objetivos) ? raw.objetivos : []) {
     const clave = String(t?.clave ?? '');
-    if (!TIPOS.includes(t?.tipo)) { warnings.push(`${clave}: tipo "${t?.tipo}" no válido (objetivo, min o max)`); continue; }
+    if (!TIPOS.includes(t?.tipo)) { warnings.push(`${clave}: tipo "${t?.tipo}" no válido (objetivo, min, max o rango)`); continue; }
     if (list.some((x) => x.clave === clave)) { warnings.push(`${clave}: repetido (se ignora)`); continue; }
     let label;
     let unit;
@@ -40,11 +44,11 @@ export function loadTargets(raw, catalog) {
     const porPerfil = Object.fromEntries(Object.keys(perfiles).filter((p) => num(t[p]) !== null).map((p) => [p, t[p]]));
     const item = {
       clave, label, unit, tipo: t.tipo, suma: Array.isArray(t.suma) ? [...t.suma] : null,
-      valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia), porKg: num(t.por_kg), soloReferencia: t.solo_referencia === true,
+      valor: num(t.valor), porPerfil, porMj: num(t.por_mj), pctEnergia: num(t.pct_energia), pctEnergiaMin: num(t.pct_energia_min), pctEnergiaMax: num(t.pct_energia_max), porKg: num(t.por_kg), soloReferencia: t.solo_referencia === true,
       ul: num(t.ul), ulInformativo: num(t.ul) !== null && t.ul_informativo === true, nota: t.nota ?? '', notaUl: t.nota_ul ?? '', fuente: raw?.fuentes?.[t.fuente] ?? t.fuente ?? '',
     };
-    if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null && item.porKg === null) {
-      warnings.push(`${clave}: sin valor (valor, por perfil, por_mj, pct_energia o por_kg)`);
+    if (item.valor === null && !Object.keys(porPerfil).length && item.porMj === null && item.pctEnergia === null && item.porKg === null && !esRangoEnergia(item)) {
+      warnings.push(`${clave}: sin valor (valor, por perfil, por_mj, pct_energia, pct_energia_min y pct_energia_max o por_kg)`);
       continue;
     }
     list.push(item);
@@ -67,9 +71,11 @@ export function resolveTargets(targets, user = {}) {
     if (pos(own[t.clave])) { valor = own[t.clave]; origen = 'tuyo'; }
     else if (t.porMj !== null) valor = pos(kcal) ? round2(t.porMj * kcal * KCAL_TO_MJ) : null;
     else if (t.pctEnergia !== null) valor = pos(kcal) ? round2((t.pctEnergia / 100) * kcal / 9) : null; // grasa: 9 kcal/g
+    else if (esRangoEnergia(t)) valor = pos(kcal) ? gramosDeEnergia(t.pctEnergiaMax, kcal) : null; // el máximo es el principal; el rango entero, en min y max
     else if (t.porKg !== null) valor = pos(user?.peso_kg) ? Math.round(t.porKg * user.peso_kg * 1e4) / 1e4 : null;
     else valor = base(t) ?? null;
-    return { ...t, perfil, valor, origen };
+    const rango = esRangoEnergia(t) && origen === 'referencia' && pos(kcal) ? { min: gramosDeEnergia(t.pctEnergiaMin, kcal), max: valor } : {};
+    return { ...t, perfil, valor, origen, ...rango };
   });
 }
 

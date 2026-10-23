@@ -70,7 +70,7 @@ test('informe: aminoácido con su barra y % (39 mg/kg × 75 kg = 2,925 g); sin r
   assert.ok(leu.querySelector('.meter'));
   assert.match(leu.querySelector('.nut-valor').textContent, /\/ 2,9/);
   assert.match(leu.querySelector('.nut-pct').textContent, /^\d+ %$/);
-  const alm = fila(t, 'grasas_monoinsaturadas_g');
+  const alm = fila(t, 'agua_g');
   assert.ok(alm.classList.contains('nut-sin-ref'));
   assert.equal(alm.querySelector('.meter'), null);
   // dos columnas: nombre a la izquierda y el valor en la columna del % (sin %); debajo, «sin referencia»

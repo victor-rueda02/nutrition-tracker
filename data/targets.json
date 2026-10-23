@@ -1,11 +1,13 @@
 {
-  "_comentario": "Objetivos diarios por defecto. Es la referencia para lo que no define tu plan de objetivos (pantalla Objetivos; formato en docs/OBJETIVOS-FORMATO.md), que tiene prioridad y se guarda en el iPhone; los UL salen siempre de aquí. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'ul_informativo': true = ese UL solo se enseña (informe y detalle del nutriente, con su 'nota_ul') y nunca avisa ni descarta cenas, porque la EFSA lo define para una forma concreta (retinol preformado, ácido fólico añadido) y no para el total de la columna del documento. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal (1 kcal = 0,004184 MJ). 'por_kg' (en la unidad del nutriente, p. ej. 0,039 g/kg de leucina) se multiplica por el peso_kg de tu plan; sin peso no hay referencia. 'solo_referencia': true = referencia que solo se enseña en el informe y el detalle (OMS, EFSA): no entra en tu plan de objetivos, ni en los totales parciales, ni en «¿Qué ceno?», y no es un UL. Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
+  "_comentario": "Objetivos diarios por defecto. Es la referencia para lo que no define tu plan de objetivos (pantalla Objetivos; formato en docs/OBJETIVOS-FORMATO.md), que tiene prioridad y se guarda en el iPhone; los UL salen siempre de aquí. tipo: 'objetivo' (acercarse), 'min' (al menos), 'max' (como mucho). 'ul' = nivel máximo tolerable de la EFSA: superarlo da un aviso distinto. 'ul_informativo': true = ese UL solo se enseña (informe y detalle del nutriente, con su 'nota_ul') y nunca avisa ni descarta cenas, porque la EFSA lo define para una forma concreta (retinol preformado, ácido fólico añadido) y no para el total de la columna del documento. 'por_mj' y 'pct_energia' se calculan con tu objetivo de kcal; un rango en % de la energía lleva tipo 'rango' con 'pct_energia_min' y 'pct_energia_max' (gramos = % × kcal ÷ 9) (1 kcal = 0,004184 MJ). 'por_kg' (en la unidad del nutriente, p. ej. 0,039 g/kg de leucina) se multiplica por el peso_kg de tu plan; sin peso no hay referencia. 'solo_referencia': true = referencia que solo se enseña en el informe y el detalle (OMS, EFSA): no entra en tu plan de objetivos, ni en los totales parciales, ni en «¿Qué ceno?», y no es un UL. Revisa los valores en el DRV Finder de la EFSA si quieres afinarlos.",
   "fuentes": {
     "ir_ue": "Ingestas de referencia para un adulto medio, Reglamento (UE) 1169/2011, anexo XIII",
     "efsa": "EFSA, valores dietéticos de referencia para adultos (PRI o AI) y niveles máximos tolerables (UL)",
     "oms_aminoacidos": "OMS/FAO/UNU, informe técnico 935 (2007), tabla 23: requerimiento medio de aminoácidos esenciales en adultos (mg por kg de peso y día)",
     "efsa_cafeina": "EFSA 2015, opinión científica sobre la seguridad de la cafeína: hasta 400 mg al día en adultos sanos",
-    "oms_trans": "OMS, directriz de 2023 sobre grasas saturadas y trans: menos del 1 % de la energía total"
+    "oms_trans": "OMS, directriz de 2023 sobre grasas saturadas y trans: menos del 1 % de la energía total",
+    "fao_oms_poli": "FAO/OMS, «What are healthy diets? Joint statement» (24-10-2024), tabla 1: 6-10 % de la energía total como grasas poliinsaturadas (https://www.who.int/publications/i/item/9789240101876)",
+    "nnr_mono": "Nordic Nutrition Recommendations 2023 (Consejo Nórdico de Ministros): 10-20 % de la energía como grasas cis-monoinsaturadas; la EFSA y la OMS no fijan valor (https://www.livsmedelsverket.se/globalassets/publikationsdatabas/broschyrer-foldrar/slutleverans_nordiska-naringsrekommendationer-2023.pdf)"
   },
   "perfil_por_defecto": "hombre",
   "perfiles": { "hombre": "Hombre adulto", "mujer": "Mujer adulta (premenopáusica)" },
@@ -61,6 +63,8 @@
     { "clave": "metionina_cistina", "etiqueta": "Metionina + cistina", "suma": ["metionina_g", "cistina_g"], "unidad": "g", "tipo": "min", "por_kg": 0.015, "solo_referencia": true, "fuente": "oms_aminoacidos" },
     { "clave": "fenilalanina_tirosina", "etiqueta": "Fenilalanina + tirosina", "suma": ["fenilalanina_g", "tirosina_g"], "unidad": "g", "tipo": "min", "por_kg": 0.025, "solo_referencia": true, "fuente": "oms_aminoacidos" },
     { "clave": "cafeina_mg", "tipo": "max", "valor": 400, "solo_referencia": true, "fuente": "efsa_cafeina" },
-    { "clave": "grasas_trans_g", "tipo": "max", "pct_energia": 1, "solo_referencia": true, "fuente": "oms_trans" }
+    { "clave": "grasas_trans_g", "tipo": "max", "pct_energia": 1, "solo_referencia": true, "fuente": "oms_trans" },
+    { "clave": "grasas_poliinsaturadas_g", "tipo": "rango", "pct_energia_min": 6, "pct_energia_max": 10, "solo_referencia": true, "fuente": "fao_oms_poli", "nota": "Referencia FAO/OMS 2024: 6-10 % de la energía." },
+    { "clave": "grasas_monoinsaturadas_g", "tipo": "rango", "pct_energia_min": 10, "pct_energia_max": 20, "solo_referencia": true, "fuente": "nnr_mono", "nota": "Referencia nórdica (NNR 2023): 10-20 % de la energía. La EFSA y la OMS no fijan valor." }
   ]
 }
