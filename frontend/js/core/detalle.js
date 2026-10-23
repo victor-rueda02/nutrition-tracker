@@ -193,6 +193,8 @@ export function rangoNutriente({ fila, hoy: hoyDado = null, aporteOriginal = nul
   // Si el objetivo del día ya ES la referencia (origen 'referencia'), una sola cifra: la del día, que puede diferir de la de
   // resolveTargets (trans, ALA, B1 y niacina dependen de las kcal del plan). Se funde con su límite, sin fila «Referencia» aparte.
   const referencia = referenciaDada && fila.origen === 'referencia' && esNum(fila[referenciaDada.tipo]) ? { ...referenciaDada, valor: fila[referenciaDada.tipo] } : referenciaDada;
+  // Regla 4: si al total del día le faltan alimentos sin dato, la cifra principal lo dice («Llevas hoy (parcial)»).
+  const etHoy = dia && fila.parcial && esNum(fila.total) ? `${etiquetaHoy} (parcial)` : etiquetaHoy;
   const aporte = dia ? null : fila.total;
   const hayHoy = esNum(hoy);
   const otros = hayHoy && !dia ? Math.max(0, hoy - (esNum(aporteOriginal) ? aporteOriginal : 0)) : 0;
@@ -212,7 +214,7 @@ export function rangoNutriente({ fila, hoy: hoyDado = null, aporteOriginal = nul
   const escala = marcas.length && tope > 0 ? tope * 1.15 : null; // sin ninguna referencia no hay barra: solo el valor
   const pos = (v) => Math.min(1, Math.max(0, v / escala));
   // Tabla: «Referencia» se funde con el mínimo, el objetivo o el máximo si vale lo mismo («Mínimo (referencia)»).
-  const filas = dia ? [{ id: 'hoy', etiqueta: etiquetaHoy, valor: hayHoy ? hoy : null }] : [{ id: 'alimento', etiqueta: 'Este alimento', valor: aporte }];
+  const filas = dia ? [{ id: 'hoy', etiqueta: etHoy, valor: hayHoy ? hoy : null }] : [{ id: 'alimento', etiqueta: 'Este alimento', valor: aporte }];
   const cambiado = esNum(aporte) !== esNum(aporteOriginal) || (esNum(aporte) && Math.abs(aporte - aporteOriginal) > 1e-9);
   if (hayHoy && !dia) filas.push({ id: 'hoy', etiqueta: `${etiquetaHoy}${cambiado ? ' (con esta cantidad)' : ''}`, valor: total });
   const refValor = referencia?.valor;
@@ -231,7 +233,7 @@ export function rangoNutriente({ fila, hoy: hoyDado = null, aporteOriginal = nul
     return {
       filas, modo, sinReferencia: marcas.length === 0, faltaPeso: marcas.length === 0 && Boolean(fila.faltaPeso),
       marcas: escala ? marcas.map((m) => ({ ...m, pos: pos(m.valor) })) : [], escala,
-      leyenda: { otros: null, aporte: { etiqueta: etiquetaHoy, valor: hayHoy ? hoy : null } },
+      leyenda: { otros: null, aporte: { etiqueta: etHoy, valor: hayHoy ? hoy : null } },
       // lo que llevas se dibuja como el relleno principal (del color del estado: rojo si supera el UL), desde el principio de la barra
       barra: escala ? { otros: 0, aporte: hayHoy ? pos(total) : 0, total, estado: ev?.estado ?? 'sin_dato', superaUl: Boolean(ev?.superaUl) } : null,
     };

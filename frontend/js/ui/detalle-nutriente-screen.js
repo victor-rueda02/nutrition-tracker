@@ -18,8 +18,9 @@ export function detalleNutrienteScreen(ui) {
   const hoy = dia ? null : ui.hoy?.(clave) ?? null;
   const referencia = referenciaDe(ui.targets, clave, ui.objetivos.perfil);
   const rango = rangoNutriente({ fila, hoy: hoy?.total ?? null, aporteOriginal: hoy?.aporteOriginal ?? null, referencia, etiquetaHoy: ui.etiquetaHoy, modo: dia ? 'dia' : 'alimento' });
-  const quien = dia ? ui.etiquetaHoy : 'Este alimento'; // de quién es el valor que se compara con el rango
+  const quien = dia ? rango.leyenda.aporte.etiqueta : 'Este alimento'; // de quién es el valor que se compara con el rango (en modo día lleva «(parcial)» si faltan datos)
   const q = (v) => ui.fmtQty(v, fila.unit);
+  const nb = (t) => t.replace(/ /g, ' '); // espacio duro: la cifra y la unidad no se separan al partir la línea
 
   // Barra con marcas: lo que llevas (gris), lo que aporta este alimento y una marca por cada valor del rango (las que valen lo
   // mismo comparten etiqueta). Las etiquetas cercanas se escalonan en dos niveles para que no se pisen. Superar el UL se dice
@@ -38,7 +39,7 @@ export function detalleNutrienteScreen(ui) {
     for (const m of orden) { nivel = previa >= 0 && m.pos - previa < 0.22 ? 1 - nivel : 0; niveles.set(m.id, nivel); previa = m.pos; }
     const conPct = fila.pct !== null && fila.total !== null;
     const pct = conPct ? `${ui.nf0.format(fila.pct * 100)} % del objetivo` : fila.total === null ? 'sin dato' : q(fila.total);
-    const resumen = dia ? `${fila.label}: ${ui.etiquetaHoy.toLowerCase()} ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`
+    const resumen = dia ? `${fila.label}: ${quien.toLowerCase()} ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`
       : `${fila.label}: este alimento aporta ${fila.total === null ? 'sin dato' : q(fila.total)}${conPct ? ` · ${pct}` : ''}`;
     const otros = rango.barra.otros;
     return h('div', { class: 'rango-caja' },
@@ -77,18 +78,18 @@ export function detalleNutrienteScreen(ui) {
   // que no tienen dato (no son 0). Cada una abre el detalle de su alimento con los gramos de esa línea.
   const aportes = () => {
     const { con, sin } = ui.aportes;
-    const pctTxt = (p) => (p === null ? '' : ` (${p > 0 && p < 0.01 ? '<1' : ui.nf0.format(p * 100)} % del total del día)`);
+    const pctTxt = (p) => (p === null ? '' : ` (${p > 0 && p < 0.01 ? '<1' : ui.nf0.format(p * 100)} % del total del día)`);
     const item = (a, texto, clase) => {
       const li = h('li', { class: `aporte ${clase}`, 'data-id': a.foodId }, texto);
       if (a.abrible) li.append(h('button', { type: 'button', class: 'abre-detalle', 'aria-label': `Ver detalle de ${a.nombre}`, onclick: () => ui.abrirAlimento(a) }));
       return li;
     };
-    const base = (a) => `${a.nombre} · ${ui.MEAL_LABEL[a.meal] ?? a.meal} · ${ui.nf1.format(a.grams)} g →`;
+    const base = (a) => `${a.nombre} · ${ui.MEAL_LABEL[a.meal] ?? a.meal} · ${ui.nf1.format(a.grams)} g →`;
     return h('section', { class: 'aportes-dia', 'aria-label': ui.tituloAportes },
       h('h2', { class: 'caps' }, ui.tituloAportes),
       h('div', { class: 'panel' },
         con.length || sin.length ? h('ul', { class: 'top-lista aportes-lista' },
-          con.map((a) => item(a, `${base(a)} ${q(a.valor)}${a.parcial ? ' (parcial)' : ''}${pctTxt(a.pct)}`, 'con-dato')),
+          con.map((a) => item(a, `${base(a)} ${nb(q(a.valor))}${a.parcial ? ' (parcial)' : ''}${pctTxt(a.pct)}`, 'con-dato')),
           sin.map((a) => item(a, `${base(a)} sin dato`, 'sin-dato')))
           : h('p', { class: 'muted' }, 'Sin registros este día.')));
   };

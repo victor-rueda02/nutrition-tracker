@@ -310,3 +310,17 @@ test('rango en modo día: sin «Este alimento», la barra es lo que llevas con e
   assert.equal(bien.barra.estado, 'cumplido');
   assert.equal(bien.barra.superaUl, false);
 });
+
+test('rango en modo día, regla 4: «(parcial)» en la fila y la leyenda solo si el total tiene faltas y algún dato', () => {
+  const o = targetsForDate('2026-10-16', { plan: null, targets, catalog });
+  const rep = (lines) => diaryReport([comida('r', 'comida', lines)], porId, o.list, catalog).rows.find((x) => x.clave === 'calcio_mg');
+  const con = rangoNutriente({ fila: rep([['b', 100], ['d', 100]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' }); // d: sin dato de calcio
+  assert.equal(con.filas[0].etiqueta, 'Llevas hoy (parcial)');
+  assert.equal(con.leyenda.aporte.etiqueta, 'Llevas hoy (parcial)');
+  assert.equal(rangoNutriente({ fila: rep([['b', 100], ['d', 100]]), etiquetaHoy: 'Llevas ese día', modo: 'dia' }).filas[0].etiqueta, 'Llevas ese día (parcial)');
+  const sin = rangoNutriente({ fila: rep([['b', 100]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' });
+  assert.equal(sin.filas[0].etiqueta, 'Llevas hoy');
+  assert.equal(sin.leyenda.aporte.etiqueta, 'Llevas hoy');
+  // todo sin dato: no hay cifra que marcar
+  assert.equal(rangoNutriente({ fila: rep([['d', 100]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' }).filas[0].etiqueta, 'Llevas hoy');
+});

@@ -44,7 +44,7 @@ async function setup({ meals = DIA, foods = foodsConSinDatos, ajustes = {} } = {
 }
 const fila = (t, clave) => t.$(`main.informe li.nut[data-clave="${clave}"]`);
 const abrir = (t, clave) => t.act(() => fila(t, clave).querySelector('button.abre-detalle').click());
-const lineas = (t) => t.$$('.aportes-lista li').map((li) => li.textContent);
+const lineas = (t) => t.$$('.aportes-lista li').map((li) => li.textContent.replace(/ /g, ' ')); // los espacios duros (cifra + unidad) como normales
 const fijaScroll = (t) => { // scroll controlable en jsdom
   let y = 0;
   Object.defineProperty(t.root.ownerDocument, 'scrollingElement', { configurable: true, value: { get scrollTop() { return y; }, set scrollTop(v) { y = v; } } });
@@ -68,7 +68,9 @@ test('todas las filas del informe llevan su botón superpuesto (≥ 44 px, con n
   // el CSS: zona ≥ 44 px y fila de referencia posicionada
   const css = readFile('../frontend/css/detalle.css');
   assert.match(css, /\.abre-detalle \{ position:absolute; inset:0 -8px;[^}]*min-height:44px/);
-  assert.match(css, /\.informe \.nut \{ min-height:44px; \}/);
+  assert.match(css, /\.informe \.nut:not\(\.nut-sin-ref\) \{ min-height:44px; \}/); // las «sin referencia» conservan sus 50 px
+  assert.match(css, /\.aportes-dia h2\.caps \{/); // mismo encabezado que «Qué es» o «En tu catálogo»
+  assert.doesNotMatch(css, /\.aportes-lista \.abre-detalle/); // usa la regla base
   assert.match(readFile('../frontend/css/navegacion.css'), /\.nut \{ position:relative; \}/);
 });
 
@@ -95,13 +97,13 @@ test('detalle de proteína del día: rango con el total del día y el objetivo, 
   const al = por100('almendras_crudas', 'proteina_g') * 0.3;
   const sa = por100('salmon_atlantico', 'proteina_g') * 1.5;
   const total = av + al + sa;
-  assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy');
+  assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (parcial)'); // el refresco no tiene dato de proteína
   assert.ok(Math.abs(num(t.$('.rango-tabla tr[data-fila="hoy"] td').textContent) - total) < 0.06, 'el total del día');
   assert.ok(t.$('.rango-tabla tr[data-fila="objetivo"]') || t.$('.rango-tabla tr[data-fila="min"]'), 'con el objetivo del día');
   assert.ok(t.$('.rango-barra .rango-aporte'));
   assert.equal(t.$('.rango-barra .rango-otros'), null);
   assert.equal(t.$('.ley-otros'), null);
-  assert.match(t.$('.ley-aporte').textContent, /^Llevas hoy · \d+ % del objetivo$/);
+  assert.match(t.$('.ley-aporte').textContent, /^Llevas hoy \(parcial\) · \d+ % del objetivo$/);
   assert.equal(t.$('.aportes-dia h2').textContent, 'Qué te ha aportado hoy');
   const esperado = [['Salmón del Atlántico de piscifactoría crudo', 'Comida', 150, sa], ['Avena (copos/molida)', 'Desayuno', 80, av], ['Almendras crudas', 'Desayuno', 30, al]].sort((a, b) => b[3] - a[3]);
   const L = lineas(t);
@@ -244,4 +246,40 @@ test('la tira de UL, los totales parciales y los desplegables del informe siguen
   assert.ok(t.$('.rango-tabla tr[data-fila="alimento"]'));
   assert.equal(t.$('.aportes-dia'), null);
   assert.equal(t.$('header.top .title-block small').textContent, 'Aceite de oliva');
+});
+
+test('regla 4: con faltas, la cifra del día dice «(parcial)» en tabla, leyenda y barra; sin faltas no; las líneas llevan espacio duro', { skip }, async () => {
+  const parcial = await setup({ foods: realFoods, meals: [MEAL('m0', '2026-10-16', 'comida', [['salmon_atlantico', 150], ['pan_molde_blanco', 60]])] });
+  await parcial.informe();
+  await abrir(parcial, 'metionina_cistina');
+  assert.equal(parcial.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (parcial)');
+  assert.match(parcial.$('.ley-aporte').textContent, /^Llevas hoy \(parcial\) · /);
+  assert.ok(parcial.$('.rango-sin-ref'), 'sin peso en el plan no hay referencia ni barra: la línea «sin referencia» también lo dice');
+  assert.match(parcial.$('.rango-sin-ref .ley-aporte').textContent, /^Llevas hoy \(parcial\) · [\d,.]+ g$/); // aminoácido sin peso en el plan: «falta tu peso en Objetivos»
+  assert.ok(lineas(parcial).some((x) => x.startsWith('Pan de molde blanco') && x.endsWith('sin dato')));
+  // cifra, unidad y % no se parten
+  const con = parcial.$('.aportes-lista li.con-dato').textContent;
+  assert.match(con, /\d g/);
+  assert.match(con, /\d %/);
+  // proteína con un alimento sin dato de proteína, igual
+  const p = realFoods.find((f) => f.id === 'pasta_seca');
+  const biz = { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } };
+  const t2 = await setup({ foods: [...realFoods, biz], meals: [MEAL('m0', '2026-10-16', 'cena', [['pasta_seca', 80], ['bizcocho', 60]])] });
+  await t2.informe();
+  await abrir(t2, 'proteina_g');
+  assert.equal(t2.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy (parcial)');
+  assert.match(t2.$('.rango-barra').getAttribute('aria-label'), /^Proteína: llevas hoy \(parcial\) /); // la barra, también
+  // sin faltas: sin «(parcial)»
+  const completo = await setup({ foods: realFoods, meals: [MEAL('m0', '2026-10-16', 'comida', [['salmon_atlantico', 150]])] });
+  await completo.informe();
+  await abrir(completo, 'metionina_cistina');
+  assert.equal(completo.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas hoy');
+  assert.doesNotMatch(completo.$('.ley-aporte').textContent, /parcial/);
+  assert.doesNotMatch(completo.$('.rango-sin-ref').textContent, /parcial/);
+  // día pasado
+  const t3 = await setup({ foods: realFoods, meals: [MEAL('m0', '2026-10-15', 'comida', [['salmon_atlantico', 150], ['pan_molde_blanco', 60]])] });
+  await t3.act(() => t3.$('button[aria-label="Día anterior"]').click());
+  await t3.informe();
+  await abrir(t3, 'metionina_cistina');
+  assert.equal(t3.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas ese día (parcial)');
 });
