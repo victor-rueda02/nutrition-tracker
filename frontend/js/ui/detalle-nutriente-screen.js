@@ -74,7 +74,9 @@ export function detalleNutrienteScreen(ui) {
     ui.header(fila.label, ui.back, { close: true, sub: food.nombre }),
     h('section', { class: 'panel rango', 'aria-label': 'Tu rango' },
       h('h2', { class: 'caps' }, 'Tu rango'),
-      ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
+      // una referencia que no es un objetivo (OMS, nórdica...) dice de quién es en vez de «Objetivos: referencias EFSA»; su nota va una sola vez
+      fila.soloReferencia ? h('p', { class: 'muted small objetivos-dia nota-ref' }, fila.nota || 'Referencia: no es un objetivo de tu plan')
+        : ui.objetivosTexto ? h('p', { class: 'muted small objetivos-dia' }, ui.objetivosTexto) : null,
       barra(), tabla, notaUl),
     informacion,
     h('section', { class: 'catalogo-top', 'aria-label': 'En tu catálogo' },

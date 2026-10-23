@@ -824,6 +824,8 @@ export function mountApp(root, deps) {
         h('span', { class: r.superaUl ? 'estado sr' : `estado ${r.estado}` }, [ESTADO_TEXT[r.estado], pct].filter(Boolean).join(' · ')),
         r.superaUl ? h('strong', { class: 'ul' }, ` ⚠ Supera el máximo tolerable (UL ${fmtQty(r.ul, r.unit)})`) : null,
         r.superaUl && r.notaUl ? h('div', { class: 'small muted nota-ul' }, r.notaUl) : null),
+      // referencia que no es de la EFSA (monoinsaturadas: nórdica): se dice de quién es, en la propia fila
+      r.soloReferencia && r.nota ? h('div', { class: 'small muted nota-ref' }, r.nota) : null,
       // UL informativo (vitamina A, folato): solo se enseña en el informe, con su nota; no avisa ni pinta de rojo.
       conUlInformativo && r.ulInformativo && r.ul != null ? h('div', { class: 'small muted nota-ul ul-informativo' },
         `UL ${fmtQty(r.ul, r.unit)} (solo informativo)`, r.notaUl ? h('div', {}, r.notaUl) : null) : null);

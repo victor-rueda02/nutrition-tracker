@@ -171,7 +171,7 @@ export function topCatalogo({ foods, clave, suma = null, objetivo = null, n = 5 
 // Referencia de targets.json (EFSA/UE) de un nutriente, con el perfil del plan: { valor, tipo } o null.
 export function referenciaDe(targets, clave, perfil) {
   const t = targets?.list?.find((x) => x.clave === clave);
-  if (!t) return null;
+  if (!t || t.tipo === 'rango') return null; // un rango (poli y monoinsaturadas, % de la energía) ya es la fila Mínimo/Máximo del día: no se repite como «Referencia»
   const valor = referenceValue(targets, clave, { perfil });
   return valor === null || valor === undefined ? null : { valor, tipo: t.tipo };
 }
@@ -215,7 +215,7 @@ export function rangoNutriente({ fila, hoy = null, aporteOriginal = null, refere
   let refFundida = false;
   for (const [id, etiqueta, valor] of [['min', 'Mínimo', fila.min], ['objetivo', 'Objetivo', fila.objetivo], ['max', 'Máximo', fila.max]]) {
     if (!esNum(valor)) continue;
-    const funde = !refFundida && esNum(refValor) && Math.abs(valor - refValor) <= 1e-9 * Math.max(1, Math.abs(valor));
+    const funde = fila.soloReferencia || (!refFundida && esNum(refValor) && Math.abs(valor - refValor) <= 1e-9 * Math.max(1, Math.abs(valor))); // una referencia solo_referencia ya ES la referencia: sus filas lo dicen
     if (funde) refFundida = true;
     filas.push({ id, etiqueta: funde ? `${etiqueta} (referencia)` : etiqueta, valor });
   }

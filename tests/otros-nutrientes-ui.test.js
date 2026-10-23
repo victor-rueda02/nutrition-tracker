@@ -70,13 +70,13 @@ test('informe: aminoácido con su barra y % (39 mg/kg × 75 kg = 2,925 g); sin r
   assert.ok(leu.querySelector('.meter'));
   assert.match(leu.querySelector('.nut-valor').textContent, /\/ 2,9/);
   assert.match(leu.querySelector('.nut-pct').textContent, /^\d+ %$/);
-  const alm = fila(t, 'grasas_monoinsaturadas_g');
-  assert.ok(alm.classList.contains('nut-sin-ref'));
-  assert.equal(alm.querySelector('.meter'), null);
+  const aguaFila = fila(t, 'agua_g');
+  assert.ok(aguaFila.classList.contains('nut-sin-ref'));
+  assert.equal(aguaFila.querySelector('.meter'), null);
   // dos columnas: nombre a la izquierda y el valor en la columna del % (sin %); debajo, «sin referencia»
-  assert.match(alm.querySelector('.nut-head > .nut-pct .nut-valor').textContent, /^\d[\d,.]* g$/);
-  assert.equal(alm.querySelector('.nut-head > .nut-main .nut-valor'), null);
-  assert.equal(alm.querySelector('.nut-sin-ref-nota').textContent, 'sin referencia');
+  assert.match(aguaFila.querySelector('.nut-head > .nut-pct .nut-valor').textContent, /^\d[\d,.]* g$/);
+  assert.equal(aguaFila.querySelector('.nut-head > .nut-main .nut-valor'), null);
+  assert.equal(aguaFila.querySelector('.nut-sin-ref-nota').textContent, 'sin referencia');
   // trans con su máximo y cafeína con el suyo
   assert.ok(fila(t, 'grasas_trans_g').querySelector('.meter'));
   assert.ok(fila(t, 'cafeina_mg').querySelector('.meter'));

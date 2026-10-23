@@ -317,7 +317,7 @@
     },
     "grasas_monoinsaturadas_g": {
       "resumen": "Grasas con un solo doble enlace, abundantes en el aceite de oliva. El cuerpo las sintetiza, así que no son imprescindibles.",
-      "necesidades": "Sin valor de referencia: la EFSA propone no fijar ninguno para las monoinsaturadas cis, que no tienen un papel específico conocido en prevenir ni causar enfermedades.",
+      "necesidades": "La EFSA y la OMS no fijan valor para las monoinsaturadas cis. La app usa la referencia de las Nordic Nutrition Recommendations 2023 (NNR): 10-20 % de la energía (unos 22-44 g con 2.000 kcal). Es una referencia nórdica, no europea ni de la OMS.",
       "deficit": "No aplica.",
       "exceso": "No se describen efectos adversos específicos; cuentan como grasa y energía. En un ensayo citado por Harvard, sustituir hidratos por grasa insaturada, sobre todo monoinsaturada, redujo la presión arterial y mejoró los lípidos.",
       "fuentes_alimentos": "Aceites de oliva, cacahuete y colza; aguacate; almendras, avellanas y pecanas; semillas de calabaza y sésamo.",
@@ -330,16 +330,28 @@
           "consultado": "2026-10-21"
         },
         {
+          "organismo": "NNR (Consejo Nórdico)",
+          "titulo": "Nordic Nutrition Recommendations 2023",
+          "url": "https://www.livsmedelsverket.se/globalassets/publikationsdatabas/broschyrer-foldrar/slutleverans_nordiska-naringsrekommendationer-2023.pdf",
+          "consultado": "2026-10-23"
+        },
+        {
           "organismo": "Harvard T.H. Chan",
           "titulo": "Types of Fat (The Nutrition Source)",
           "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
           "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "What are healthy diets? Joint statement by FAO and WHO (2024)",
+          "url": "https://www.who.int/publications/i/item/9789240101876",
+          "consultado": "2026-10-23"
         }
       ]
     },
     "grasas_poliinsaturadas_g": {
       "resumen": "Grasas con dos o más dobles enlaces: omega-6 (linoleico) y omega-3 (alfa-linolénico, EPA, DHA). El linoleico y el alfa-linolénico son esenciales.",
-      "necesidades": "La EFSA no fija valor para el total, sino para sus componentes: ácido linoleico 4 % de la energía, alfa-linolénico 0,5 % y EPA+DHA 250 mg al día. La American Heart Association sugiere un 8-10 % de la energía.",
+      "necesidades": "La EFSA no fija valor para el total, sino para sus componentes: ácido linoleico 4 % de la energía, alfa-linolénico 0,5 % y EPA+DHA 250 mg al día. La app usa la referencia FAO/OMS 2024 para el total: 6-10 % de la energía (unos 13-22 g con 2.000 kcal). La American Heart Association sugiere un 8-10 %.",
       "deficit": "Con las ingestas europeas más bajas de linoleico y alfa-linolénico no se observan signos de déficit.",
       "exceso": "La EFSA no fija UL para omega-6 ni para alfa-linolénico. Sustituir saturadas por poliinsaturadas reduce los eventos cardiovasculares sin cambiar la grasa total.",
       "fuentes_alimentos": "Aceites de girasol, maíz, soja, lino y colza; nueces; semillas de lino; pescado.",
@@ -356,6 +368,12 @@
           "titulo": "Types of Fat (The Nutrition Source)",
           "url": "https://nutritionsource.hsph.harvard.edu/what-should-you-eat/fats-and-cholesterol/types-of-fat/",
           "consultado": "2026-10-21"
+        },
+        {
+          "organismo": "OMS",
+          "titulo": "What are healthy diets? Joint statement by FAO and WHO (2024)",
+          "url": "https://www.who.int/publications/i/item/9789240101876",
+          "consultado": "2026-10-23"
         }
       ]
     },
