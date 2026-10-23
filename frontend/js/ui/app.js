@@ -4,7 +4,7 @@
 // Sin frameworks: DOM con textContent (nunca innerHTML con datos). Toda la lógica de negocio está en js/core.
 import { buildCompactList } from '../core/ai-contract.js';
 import { annotateExcluded, isExcluded } from '../core/excluded.js';
-import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, setDate, validateDraft, lineProblem, previewTotals, toMealRecord, draftFromRecord } from '../core/draft.js';
+import { createDraft, setGrams, changeFood, confirmFood, removeLine, addLine, resolveUnmatched, dropUnmatched, confirmHigh, setMeal, setDate, validateDraft, lineProblem, previewTotals, toMealRecord, draftFromRecord, appendDictation } from '../core/draft.js';
 import { MEALS, defaultMeal, madridNow } from '../core/meal-defaults.js';
 import { parseFoodsDocument, parseFoodsCSV, formatIssue, foodsToCSV } from '../core/foods-parser.js';
 import { buildBackup, backupToJSON, parseBackup, planImport, tieneObjetivos } from '../core/backup.js';
@@ -209,6 +209,49 @@ export function mountApp(root, deps) {
     state.error = ''; state.screen = 'confirm'; render();
   }
 
+  // Al guardar, qué alimento quedó en cada frase problemática anotada: la del dictado y las de «Dictar más».
+  async function resolverRegistro(d, rec) {
+    const ids = [d.logId, ...(d.logIds ?? [])].filter(Boolean);
+    if (!ids.length) return;
+    let log = await loadLog();
+    for (const id of ids) {
+      const entry = log.find((e) => e.id === id);
+      if (entry) log = updateEntry(log, resolveEntry(entry, rec.lines));
+    }
+    await deps.store.setSetting('registro_frases', log);
+  }
+
+  // «Dictar más» (en Confirmar): una llamada a la IA por pulsación, igual que el dictado; el resultado se añade al final
+  // del borrador sin tocar nada de lo que había (appendDictation). Un fallo conserva el texto y el borrador intactos.
+  const setMas = (patch) => { state.draft = { ...state.draft, mas: { ...(state.draft.mas ?? {}), ...patch } }; };
+  let irANuevo = null; // qué mostrar tras añadir: { lineKeys, unmatchedFrom }
+  function dictarMas() {
+    const text = (state.draft?.mas?.texto ?? '').trim();
+    if (!text || state.busy) return undefined;
+    state.busy = true; setMas({ error: '' }); render();
+    return track((async () => {
+      try {
+        const result = await interpret(text);
+        if (!state.draft || state.screen !== 'confirm') return; // te fuiste de la confirmación mientras esperabas
+        const entry = newEntry({ texto: text, result, now: now() });
+        if (entry) await deps.store.setSetting('registro_frases', addEntry(await loadLog(), entry));
+        const r = appendDictation(state.draft, { text, result, foodsById: byId() });
+        state.draft = { ...r.draft, logIds: [...(state.draft.logIds ?? []), ...(entry ? [entry.id] : [])], mas: null };
+        irANuevo = { lineKeys: r.lineKeys, unmatchedFrom: r.unmatchedFrom };
+      } catch (e) {
+        if (state.draft) setMas({ error: e.userMessage ?? `Error inesperado: ${e.message}` });
+      } finally {
+        state.busy = false; render();
+        if (irANuevo) { const n = irANuevo; irANuevo = null; queueMicrotask(() => verNuevo(n)); }
+      }
+    })(), 'No se pudo añadir');
+  }
+  // Lleva la vista a la primera línea nueva (o al primer "sin resolver" nuevo).
+  function verNuevo({ lineKeys, unmatchedFrom }) {
+    const el = (lineKeys[0] && root.querySelector(`[data-key="${lineKeys[0]}"]`)) || root.querySelector(`[data-sin-resolver="${unmatchedFrom}"]`);
+    try { el?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); } catch { /* sin scroll */ }
+  }
+
   function save() {
     if (!validateDraft(state.draft).ok) return;
     if (state.draft.editing) return saveEdit();
@@ -216,11 +259,7 @@ export function mountApp(root, deps) {
       const rec = toMealRecord(state.draft, { now: now(), idGen: deps.idGen });
       if (state.draft.addDate) rec.date = state.draft.addDate; // "+" de una comida de otro día: se guarda en ese día
       await deps.store.addMeal(rec);
-      if (state.draft.logId) {
-        const log = await loadLog();
-        const entry = log.find((e) => e.id === state.draft.logId);
-        if (entry) await deps.store.setSetting('registro_frases', updateEntry(log, resolveEntry(entry, rec.lines)));
-      }
+      await resolverRegistro(state.draft, rec);
       const msg = `Guardado en ${MEAL_LABEL[rec.meal].toLowerCase()}: ${rec.lines.length} ${rec.lines.length === 1 ? 'alimento' : 'alimentos'}.`;
       state.text = ''; state.draft = null; state.addDate = null;
       await openDay(rec.date, msg);
@@ -236,6 +275,7 @@ export function mountApp(root, deps) {
     return track((async () => {
       const rec = toMealRecord(state.draft, { now: now() });
       await deps.store.addMeal(rec);
+      await resolverRegistro(state.draft, rec);
       const movida = rec.date !== state.draft.editing.date;
       state.draft = null;
       await openDay(rec.date, movida ? `Cambios guardados. La comida está ahora en este día.` : 'Cambios guardados.');
@@ -621,6 +661,7 @@ export function mountApp(root, deps) {
   // alias_mas_especifico se pinta aparte («¿es …?») mientras la línea espera confirmación y el otro alimento sigue en el documento.
   function flagsFor(line) { const aparte = line.needsReview && line.masEspecifico && byId().has(line.masEspecifico); return line.flags.filter((f) => FLAG_TEXT[f] && !(aparte && f === 'alias_mas_especifico')).map((f) => h('div', { class: 'flag' }, FLAG_TEXT[f])); }
 
+  let focoMas = false; // «Dictar más» recién abierto: el campo toma el foco
   function confirmScreen() {
     const d = state.draft;
     const footer = h('footer', { class: 'bar' });
@@ -633,6 +674,21 @@ export function mountApp(root, deps) {
     const estimarLinea = (key) => { const r = lineaAEstimar(state.draft, key, byId()); state.draft = r.draft; if (r.index >= 0) est.start(r.index); };
     const estimarPlato = (p) => { const r = tratarComoPlato(state.draft, p); state.draft = r.draft; if (r.index >= 0) est.start(r.index); };
     let pantalla = null;
+    const mas = d.mas ?? null;
+    const dictarMasPanel = () => {
+      let interpretar;
+      const ta = h('textarea', {
+        class: 'dictado dictar-mas', rows: '3', placeholder: 'Toca aquí y dicta con el micrófono del teclado…', 'aria-label': 'Qué más has comido', value: mas.texto ?? '',
+        oninput: (e) => { setMas({ texto: e.target.value }); interpretar.disabled = state.busy || !e.target.value.trim(); },
+      });
+      interpretar = h('button', { class: 'primary', disabled: state.busy || !(mas.texto ?? '').trim(), onclick: dictarMas }, state.busy ? 'Procesando…' : 'Interpretar');
+      if (focoMas) { focoMas = false; queueMicrotask(() => { try { ta.focus(); } catch { /* sin foco */ } }); }
+      return h('section', { class: 'card dictar-mas-panel', 'aria-label': 'Dictar más' },
+        h('p', { class: 'muted small' }, 'Dicta o escribe lo que falta: se añade al final, sin cambiar lo que ya tienes.'),
+        ta,
+        mas.error ? h('p', { class: 'error', role: 'alert' }, mas.error) : null,
+        h('div', { class: 'row' }, interpretar, h('button', { class: 'secondary', disabled: state.busy, onclick: () => { state.draft = { ...state.draft, mas: null }; render(); } }, 'Cancelar')));
+    };
     const ajustarMargen = () => { if (pantalla) pantalla.style.paddingBottom = `${footer.offsetHeight + 24}px`; }; // el pie fijo no tapa la última tarjeta
     const paintFooter = () => {
       const v = validateDraft(state.draft);
@@ -704,7 +760,7 @@ export function mountApp(root, deps) {
       if (MOTIVOS_ESTIMABLES.includes(u.motivo)) actions.push(h('button', { class: 'secondary', disabled: state.busy, onclick: () => est.start(i) }, 'Estimar con IA'));
       if (u.origen) actions.push(h('button', { class: 'secondary', onclick: () => { state.draft = deshacerPlato(state.draft, i); render(); } }, 'Volver a los alimentos por separado'));
       actions.push(h('button', { class: 'link', onclick: () => { state.draft = dropUnmatched(state.draft, i); render(); } }, 'Descartar'));
-      return h('li', { class: 'card unmatched' }, h('div', {}, `«${u.text}»`), h('div', { class: 'muted small' }, MOTIVO_TEXT[u.motivo] ?? u.motivo), h('div', { class: 'row wrap' }, actions));
+      return h('li', { class: 'card unmatched', 'data-sin-resolver': i }, h('div', {}, `«${u.text}»`), h('div', { class: 'muted small' }, MOTIVO_TEXT[u.motivo] ?? u.motivo), h('div', { class: 'row wrap' }, actions));
     };
 
     footer.append(totalsEl, hint, h('div', { class: 'row' }, saveBtn));
@@ -723,7 +779,10 @@ export function mountApp(root, deps) {
         h('div', { class: 'muted small' }, 'La IA lo ha separado en varios alimentos, pero suena a un solo plato.'),
         h('div', { class: 'row wrap' }, h('button', { class: 'secondary', disabled: state.busy, onclick: () => estimarPlato(p) }, 'Tratar como un plato y estimar con IA'))))) : null,
       h('ul', { class: 'cards' }, d.lines.map(lineCard)),
-      h('button', { class: 'secondary wide', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
+      h('div', { class: 'add-actions' },
+        h('button', { class: 'secondary wide', onclick: () => openPicker({ title: 'Añadir alimento', onPick: (f) => { state.draft = addLine(state.draft, f.id); render(); } }) }, '+ Añadir alimento'),
+        h('button', { class: 'secondary wide', 'aria-expanded': String(!!mas), disabled: !!mas, onclick: () => { setMas({ abierto: true, texto: '', error: '' }); focoMas = true; render(); } }, 'Dictar más')),
+      mas ? dictarMasPanel() : null,
       d.unmatched.length ? h('h2', {}, 'Sin resolver') : null,
       h('ul', { class: 'cards' }, d.unmatched.map(unmatchedCard)),
       editing ? h('div', { class: 'row' }, deleteControls(editing.id, editing.date, 'Borrar esta comida')) : null,
