@@ -5,9 +5,10 @@ import assert from 'node:assert/strict';
 import { catalog, settings, readFile, realFoods } from './helpers.js';
 import { loadTargets } from '../frontend/js/core/targets.js';
 import { targetsForDate } from '../frontend/js/core/targets-plan.js';
+import { diaryReport } from '../frontend/js/core/diary.js';
 import {
   opcionesPorcion, gramosDeCantidad, cantidadDeGramos, filasAlimento, grupoDetalle, GRUPOS_DETALLE, fuenteDe, completitudDe, registroConGramos,
-  racionHabitual, topCatalogo, referenciaDe, rangoNutriente, limpiarInfoNutrientes, cantidadLegible,
+  racionHabitual, topCatalogo, referenciaDe, rangoNutriente, limpiarInfoNutrientes, cantidadLegible, aportesDelDia,
 } from '../frontend/js/core/detalle.js';
 
 const targets = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog).targets;
@@ -231,4 +232,81 @@ test('UL informativo (vitamina A, folato): sin aviso en la barra, sin marca UL, 
   assert.equal(rz.barra.superaUl, true);
   assert.ok(rz.marcas.some((m) => m.ids.includes('ul')));
   assert.equal(rz.filas.find((x) => x.id === 'ul').etiqueta, 'UL');
+});
+
+// ---------- modo día (desde el informe diario) y «Qué te ha aportado hoy» ----------
+
+const alim = [
+  food('a', { calcio_mg: 100, epa_g: 0.5, dha_g: 1 }), food('b', { calcio_mg: 300, epa_g: 0.2 }), food('c', { calcio_mg: 0 }),
+  food('d', { energia_kcal: 100 }), // calcio sin dato
+];
+const porId = new Map(alim.map((f) => [f.id, f]));
+const comida = (id, meal, lines) => ({ id, meal, date: '2026-10-16', lines: lines.map(([food_id, grams]) => ({ food_id, grams })) });
+const dia = [
+  comida('r1', 'desayuno', [['a', 50], ['d', 200]]), // a: 50 mg · d: sin dato
+  comida('r2', 'comida', [['b', 100], ['c', 80], ['a', 100], ['borrado', 30]]), // b: 300 · c: 0 real · a: 100 · borrado: sin dato
+];
+
+test('Qué te ha aportado hoy: de más a menos, % del total del día, 0 real con dato y sin dato al final (nunca 0)', () => {
+  const r = aportesDelDia({ meals: dia, byId: porId, clave: 'calcio_mg' });
+  assert.deepEqual(r.con.map((x) => [x.foodId, x.valor]), [['b', 300], ['a', 100], ['a', 50], ['c', 0]]);
+  assert.equal(r.total, 450);
+  assert.deepEqual(r.con.map((x) => x.pct), [300 / 450, 100 / 450, 50 / 450, 0]); // un 0 escrito es un 0 real: 0 %
+  assert.deepEqual(r.sin.map((x) => [x.foodId, x.valor, x.pct]), [['d', null, null], ['borrado', null, null]]);
+  assert.deepEqual(r.con[0], { foodId: 'b', nombre: 'b', meal: 'comida', recordId: 'r2', lineIndex: 0, grams: 100, valor: 300, parcial: false, abrible: true, pct: 300 / 450 });
+  assert.equal(r.sin[1].abrible, false); // borrado del documento: sin detalle
+  assert.equal(r.sin[1].nombre, 'borrado');
+  // el total coincide con el del Diario
+  const rep = diaryReport(dia, porId, targetsForDate('2026-10-16', { plan: null, targets, catalog }).list, catalog);
+  assert.equal(rep.rows.find((x) => x.clave === 'calcio_mg').total, r.total);
+  // las partes de las líneas siguen los gramos de cada línea
+  assert.equal(r.con.find((x) => x.grams === 50).valor, 50);
+});
+
+test('Qué te ha aportado hoy: empates por nombre; sin ninguna línea con dato el total es null; día vacío', () => {
+  const dos = [comida('r', 'cena', [['b', 100], ['a', 300]])];
+  assert.deepEqual(aportesDelDia({ meals: dos, byId: porId, clave: 'calcio_mg' }).con.map((x) => x.foodId), ['a', 'b']); // 300 y 300: por nombre
+  const nada = aportesDelDia({ meals: [comida('r', 'cena', [['d', 100]])], byId: porId, clave: 'calcio_mg' });
+  assert.equal(nada.total, null); assert.deepEqual(nada.con, []); assert.equal(nada.sin.length, 1);
+  assert.deepEqual(aportesDelDia({ meals: [], byId: porId, clave: 'calcio_mg' }), { con: [], sin: [], total: null });
+  const ceros = aportesDelDia({ meals: [comida('r', 'cena', [['c', 100]])], byId: porId, clave: 'calcio_mg' });
+  assert.equal(ceros.total, 0); assert.equal(ceros.con[0].pct, null); // total 0: sin porcentaje
+});
+
+test('Qué te ha aportado hoy: una suma (EPA + DHA) suma las partes con dato; falta una parte = parcial; ninguna = sin dato', () => {
+  const r = aportesDelDia({ meals: dia, byId: porId, clave: 'epa_dha', suma: ['epa_g', 'dha_g'] });
+  // a 50 g: 0,25 + 0,5 · a 100 g: 0,5 + 1 · b 100 g: 0,2 (le falta DHA) · c y d: sin dato de ninguna parte
+  assert.deepEqual(r.con.map((x) => [x.foodId, x.grams, x.valor, x.parcial]), [['a', 100, 1.5, false], ['a', 50, 0.75, false], ['b', 100, 0.2, true]]);
+  assert.ok(Math.abs(r.total - 2.45) < 1e-9);
+  assert.ok(Math.abs(r.con[0].pct - 1.5 / 2.45) < 1e-9);
+  assert.deepEqual(r.sin.map((x) => x.foodId), ['d', 'c', 'borrado']); // en el orden del día
+});
+
+test('rango en modo día: sin «Este alimento», la barra es lo que llevas con el objetivo de ese día; UL superado y sin dato', () => {
+  const o = targetsForDate('2026-10-16', { plan: null, targets, catalog });
+  const rep = (lines) => diaryReport([comida('r', 'comida', lines)], porId, o.list, catalog).rows.find((x) => x.clave === 'calcio_mg');
+  const fila = rep([['b', 1000]]); // 3000 mg de calcio > UL 2500
+  const r = rangoNutriente({ fila, referencia: referenciaDe(targets, 'calcio_mg', o.perfil), etiquetaHoy: 'Llevas hoy', modo: 'dia' });
+  assert.deepEqual(r.filas.map((x) => x.id), ['hoy', 'min', 'ul']);
+  assert.deepEqual(r.filas.map((x) => x.etiqueta), ['Llevas hoy', 'Mínimo (referencia)', 'UL']);
+  assert.equal(r.filas[0].valor, 3000);
+  assert.equal(r.leyenda.otros, null);
+  assert.deepEqual(r.leyenda.aporte, { etiqueta: 'Llevas hoy', valor: 3000 });
+  assert.equal(r.barra.otros, 0);
+  assert.ok(Math.abs(r.barra.aporte - 3000 / r.escala) < 1e-9);
+  assert.equal(r.barra.superaUl, true);
+  assert.deepEqual(r.marcas.map((m) => m.etiqueta), ['Mín. y ref.', 'UL']);
+  // día pasado: la etiqueta que le pasan
+  assert.equal(rangoNutriente({ fila, etiquetaHoy: 'Llevas ese día', modo: 'dia' }).filas[0].etiqueta, 'Llevas ese día');
+  // sin dato: «—» (null) y barra vacía, nunca 0
+  const sin = rangoNutriente({ fila: rep([['d', 100]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' });
+  assert.equal(sin.filas[0].valor, null);
+  assert.equal(sin.barra.aporte, 0);
+  assert.equal(sin.barra.estado, 'sin_dato');
+  // por debajo del mínimo y luego cumplido, sin superar el UL
+  const poco = rangoNutriente({ fila: rep([['b', 300]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' });
+  assert.equal(poco.barra.estado, 'por_debajo'); // 900 mg frente a un mínimo de 950
+  const bien = rangoNutriente({ fila: rep([['b', 400]]), etiquetaHoy: 'Llevas hoy', modo: 'dia' });
+  assert.equal(bien.barra.estado, 'cumplido');
+  assert.equal(bien.barra.superaUl, false);
 });

@@ -89,3 +89,10 @@
 .line-name button.line-open { display:block; width:100%; min-height:44px; margin:-10px 0 -6px; padding:10px 0; border:none; border-radius:0; background:none; color:inherit; font:inherit; font-weight:600; text-align:left; }
 .food-row { position:relative; }
 .food-row .abre-detalle { inset:0; border-radius:0; }
+
+/* Informe diario: cada fila de nutriente abre su detalle del día (botón superpuesto, ≥ 44 px) */
+.informe .nut { min-height:44px; }
+/* «Qué te ha aportado hoy» (detalle de nutriente desde el informe): una línea por alimento, pulsable; sin dato al final y atenuado */
+.aportes-lista .aporte { position:relative; overflow-wrap:anywhere; }
+.aportes-lista .aporte.sin-dato { color:var(--muted); }
+.aportes-lista .abre-detalle { inset:0 -8px; }
