@@ -29,7 +29,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-23 | U · «Otros nutrientes» del informe con el mismo formato (filas, grupos) y referencias nuevas (aa esenciales OMS mg/kg, cafeína 400, trans <1 % kcal) | desarrollador | dev/u-otros-nutrientes | 2 | integrado y publicado | – (aprobado por Victor) |
 | 2026-10-23 | V · Investigar referencias oficiales para nutrientes «sin referencia» (solo informe, sin cambios) | redactor-salud | – | – | hecho | – (Victor: poli 6-10 %E FAO/OMS 2024 y mono 10-20 %E NNR 2023 con apunte nórdico; nada más) |
 | 2026-10-23 | W · Referencias de mono (NNR 2023, 10-20 %E) y poliinsaturadas (FAO/OMS 2024, 6-10 %E) | desarrollador | dev/w-ref-mono-poli | 2 | integrado y publicado | – |
-| 2026-10-23 | X · Informe diario: pulsar un nutriente abre su detalle en modo día («Qué te ha aportado hoy») | desarrollador | dev/x-informe-detalle | 2 | integrado (APROBADO) | push |
+| 2026-10-23 | X · Informe diario: pulsar un nutriente abre su detalle en modo día («Qué te ha aportado hoy») | desarrollador | dev/x-informe-detalle | 2 | integrado (APROBADO) | probar en iPhone |
 
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
