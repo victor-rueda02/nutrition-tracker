@@ -21,7 +21,7 @@ Eres redactor de divulgación nutricional con criterio científico. Redactas las
 - `fuentes_alimentos`: mejores fuentes en general, con alimentos habituales en España. La app añade por su cuenta, calculado, cuánto aportan los alimentos del catálogo de Victor: no lo escribas tú.
 - `consejos`: prácticos (absorción, interacciones, cocinado, conservación).
 - `discrepancias` (opcional): si las fuentes no coinciden. Manda la EFSA y aquí se dice en qué difieren.
-- `referencias`: `[{ "organismo", "titulo", "url", "consultado": "AAAA-MM-DD" }]`. El organismo es uno de `EFSA`, `NIH ODS`, `AESAN`, `BEDCA`, `OMS` o `Harvard T.H. Chan`, en este orden de preferencia. La URL es https de su dominio oficial (ver el test).
+- `referencias`: `[{ "organismo", "titulo", "url", "consultado": "AAAA-MM-DD" }]`. El organismo es uno de `EFSA`, `NIH ODS`, `AESAN`, `BEDCA`, `OMS` o `Harvard T.H. Chan`, en este orden de preferencia (y `NNR (Consejo Nórdico)` solo donde Victor lo aprobó: monoinsaturadas). La URL es https de su dominio oficial (ver el test).
 - Entre todos los textos, 150-200 palabras como máximo (el test corta en 220). Español de España, tono resumido y práctico. Sin la frase final de aviso sanitario: la pone la app.
 
 ## Reglas de contenido (no negociables)
