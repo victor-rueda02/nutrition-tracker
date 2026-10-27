@@ -33,6 +33,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-23 | Y · Confirmar: botón «Dictar más» que añade alimentos dictados al borrador | desarrollador | dev/y-dictar-mas | 2 | integrado y publicado | probar en iPhone |
 | 2026-10-27 | Z · Huecos de micros del aviso de parciales (chía, salchichón, chorizo, pan de barra, chocolate 85, anacardos, bebida de avena); B12 y D = 0 real en vegetales sin enriquecer | catalogo | cat/z-huecos-micros | 2 | integrado (APROBADO) | OK para git push; luego aceptar la actualización del documento en el iPhone (Victor: B12/D 0 real en vegetales; embutidos caseros; anacardos colina escalada por agua; pan B3 de pita sin enriquecer) |
 
+| 2026-10-27 | AA · Colina del chocolate 85 % (USDA 170274, mezcla 45-85 %, estimado) y B5 de la chía de otra base oficial | catalogo | cat/aa-colina-b5 | 2 | integrado (APROBADO) | OK para git push (junto con Z) (Victor: AFCD como último recurso, en CLAUDE.md §4) |
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
 - 2026-10-21, F · etiquetas de Victor (por 100 g). Victor: «si no digo nada, es el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
