@@ -302,12 +302,13 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
   assert.match(fila(t, 'energia_kcal').textContent, /parcial/);
 });
 
-// Día con ambos casos: chía (sin vitamina B5) y pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
+// Día con ambos casos: pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
 const BIZCOCHO = (() => { const p = realFoods.find((f) => f.id === 'pasta_seca'); return { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } }; })();
-const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['semillas_chia', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
+const CHIA_SIN_B5 = (() => { const c = realFoods.find((f) => f.id === 'semillas_chia'); return { ...c, id: 'chia_sin_b5', nombre: 'Semillas de chía', extra: {}, nutrients: { ...c.nutrients, vitamina_b5_mg: null } }; })();
+const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['chia_sin_b5', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
 
 test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) primero y en negrita; lo menor, discreto y plegado', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   const avisos = t.$$('.parciales');
   assert.equal(avisos.length, 2);
@@ -324,7 +325,7 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
 });
 
 test('Informe diario: el detalle de parciales, agrupado y por gravedad (importante primero)', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   await t.act(() => verInforme(t));
   const panel = t.$('.parciales-informe');
