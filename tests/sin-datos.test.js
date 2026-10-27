@@ -188,17 +188,17 @@ test('UI: un dictado normal (cantidades y alimentos con datos) no ofrece plato n
   assert.doesNotMatch(t.root.textContent, /Sin datos nutricionales/);
 });
 
-const COMIDA = { id: 'c1', date: '2026-10-18', meal: 'comida', createdAt: '2026-10-18T10:00:00.000Z', text: 'x', lines: [{ food_id: 'lentejas_caseras', grams: 200 }, { food_id: 'chorizo', grams: 30 }] };
+const COMIDA = { id: 'c1', date: '2026-10-18', meal: 'comida', createdAt: '2026-10-18T10:00:00.000Z', text: 'x', lines: [{ food_id: 'lentejas_caseras', grams: 200 }, { food_id: 'pasta_seca', grams: 30 }] };
 const aDiario = async (t) => { await t.act(() => t.$$('button').find((b) => b.textContent.includes('‹ Volver')).click()); };
 
 test('UI: el Diario avisa de los alimentos sin datos y no da el día por completo', { skip }, async () => {
   const t = await setup(DICTADO, { meals: [COMIDA] });
   await aDiario(t);
   assert.match(t.$('[role=alert]').textContent, /Sin datos nutricionales: Lentejas caseras/);
-  // el alimento sin ningún dato se avisa aparte; el aviso de parciales solo habla de los que tienen datos a medias (chorizo, con datos a medias)
+  // el alimento sin ningún dato se avisa aparte; el aviso de parciales solo habla de los que tienen datos a medias (pasta seca, sin colina)
   const parciales = t.$('.parciales').textContent;
   assert.doesNotMatch(parciales, /Lentejas caseras/);
-  assert.match(parciales, /^Totales parciales en .*\(faltan datos de Chorizo\)$/);
+  assert.match(parciales, /^Totales parciales en .*\(faltan datos de Pasta seca sin enriquecer\)$/);
 });
 
 test('UI: las etiquetas de macros son «Hidratos» y «Grasa» en el Diario, el anillo y el informe', { skip }, async () => {

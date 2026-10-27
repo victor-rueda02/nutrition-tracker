@@ -125,7 +125,7 @@ test('con el documento real: chía y pasta dan «Vitamina K y colina» (menor); 
   const a = avisoParciales(meals, byId, rep.rows);
   assert.equal(a.importante, null);
   const texto = a.menor.grupos.map((g) => g.texto).join(' | ');
-  assert.match(texto, /vitamina K.*: faltan datos de Semillas de chía/); // la chía no trae vitamina K...
+  assert.match(texto, /pantoténico.*: faltan datos de Semillas de chía/); // la chía no trae vitamina B5 (ninguna fuente)...
   assert.match(texto, /Colina: faltan datos de Pasta seca sin enriquecer/); // ...ni la pasta colina
   const rep2 = diaryReport([comida(['pasta_sin_kcal', 80])], byId, resolveTargets(targets), catalog);
   const b = avisoParciales([comida(['pasta_sin_kcal', 80])], byId, rep2.rows);
