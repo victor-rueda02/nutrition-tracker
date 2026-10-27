@@ -37,7 +37,7 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   for (const [id, text] of [['pan_blanco_barra', '60 g de pan'], ['pan_blanco_barra', '60 g de barra de pan'], ['jamon_cocido', '30 g de jamón cocido'], ['jamon_cocido', '30 g de jamón york']]) {
     assert.ok(!flagsOf(id, text).includes('sin_alias'), text);
   }
-  // pan de barra español sin enriquecer: B1, B2, B9 y hierro de BEDCA; B3 sin dato (USDA solo la tiene enriquecida)
+  // pan de barra español sin enriquecer: B1, B2, B9 y hierro de BEDCA; B3 de la pita blanca sin enriquecer de USDA (172816)
   const pan = byId.get('pan_blanco_barra');
   assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, 2.142]);
   assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
