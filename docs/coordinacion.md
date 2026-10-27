@@ -31,9 +31,9 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-23 | W · Referencias de mono (NNR 2023, 10-20 %E) y poliinsaturadas (FAO/OMS 2024, 6-10 %E) | desarrollador | dev/w-ref-mono-poli | 2 | integrado y publicado | – |
 | 2026-10-23 | X · Informe diario: pulsar un nutriente abre su detalle en modo día («Qué te ha aportado hoy») | desarrollador | dev/x-informe-detalle | 2 | integrado (APROBADO) | probar en iPhone |
 | 2026-10-23 | Y · Confirmar: botón «Dictar más» que añade alimentos dictados al borrador | desarrollador | dev/y-dictar-mas | 2 | integrado y publicado | probar en iPhone |
-| 2026-10-27 | Z · Huecos de micros del aviso de parciales (chía, salchichón, chorizo, pan de barra, chocolate 85, anacardos, bebida de avena); B12 y D = 0 real en vegetales sin enriquecer | catalogo | cat/z-huecos-micros | 2 | integrado (APROBADO) | OK para git push; luego aceptar la actualización del documento en el iPhone (Victor: B12/D 0 real en vegetales; embutidos caseros; anacardos colina escalada por agua; pan B3 de pita sin enriquecer) |
+| 2026-10-27 | Z · Huecos de micros del aviso de parciales (chía, salchichón, chorizo, pan de barra, chocolate 85, anacardos, bebida de avena); B12 y D = 0 real en vegetales sin enriquecer | catalogo | cat/z-huecos-micros | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone (Victor: B12/D 0 real en vegetales; embutidos caseros; anacardos colina escalada por agua; pan B3 de pita sin enriquecer) |
 
-| 2026-10-27 | AA · Colina del chocolate 85 % (USDA 170274, mezcla 45-85 %, estimado) y B5 de la chía de otra base oficial | catalogo | cat/aa-colina-b5 | 2 | integrado (APROBADO) | OK para git push (junto con Z) (Victor: AFCD como último recurso, en CLAUDE.md §4) |
+| 2026-10-27 | AA · Colina del chocolate 85 % (USDA 170274, mezcla 45-85 %, estimado) y B5 de la chía de otra base oficial | catalogo | cat/aa-colina-b5 | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone (Victor: AFCD como último recurso, en CLAUDE.md §4) |
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
 - 2026-10-21, F · etiquetas de Victor (por 100 g). Victor: «si no digo nada, es el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
@@ -58,3 +58,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-23: git push de U y W (informe con todos los nutrientes; referencias aa OMS, cafeína, trans, poli FAO\/OMS 2024, mono NNR 2023). Worker sin cambios.
 - 2026-10-23: git push de Y («Dictar más» en Confirmar). Worker sin cambios.
 - 2026-10-27, Z: quedan vacíos colina del chocolate 85 % y B5 de la chía (sin fuente). pan_molde_blanco sigue con B3 vacía: si Victor quiere, mismo criterio que el pan de barra (pita 172816), pero es otro pan.
+- 2026-10-27: git push de Z y AA (huecos de micros; B12/D = 0 en vegetales; AFCD como último recurso). Worker sin cambios.
