@@ -39,7 +39,7 @@ test('alias: "pan" es pan blanco de barra (no el integral) y "jamón" a secas no
   }
   // pan de barra español sin enriquecer: B1, B2, B9 y hierro de BEDCA; B3 sin dato (USDA solo la tiene enriquecida)
   const pan = byId.get('pan_blanco_barra');
-  assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, undefined]);
+  assert.deepEqual(['vitamina_b9_ug', 'vitamina_b1_mg', 'vitamina_b2_mg', 'hierro_mg', 'vitamina_b3_mg'].map((k) => pan.nutrients[k]), [23, 0.08, 0.05, 1.6, 2.142]);
   assert.match(pan.extra.fuente_usda, /^BEDCA 2160 /);
   assert.equal(pan.extra.fdc_id, '172675');
   assert.match(byId.get('jamon_cocido').extra.fuente_usda, /^Etiqueta Jamon cocido Hacendado .*BEDCA 965 .*USDA Pork, cured, ham/);
@@ -135,6 +135,20 @@ test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para q
   for (const id of ['semillas_chia', 'pimiento_amarillo']) assert.deepEqual([byId.get(id).nutrients.epa_g, byId.get(id).nutrients.dha_g], [0, 0], id);
   // atún: escurrido y con sal (el aceite se dicta aparte)
   assert.equal(byId.get('atun_lata_aceite').extra.fdc_id, '173708');
+});
+
+test('B12 y vitamina D = 0 en vegetales sin enriquecer (regla de Victor); huecos del salchichón, chía, anacardos y pan rellenados con su origen', () => {
+  for (const id of ['semillas_chia', 'bebida_de_avena']) {
+    assert.deepEqual([byId.get(id).nutrients.vitamina_d_ug, byId.get(id).nutrients.vitamina_b12_ug], [0, 0], id);
+    assert.match(byId.get(id).extra.fuente_usda, /B12\/D = 0: vegetal sin enriquecer/, id);
+  }
+  const s = byId.get('salchichon').nutrients;
+  assert.deepEqual([s.colina_mg, s.vitamina_d_ug, s.azucares_g], [72.6, 0.9, 0.26]);
+  assert.equal(byId.get('semillas_chia').nutrients.vitamina_b6_mg, 0.202); // Foundation 2710819
+  assert.match(byId.get('semillas_chia').extra.fuente_usda, /Foundation 2710819/);
+  assert.equal(byId.get('anacardos').nutrients.colina_mg, 58.83); // estimado: escalado por agua desde 170571
+  assert.match(byId.get('anacardos').extra.fuente_usda, /estimado: escalado por agua desde 170571/);
+  assert.equal(byId.get('pan_blanco_barra').nutrients.vitamina_b3_mg, 2.142); // pita sin enriquecer 172816 (no la niacina de BEDCA)
 });
 
 test('merluza: macros de la etiqueta de Victor (merluza del Cabo), micros de BEDCA', () => {

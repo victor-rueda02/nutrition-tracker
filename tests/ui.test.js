@@ -317,7 +317,7 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
   assert.ok(avisos[0].querySelector('strong')); // el estado no depende solo del color: lleva el prefijo «Importante:»
   assert.ok(avisos[1].classList.contains('menor') && avisos[1].classList.contains('muted'));
   assert.equal(avisos[1].tagName, 'DETAILS');
-  assert.match(avisos[1].querySelector('summary').textContent, /^Totales parciales en .+ \(faltan datos de /);
+  assert.equal(avisos[1].querySelector('summary').textContent, 'Totales parciales en vitamina B5 (ác. pantoténico) y colina (faltan datos de Semillas de chía, Pasta seca sin enriquecer y Bizcocho)');
   assert.match(avisos[1].querySelector('ul').textContent, /Colina: faltan datos de .*Pasta seca sin enriquecer/);
   assert.doesNotMatch(avisos[1].textContent, /Huevo/); // 0 g ese día: no cuenta
   assert.doesNotMatch(t.root.textContent, /Totales parciales: faltan datos/); // el texto antiguo ya no está
