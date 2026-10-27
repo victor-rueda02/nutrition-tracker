@@ -304,10 +304,11 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
 
 // Día con ambos casos: pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
 const BIZCOCHO = (() => { const p = realFoods.find((f) => f.id === 'pasta_seca'); return { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } }; })();
-const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['semillas_chia', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
+const CHIA_SIN_B5 = (() => { const c = realFoods.find((f) => f.id === 'semillas_chia'); return { ...c, id: 'chia_sin_b5', nombre: 'Semillas de chía', extra: {}, nutrients: { ...c.nutrients, vitamina_b5_mg: null } }; })();
+const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['chia_sin_b5', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
 
 test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) primero y en negrita; lo menor, discreto y plegado', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   const avisos = t.$$('.parciales');
   assert.equal(avisos.length, 2);
@@ -316,14 +317,15 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
   assert.equal(avisos[0].textContent, 'Importante: totales parciales en kcal y proteína (faltan datos de Bizcocho)');
   assert.ok(avisos[0].querySelector('strong')); // el estado no depende solo del color: lleva el prefijo «Importante:»
   assert.ok(avisos[1].classList.contains('menor') && avisos[1].classList.contains('muted'));
-  assert.equal(avisos[1].tagName, 'P'); // con un solo grupo el resumen lo dice todo: sin desplegable
-  assert.equal(avisos[1].textContent, 'Totales parciales en colina (faltan datos de Pasta seca sin enriquecer y Bizcocho)');
+  assert.equal(avisos[1].tagName, 'DETAILS');
+  assert.equal(avisos[1].querySelector('summary').textContent, 'Totales parciales en vitamina B5 (ác. pantoténico) y colina (faltan datos de Semillas de chía, Pasta seca sin enriquecer y Bizcocho)');
+  assert.match(avisos[1].querySelector('ul').textContent, /Colina: faltan datos de .*Pasta seca sin enriquecer/);
   assert.doesNotMatch(avisos[1].textContent, /Huevo/); // 0 g ese día: no cuenta
   assert.doesNotMatch(t.root.textContent, /Totales parciales: faltan datos/); // el texto antiguo ya no está
 });
 
 test('Informe diario: el detalle de parciales, agrupado y por gravedad (importante primero)', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   await t.act(() => verInforme(t));
   const panel = t.$('.parciales-informe');

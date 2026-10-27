@@ -146,10 +146,10 @@ test('B12 y vitamina D = 0 en vegetales sin enriquecer (regla de Victor); huecos
   assert.deepEqual([s.colina_mg, s.vitamina_d_ug, s.azucares_g], [72.6, 0.9, 0.26]);
   assert.equal(byId.get('semillas_chia').nutrients.vitamina_b6_mg, 0.202); // Foundation 2710819
   assert.match(byId.get('semillas_chia').extra.fuente_usda, /Foundation 2710819/);
-assert.equal(byId.get('semillas_chia').nutrients.vitamina_b5_mg, 0.37); // AFCD Release 3, F008209 (analizado)
-assert.match(byId.get('semillas_chia').extra.fuente_usda, /AFCD.*F008209.*foodstandards\.gov\.au/);
-assert.equal(byId.get('chocolate_negro_85').nutrients.colina_mg, 27.6); // estimado: USDA 170274
-assert.match(byId.get('chocolate_negro_85').extra.fuente_usda, /colina estimado: USDA 170274/);
+  assert.equal(byId.get('semillas_chia').nutrients.vitamina_b5_mg, 0.37); // AFCD Release 3, F008209 (analizado)
+  assert.match(byId.get('semillas_chia').extra.fuente_usda, /AFCD.*F008209.*foodstandards\.gov\.au/);
+  assert.equal(byId.get('chocolate_negro_85').nutrients.colina_mg, 27.6); // estimado: USDA 170274
+  assert.match(byId.get('chocolate_negro_85').extra.fuente_usda, /colina estimado: USDA 170274/);
   assert.equal(byId.get('anacardos').nutrients.colina_mg, 58.83); // estimado: escalado por agua desde 170571
   assert.match(byId.get('anacardos').extra.fuente_usda, /estimado: escalado por agua desde 170571/);
   assert.equal(byId.get('pan_blanco_barra').nutrients.vitamina_b3_mg, 2.142); // pita sin enriquecer 172816 (no la niacina de BEDCA)

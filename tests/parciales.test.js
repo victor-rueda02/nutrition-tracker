@@ -115,7 +115,7 @@ test('sin parciales no hay aviso', () => {
   assert.equal(avisoParciales([comida(['chia', 20])], mapa(chia), [fila('colina_mg', 'Colina', [])]), null);
 });
 
-test('con el documento real: pasta (sin colina) dan totales parciales menores; un alimento con kcal sin dato sería importante', () => {
+test('con el documento real: pasta (sin colina) da totales parciales menores; un alimento con kcal sin dato sería importante', () => {
   const { targets } = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog);
   const byId = new Map(realFoods.map((f) => [f.id, f]));
   const sinKcal = { ...byId.get('pasta_seca'), id: 'pasta_sin_kcal', nombre: 'Pasta sin kcal', nutrients: { ...byId.get('pasta_seca').nutrients, energia_kcal: null } };
