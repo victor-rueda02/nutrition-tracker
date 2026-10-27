@@ -177,3 +177,8 @@ Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-f
 - `anacardos` colina 58,83 (estimado: escalado por agua desde USDA 170571, tostado sin sal, 61 mg × (100−5,2)/(100−1,7), con el agua de 170162 crudo). USDA da la misma colina (52,1) en la almendra cruda 170567 y tostada 170158, así que tostar no la cambia salvo por el agua.
 - `pan_blanco_barra` B3 2,142 de USDA 172816 «Bread, pita, white, unenriched» (SR Legacy; pan blanco de harina sin enriquecer). USDA sí tiene pan blanco sin enriquecer: la pita 172816. BEDCA 2160 solo da equivalentes de niacina (sin triptófano) y CIQUAL siguió con 503.
 - Siguen vacíos: `chocolate_negro_85` colina (USDA 170273/170272/170271 no la traen) y `semillas_chia` B5.
+
+## Rama `cat/aa-colina-b5` (27-10-2026)
+- `chocolate_negro_85` · colina_mg = 27,6 (USDA SR Legacy 170274, chocolate negro 45-85 %; aproximación aprobada por Victor, anotada como estimado en `fuente_usda`). El resto de la fila (etiqueta) intacto.
+- `semillas_chia` · vitamina_b5_mg = 0,37 mg/100 g: AFCD (Australian Food Composition Database, FSANZ) Release 3, dic. 2025, alimento F008209 «Seed, chia, dried» (analizado; compuesto de 8 muestras comerciales; B5 no figura entre los valores imputados). Coherente con la fila: agua 5,6 (5,8), proteína 23,8 (22), grasa 29,8 (34), fibra 33,2 (30). Fineli (bloqueada por Cloudflare), Frida y la base suiza (sin API accesible) no se pudieron consultar; la Canadian Nutrient File 2511 copia USDA y no trae B5.
+- Descarga: https://www.foodstandards.gov.au/science-data/food-nutrient-databases/afcd/australian-food-composition-database-download-excel-files (Excel «Nutrient profiles», columna «Pantothenic acid (B5)»).

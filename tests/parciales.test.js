@@ -115,7 +115,7 @@ test('sin parciales no hay aviso', () => {
   assert.equal(avisoParciales([comida(['chia', 20])], mapa(chia), [fila('colina_mg', 'Colina', [])]), null);
 });
 
-test('con el documento real: chía (sin vitamina B5) y pasta (sin colina) dan totales parciales menores; un alimento con kcal sin dato sería importante', () => {
+test('con el documento real: pasta (sin colina) dan totales parciales menores; un alimento con kcal sin dato sería importante', () => {
   const { targets } = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog);
   const byId = new Map(realFoods.map((f) => [f.id, f]));
   const sinKcal = { ...byId.get('pasta_seca'), id: 'pasta_sin_kcal', nombre: 'Pasta sin kcal', nutrients: { ...byId.get('pasta_seca').nutrients, energia_kcal: null } };
@@ -125,7 +125,7 @@ test('con el documento real: chía (sin vitamina B5) y pasta (sin colina) dan to
   const a = avisoParciales(meals, byId, rep.rows);
   assert.equal(a.importante, null);
   const texto = a.menor.grupos.map((g) => g.texto).join(' | ');
-  assert.match(texto, /pantoténico.*: faltan datos de Semillas de chía/); // la chía no trae vitamina B5 (ninguna fuente)...
+  assert.doesNotMatch(texto, /pantoténico/); // la chía ya trae vitamina B5 (AFCD F008209)...
   assert.match(texto, /Colina: faltan datos de Pasta seca sin enriquecer/); // ...ni la pasta colina
   const rep2 = diaryReport([comida(['pasta_sin_kcal', 80])], byId, resolveTargets(targets), catalog);
   const b = avisoParciales([comida(['pasta_sin_kcal', 80])], byId, rep2.rows);
