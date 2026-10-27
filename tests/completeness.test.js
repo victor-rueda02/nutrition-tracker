@@ -67,7 +67,7 @@ test('catálogo real con nutrientes de USDA, BEDCA y recetas: 69 completos (la c
   const rep = completenessReport(foods, settings);
   assert.deepEqual([rep.summary.total, rep.summary.complete, rep.summary.incomplete], [69, 69, 0]);
   const chia = rep.perFood.find((p) => p.id === 'semillas_chia');
-  assert.deepEqual([chia.filled, chia.incomplete], [25, false]);
+  assert.deepEqual([chia.filled, chia.incomplete], [30, false]);
   // los 11 alimentos sin datos que había se retiraron (data/retirados.json): ninguno con 0 nutrientes
   assert.deepEqual(rep.incomplete, []);
   assert.equal(rep.perFood.filter((p) => p.filled === 0).length, 0);

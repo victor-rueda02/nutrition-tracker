@@ -302,7 +302,7 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
   assert.match(fila(t, 'energia_kcal').textContent, /parcial/);
 });
 
-// Día con ambos casos: chía (sin vitamina K...) y pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
+// Día con ambos casos: chía (sin vitamina B5) y pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
 const BIZCOCHO = (() => { const p = realFoods.find((f) => f.id === 'pasta_seca'); return { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } }; })();
 const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['semillas_chia', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
 
@@ -317,7 +317,7 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
   assert.ok(avisos[0].querySelector('strong')); // el estado no depende solo del color: lleva el prefijo «Importante:»
   assert.ok(avisos[1].classList.contains('menor') && avisos[1].classList.contains('muted'));
   assert.equal(avisos[1].tagName, 'DETAILS');
-  assert.match(avisos[1].querySelector('summary').textContent, /^Totales parciales en \d+ nutrientes \(faltan datos de /);
+  assert.equal(avisos[1].querySelector('summary').textContent, 'Totales parciales en vitamina B5 (ác. pantoténico) y colina (faltan datos de Semillas de chía, Pasta seca sin enriquecer y Bizcocho)');
   assert.match(avisos[1].querySelector('ul').textContent, /Colina: faltan datos de .*Pasta seca sin enriquecer/);
   assert.doesNotMatch(avisos[1].textContent, /Huevo/); // 0 g ese día: no cuenta
   assert.doesNotMatch(t.root.textContent, /Totales parciales: faltan datos/); // el texto antiguo ya no está
