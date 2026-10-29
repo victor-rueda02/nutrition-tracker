@@ -124,6 +124,7 @@ test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y 
   assert.equal(c.nutrients.vitamina_c_mg, 0);
   assert.equal(c.nutrients.vitamina_d_ug, 0);
   assert.match(c.extra.fuente_usda, /C y D = 0: cereal de maíz no enriquecido con ellas \(la etiqueta no las declara\)/);
+  assert.doesNotMatch(c.extra.fuente_usda, /vacíos A, C y D/);
   const p = byId.get('pimiento_amarillo');
   assert.deepEqual([p.nutrients.vitamina_e_mg, p.nutrients.vitamina_k_ug, p.nutrients.ala_g], [1.76, 1.18, 0.02]);
   assert.equal(p.nutrients.colina_mg, undefined); // ni USDA, BEDCA, CIQUAL ni AFCD la traen
