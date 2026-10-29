@@ -35,7 +35,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 
 | 2026-10-27 | AA · Colina del chocolate 85 % (USDA 170274, mezcla 45-85 %, estimado) y B5 de la chía de otra base oficial | catalogo | cat/aa-colina-b5 | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone (Victor: AFCD como último recurso, en CLAUDE.md §4) |
 | 2026-10-29 | AB · Selenio europeo medido (CIQUAL/BEDCA) en 12 alimentos en lugar del de USDA; lentejas con USDA (pardina de EE. UU.) | catalogo | cat/ab-selenio-europeo | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone y «Recalcular todas» si hay recetas de la app con esos alimentos |
-| 2026-10-29 | AC · Sin zoom con doble toque (touch-action: manipulation en html); el pellizco sigue | desarrollador | dev/ac-sin-doble-toque | 1 | integrado (APROBADO) | OK para git push; probar en el iPhone (doble toque no amplía, pellizco sí, scroll normal) |
+| 2026-10-29 | AC · Sin zoom con doble toque (touch-action: manipulation en html); el pellizco sigue | desarrollador | dev/ac-sin-doble-toque | 1 | integrado y publicado | probar en el iPhone (doble toque no amplía, pellizco sí, scroll normal) |
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
 - 2026-10-21, F · etiquetas de Victor (por 100 g). Victor: «si no digo nada, es el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
@@ -62,3 +62,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-27, Z: quedan vacíos colina del chocolate 85 % y B5 de la chía (sin fuente). pan_molde_blanco sigue con B3 vacía: si Victor quiere, mismo criterio que el pan de barra (pita 172816), pero es otro pan.
 - 2026-10-27: git push de Z y AA (huecos de micros; B12/D = 0 en vegetales; AFCD como último recurso). Worker sin cambios.
 - 2026-10-29: git push de AB (selenio europeo). Worker sin cambios.
+- 2026-10-29: git push de AC (sin zoom con doble toque, nt-v38). Worker sin cambios.
