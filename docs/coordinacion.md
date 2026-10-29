@@ -36,7 +36,7 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 | 2026-10-27 | AA · Colina del chocolate 85 % (USDA 170274, mezcla 45-85 %, estimado) y B5 de la chía de otra base oficial | catalogo | cat/aa-colina-b5 | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone (Victor: AFCD como último recurso, en CLAUDE.md §4) |
 | 2026-10-29 | AB · Selenio europeo medido (CIQUAL/BEDCA) en 12 alimentos en lugar del de USDA; lentejas con USDA (pardina de EE. UU.) | catalogo | cat/ab-selenio-europeo | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone y «Recalcular todas» si hay recetas de la app con esos alimentos |
 | 2026-10-29 | AC · Sin zoom con doble toque (touch-action: manipulation en html); el pellizco sigue | desarrollador | dev/ac-sin-doble-toque | 1 | integrado y publicado | probar en el iPhone (doble toque no amplía, pellizco sí, scroll normal) |
-| 2026-10-29 | AD · Totales parciales: pimiento amarillo E, K y ALA (CIQUAL 20168; colina sin fuente, ni en AFCD), recetas de verduras recalculadas; corn flakes C y D = 0 real | catalogo | cat/ad-pimiento-cornflakes | 2 | integrado (APROBADO tras ronda 2) | OK para git push; aceptar la actualización del documento en el iPhone |
+| 2026-10-29 | AD · Totales parciales: pimiento amarillo E, K y ALA (CIQUAL 20168; colina sin fuente, ni en AFCD), recetas de verduras recalculadas; corn flakes C y D = 0 real | catalogo | cat/ad-pimiento-cornflakes | 2 | integrado y publicado | aceptar la actualización del documento en el iPhone |
 ## Notas
 - 2026-10-21: los agentes de `.claude/agents/` solo se cargan al iniciar sesión; en la sesión en que se crearon se emularon con `general-purpose` + mismo modelo, effort y worktree, siguiendo su fichero.
 - 2026-10-21, F · etiquetas de Victor (por 100 g). Victor: «si no digo nada, es el salteado de verduras; si digo salteado de verduras asadas, el de asadas».
@@ -64,3 +64,4 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-27: git push de Z y AA (huecos de micros; B12/D = 0 en vegetales; AFCD como último recurso). Worker sin cambios.
 - 2026-10-29: git push de AB (selenio europeo). Worker sin cambios.
 - 2026-10-29: git push de AC (sin zoom con doble toque, nt-v38). Worker sin cambios.
+- 2026-10-29: git push de AD (pimiento amarillo, recetas de verduras, corn flakes C/D = 0). Worker sin cambios.
