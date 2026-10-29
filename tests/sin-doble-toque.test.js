@@ -13,11 +13,11 @@ test('styles.css declara touch-action: manipulation en html', () => {
   assert.match(css, /(^|\n)\s*html\s*\{[^}]*touch-action\s*:\s*manipulation/);
 });
 
-test('ningún CSS contradice touch-action: manipulation (none, auto, pinch-zoom...)', () => {
+test('ningún CSS contradice touch-action: manipulation (none o pan-x/pan-y quitarían el pellizco)', () => {
   for (const f of readdirSync(join(fe, 'css')).filter((n) => n.endsWith('.css'))) {
-    const css = readFileSync(join(fe, 'css', f), 'utf8');
+    const css = readFileSync(join(fe, 'css', f), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
     for (const m of css.matchAll(/touch-action\s*:\s*([^;}]+)/g)) {
-      assert.match(m[1].trim(), /^(manipulation|pan-[xy]( pan-[xy])?)$/, `${f}: touch-action ${m[1]}`);
+      assert.match(m[1].trim(), /^(manipulation|auto)$/, `${f}: touch-action ${m[1]}`);
     }
   }
 });
