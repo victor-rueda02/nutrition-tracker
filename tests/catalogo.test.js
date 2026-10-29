@@ -114,9 +114,26 @@ test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. U
   const c = byId.get('corn_flakes').nutrients;
   assert.deepEqual([c.energia_kcal, c.proteina_g, c.hidratos_g, c.azucares_g, c.fibra_g, c.sodio_mg], [373, 6.7, 82, 0.9, 4.4, 600]); // sodio = sal 1,5 g ÷ 2,5
   assert.deepEqual([c.vitamina_b1_mg, c.vitamina_b9_ug, c.vitamina_b12_ug, c.hierro_mg], [0.3, 282.2, 2.1, 7]); // B9 en DFE = 1,7 × 166 µg de ácido fólico
-  for (const k of ['vitamina_a_ug', 'vitamina_c_mg', 'vitamina_d_ug']) assert.equal(c[k], undefined, k);
+  assert.equal(c.vitamina_a_ug, undefined); // a propósito: fortificación de EE. UU. que la etiqueta no declara
   assert.equal(c.potasio_mg, 107); // natural del maíz: de USDA
   assert.equal(byId.get('corn_flakes').extra.termino_busqueda_usda, undefined); // usda.mjs no la vuelve a rellenar
+});
+
+test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y ALA de CIQUAL 20168 y colina vacía', () => {
+  const c = byId.get('corn_flakes');
+  assert.equal(c.nutrients.vitamina_c_mg, 0);
+  assert.equal(c.nutrients.vitamina_d_ug, 0);
+  assert.match(c.extra.fuente_usda, /C y D = 0: cereal de maíz no enriquecido con ellas \(la etiqueta no las declara\)/);
+  assert.doesNotMatch(c.extra.fuente_usda, /vacíos A, C y D/);
+  const p = byId.get('pimiento_amarillo');
+  assert.deepEqual([p.nutrients.vitamina_e_mg, p.nutrients.vitamina_k_ug, p.nutrients.ala_g], [1.76, 1.18, 0.02]);
+  assert.equal(p.nutrients.colina_mg, undefined); // ni USDA, BEDCA, CIQUAL ni AFCD la traen
+  assert.match(p.extra.fuente_usda, /CIQUAL 2020, 20168 «Sweet pepper, yellow, raw»/);
+  for (const id of ['verduras_asadas_hacendado', 'parrillada_verduras_hacendado']) {
+    const n = byId.get(id).nutrients;
+    for (const k of ['vitamina_e_mg', 'vitamina_k_ug', 'ala_g']) assert.ok(n[k] > 0, id + ' ' + k);
+    assert.equal(n.colina_mg, undefined, id);
+  }
 });
 
 test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para que usda.mjs no los pise', () => {
