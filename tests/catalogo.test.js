@@ -155,6 +155,17 @@ test('B12 y vitamina D = 0 en vegetales sin enriquecer (regla de Victor); huecos
   assert.equal(byId.get('pan_blanco_barra').nutrients.vitamina_b3_mg, 2.142); // pita sin enriquecer 172816 (no la niacina de BEDCA)
 });
 
+test('selenio_ug: dato europeo medido (CIQUAL/BEDCA) en lugar del de USDA; lentejas_secas se queda con USDA (regla de Victor, 29-10-2026)', () => {
+  const esperado = { pasta_seca: 4.8, avena_copos: 7.1, arroz_blanco_crudo: 10, muesli: 7.45, pan_blanco_barra: 4.7, pan_molde_blanco: 4.7, pan_integral: 5, pan_molde_integral: 5, huevo: 11, leche_entera: 1.4, solomillo_ternera: 8.83, yogur_griego_natural: 2 };
+  for (const [id, se] of Object.entries(esperado)) {
+    assert.equal(byId.get(id).nutrients.selenio_ug, se, id);
+    assert.match(byId.get(id).extra.fuente_usda, /selenio_ug = .*valor europeo/, id);
+  }
+  assert.match(byId.get('pan_integral').extra.fuente_usda, /5 = cota superior \(estimado\)/);
+  assert.equal(byId.get('lentejas_secas').nutrients.selenio_ug, 0.1);
+  assert.match(byId.get('lentejas_secas').extra.fuente_usda, /selenio_ug: se mantiene USDA \(origen EE\. UU\., Palouse/);
+});
+
 test('merluza: macros de la etiqueta de Victor (merluza del Cabo), micros de BEDCA', () => {
   const m = byId.get('merluza_cruda');
   assert.deepEqual(['energia_kcal', 'proteina_g', 'grasa_total_g', 'grasas_saturadas_g', 'sodio_mg', 'hidratos_g'].map((k) => m.nutrients[k]), [82, 18, 1.2, 0.3, 96, 0]);
