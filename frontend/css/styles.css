@@ -24,6 +24,8 @@
 [data-clave="grasa_total_g"], .k-grasa_total_g { --c-macro:var(--c-grasa); }
 
 * { box-sizing:border-box; }
+/* Sin zoom con doble toque en iOS; el pellizco y el scroll siguen (el touch-action efectivo es la intersección con los ancestros: vale para toda la app). */
+html { touch-action:manipulation; }
 html, body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust:100%; }
 body { overflow-x:hidden; }
 main { max-width:640px; margin:0 auto; padding:0 16px calc(140px + env(safe-area-inset-bottom)); overflow-wrap:anywhere; }
