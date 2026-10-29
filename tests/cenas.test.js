@@ -558,8 +558,8 @@ test('(19) verdura añadida para completar: nunca menos de 100 g y, con la semil
   assert.ok(vistas > 0);
   const idea = proponer({ ideasIA: [sinVerdura] }).ideas[0];
   assert.deepEqual(idea.lineas.filter((l) => l.añadida).map((l) => [l.food_id, l.gramos]), [['zanahoria', 100]]);
-  // una verdura con más cenas gana aunque tenga menos gramos; con pocos gramos habituales se añade con 100 g
-  const hist = ['2026-10-12', '2026-10-14'].map((d) => cena(d, [['merluza_cruda', 150], ['arroz_blanco_crudo', 100], ['calabacin', 30]]));
+  // una verdura con más cenas gana aunque tenga menos gramos; con pocos gramos habituales se añade con 100 g (el historial usa otro hidrato para que su propuesta no tenga la misma clave que la idea)
+  const hist = ['2026-10-12', '2026-10-14'].map((d) => cena(d, [['merluza_cruda', 150], ['pan_blanco_barra', 60], ['calabacin', 30]]));
   const r = proponer({ historial: hist, ideasIA: [sinVerdura] });
   assert.deepEqual(r.ideas[0].lineas.filter((l) => l.añadida).map((l) => [l.food_id, l.gramos]), [['calabacin', 100]]);
 });
