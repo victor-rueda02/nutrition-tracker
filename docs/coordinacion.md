@@ -65,3 +65,6 @@ Una fila por encargo. Estado: `pendiente`, `en curso`, `en revisión`, `cambios 
 - 2026-10-29: git push de AB (selenio europeo). Worker sin cambios.
 - 2026-10-29: git push de AC (sin zoom con doble toque, nt-v38). Worker sin cambios.
 - 2026-10-29: git push de AD (pimiento amarillo, recetas de verduras, corn flakes C/D = 0). Worker sin cambios.
+- 2026-11-09, AE (catalogo): añadir a foods.csv yogur_griego_ligero (etiqueta Hacendado + USDA 170903), sardina_lata_reducida_sal (etiqueta + USDA 175139), platano (USDA 173944), mandarina (USDA 169105; mismo id que la del iPhone, que tenía datos de zumo) y sal (USDA 173468; mismo id que la del iPhone). Para la dieta fija de lunes a viernes.
+- 2026-11-09, AF (desarrollador, tras AE): botón «Copiar dieta del día» en los tres puntos del Diario; dieta en data/dieta.json por día de la semana; abre Repetir con todo marcado; almuerzo dentro de desayuno; se guarda como registros normales.
+- 2026-11-09, AE: 2 rondas (CAMBIOS: vitamina A del yogur ligero era retinol de fortificación de EE. UU. → 13,1 de BEDCA 118 reescalado; alias). APROBADO e integrado en main (683 tests, worker:check OK). Sin publicar. Pendiente de Victor: fósforo, zinc, B2 y B12 del yogur ligero vienen de USDA (yogur con 9,95 g de proteína; el suyo 5,8): ¿reescalar por la proteína?
