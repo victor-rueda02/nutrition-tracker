@@ -22,6 +22,8 @@ test('AE (dieta fija): yogur ligero, sardinillas reducidas en sal, plátano, man
   assert.deepEqual(flagsOf('yogur_griego_natural', '125 g de yogur griego ligero'), ['alias_mas_especifico']);
   assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinillas'), []);
   assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinillas reducidas en sal'), ['alias_mas_especifico']);
+  assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinas reducidas en sal'), ['alias_mas_especifico']);
+  assert.equal(n('yogur_griego_ligero').vitamina_a_ug, 13.1); // BEDCA 118 reescalado, no el retinol añadido de USDA
   for (const [id, text] of [['platano', '100 g de plátano'], ['platano', '100 g de banana'], ['mandarina', '80 g de mandarinas'], ['sal', '2 g de sal']]) assert.deepEqual(flagsOf(id, text), [], text);
 });
 
