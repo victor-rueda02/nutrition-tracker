@@ -62,7 +62,7 @@ export function repeatScreen(ui) {
       onclick: () => { state.repeat = nudge(state.repeat, it.key, d); input.value = fmtGramos(findItem(state.repeat, it.key).grams); marcarMal(); paint(); },
     }, signo(d));
     row = h('li', { class: `repeat-item${it.checked ? '' : ' off'}`, 'data-key': it.key },
-      h('label', { class: 'row repeat-name' }, check, h('span', {}, it.nombre), it.known ? null : h('span', { class: 'tag' }, 'ya no está en tu documento')),
+      h('label', { class: 'row repeat-name' }, check, h('span', {}, it.nombre), it.known ? null : h('span', { class: 'tag' }, r.dieta ? 'no está en tu documento' : 'ya no está en tu documento')),
       h('div', { class: 'row repeat-qty' }, boton(PASOS[0]), boton(PASOS[1]), input, h('span', {}, 'g'), boton(PASOS[2]), boton(PASOS[3])));
     marcarMal();
     refrescos.push(() => { const cur = findItem(state.repeat, it.key); check.checked = cur.checked; row.classList.toggle('off', !cur.checked); marcarMal(); });
@@ -93,6 +93,7 @@ export function repeatScreen(ui) {
       h('button', { class: 'icon', 'aria-label': 'Día de origen anterior', onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, -1)) }, '‹'),
       h('strong', { class: 'source-label' }, `De: ${ui.dayLabel(r.sourceDate)}`),
       h('button', { class: 'icon', 'aria-label': 'Día de origen siguiente', disabled: r.sourceDate >= ui.today(), onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, 1)) }, '›')),
+    r.dieta?.copia ? h('p', { class: 'muted small' }, 'Sin conexión: es la última dieta descargada; puede no ser la más reciente.') : null,
     sinDocumento.length ? h('p', { class: 'error alert-ul', role: 'alert' }, sinDocumento.length === 1
       ? `Un alimento de la dieta no está en tu documento (${sinDocumento[0]}) y no se añadirá. `
       : `${sinDocumento.length} alimentos de la dieta no están en tu documento (${sinDocumento.join(', ')}) y no se añadirán. `,

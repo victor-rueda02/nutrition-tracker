@@ -23,8 +23,8 @@ async function fetchPublished() {
 }
 
 // data/dieta.json publicado, siempre fresco (como el foods.csv: sin caché del navegador ni del service worker). Lanza si no hay red.
-async function fetchDieta() {
-  const res = await fetch(`${DATA_BASE}dieta.json?fresco=${Date.now()}`, { cache: 'no-store' });
+async function fetchDieta({ signal } = {}) {
+  const res = await fetch(`${DATA_BASE}dieta.json?fresco=${Date.now()}`, { cache: 'no-store', signal });
   if (!res.ok) throw new Error(`dieta.json: ${res.status}`);
   return res.text();
 }

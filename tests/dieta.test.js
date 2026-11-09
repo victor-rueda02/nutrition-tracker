@@ -101,15 +101,15 @@ const DIETA = { version: 1, nombre: 'prueba', dias: {
   viernes: { desayuno: [L('avena_copos', 90), L('bebida_de_avena', 300)], comida: [L('arroz_blanco_crudo', 150), L('sal', 0.3)], cena: [L('huevo', 108)] },
 } };
 
-async function setup({ dieta = JSON.stringify(DIETA), fetchDieta, fetchDietaCopia, ajustes = {}, foods = realFoods } = {}) {
+async function setup({ dieta = JSON.stringify(DIETA), fetchDieta, fetchDietaCopia, ajustes = {}, foods = realFoods, dietaTimeoutMs, alterStore = (st) => st } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const root = dom.window.document.getElementById('app');
-  const store = createMemoryStore();
+  const store = alterStore(createMemoryStore());
   for (const [k, v] of Object.entries(ajustes)) await store.setSetting(k, v);
   const peticiones = [];
   const app = mountApp(root, {
     store, createAiClient: () => ({}), catalog, settings, targets: JSON.parse(readFile('../data/targets.json')), objetivos: {},
-    fetchDieta: fetchDieta ?? (async () => { peticiones.push('red'); if (dieta instanceof Error) throw dieta; return dieta; }), fetchDietaCopia,
+    fetchDieta: fetchDieta ?? (async () => { peticiones.push('red'); if (dieta instanceof Error) throw dieta; return dieta; }), fetchDietaCopia, dietaTimeoutMs,
     initial: { foods, extraHeaders: [], docName: 'doc.csv' }, conn: { endpoint: 'https://w', token: 't' }, now: () => NOW,
     idGen: (() => { let n = 0; return () => `m${++n}`; })(),
   });
@@ -133,6 +133,7 @@ test('Copiar dieta del día: abre Repetir con la dieta del día mostrado, todo m
   assert.equal(t.$('select[aria-label="Comida de destino"]').value, 'origen');
   assert.equal(t.$('input[aria-label="Fecha de destino"]').value, '2026-10-16');
   assert.equal(t.$('.alert-ul'), null);
+  assert.equal(t.$('.repeat p.muted.small'), null); // descargada ahora: sin aviso de copia antigua
   // confirmación editable: cambiar gramos y desmarcar
   const gramos = t.$('input[aria-label="Gramos de Copos de avena"]') ?? t.$$('input.grams')[0];
   gramos.value = '80'; gramos.dispatchEvent(new t.root.ownerDocument.defaultView.Event('input', { bubbles: true }));
@@ -154,10 +155,12 @@ test('Copiar dieta del día: pide siempre la red (fresca), guarda la copia y, si
   const sinRed = await setup({ fetchDieta: async () => { throw new TypeError('Failed to fetch'); }, ajustes: { dieta_publicada: JSON.stringify(DIETA) }, fetchDietaCopia: async () => '{"dias":{}}' });
   await sinRed.copiar();
   assert.equal(sinRed.$('.source-label').textContent, 'De: dieta del viernes');
+  assert.equal(sinRed.$('.repeat p.muted.small').textContent, 'Sin conexión: es la última dieta descargada; puede no ser la más reciente.');
   // sin red ni copia guardada: la del service worker
   const conSw = await setup({ fetchDieta: async () => { throw new TypeError('Failed to fetch'); }, fetchDietaCopia: async () => JSON.stringify(DIETA) });
   await conSw.copiar();
   assert.equal(conSw.$('.source-label').textContent, 'De: dieta del viernes');
+  assert.match(conSw.$('.repeat p.muted.small').textContent, /^Sin conexión: es la última dieta descargada/);
   // sin nada: error visible, nos quedamos en el Diario
   const nada = await setup({ fetchDieta: async () => { throw new TypeError('Failed to fetch'); } });
   await nada.copiar();
@@ -209,4 +212,66 @@ test('Copiar dieta del día: un alimento con incluir=no se puede copiar, como al
   assert.ok(t.$$('.repeat-item input[type=checkbox]').every((c) => c.checked && !c.disabled));
   await t.act(() => t.btn('Añadir 5 alimentos').click());
   assert.equal((await t.store.allMeals()).flatMap((m) => m.lines).length, 5);
+});
+
+// ---------- ronda de revisión: espera, copia válida, aviso de copia antigua, fallos de guardado ----------
+
+test('Copiar dieta del día: «Cargando la dieta…» mientras espera, una segunda pulsación no repite la descarga, y a los 5 s (aquí 30 ms) usa la copia guardada', { skip }, async () => {
+  let llamadas = 0; let senal = null;
+  const t = await setup({ dietaTimeoutMs: 30, ajustes: { dieta_publicada: JSON.stringify(DIETA) }, fetchDieta: ({ signal } = {}) => { llamadas++; senal = signal; return new Promise(() => {}); } }); // nunca responde
+  t.$('button[aria-label="Más opciones del día"]').click();
+  t.btn('Copiar dieta del día').click();
+  assert.match(t.$('[role=status]').textContent, /Cargando la dieta…/); // se ve de inmediato
+  t.$('button[aria-label="Más opciones del día"]').click();
+  t.btn('Copiar dieta del día').click(); // segunda pulsación mientras carga
+  await t.app.whenIdle();
+  assert.equal(llamadas, 1);
+  assert.equal(senal.aborted, true); // la descarga se cancela al vencer el plazo
+  assert.equal(t.$('.source-label').textContent, 'De: dieta del viernes');
+  assert.match(t.$('.repeat p.muted.small').textContent, /^Sin conexión: es la última dieta descargada/);
+  assert.doesNotMatch(t.root.textContent, /Cargando la dieta/);
+  // sin copia a la que recurrir, al vencer el plazo hay error visible y el mensaje de carga desaparece
+  const sin = await setup({ dietaTimeoutMs: 20, fetchDieta: () => new Promise(() => {}) });
+  await sin.copiar();
+  assert.match(sin.$('.alert-fail').textContent, /No se pudo copiar la dieta: no se pudo cargar data\/dieta\.json .*tardó demasiado/);
+  assert.doesNotMatch(sin.root.textContent, /Cargando la dieta/);
+  // tras el fallo se puede volver a pulsar
+  assert.equal(sin.app.state.dietaCargando, null);
+});
+
+test('Copiar dieta del día: un 200 con HTML o un JSON roto no pisa la copia buena; sin red se salta una copia guardada inválida y usa la del service worker', { skip }, async () => {
+  const buena = JSON.stringify(DIETA);
+  for (const malo of ['<!doctype html><title>Wi-Fi del hotel</title>', '{ "dias": ']) {
+    const t = await setup({ dieta: malo, ajustes: { dieta_publicada: buena } });
+    await t.copiar();
+    assert.match(t.$('.alert-fail').textContent, /no es un JSON válido/); // lo recibido se enseña como error...
+    assert.equal(await t.store.getSetting('dieta_publicada'), buena); // ...pero no sustituye a la copia
+  }
+  const nueva = JSON.stringify({ ...DIETA, nombre: 'nueva' });
+  const ok = await setup({ dieta: nueva, ajustes: { dieta_publicada: buena } });
+  await ok.copiar();
+  assert.equal(await ok.store.getSetting('dieta_publicada'), nueva); // una válida sí la sustituye
+  const roto = await setup({ fetchDieta: async () => { throw new TypeError('Failed to fetch'); }, ajustes: { dieta_publicada: '<html>' }, fetchDietaCopia: async () => buena });
+  await roto.copiar();
+  assert.equal(roto.$('.source-label').textContent, 'De: dieta del viernes');
+  const sinValida = await setup({ fetchDieta: async () => { throw new TypeError('Failed to fetch'); }, ajustes: { dieta_publicada: '<html>' }, fetchDietaCopia: async () => '<html>' });
+  await sinValida.copiar();
+  assert.match(sinValida.$('.alert-fail').textContent, /no se pudo cargar data\/dieta\.json/);
+});
+
+test('Copiar dieta del día: si falla guardar la copia no se traga en silencio (console.error) y la dieta leída se usa igual', { skip }, async () => {
+  const errores = []; const original = console.error;
+  console.error = (...a) => errores.push(a);
+  try {
+    const t = await setup({ alterStore: (st) => { const set = st.setSetting.bind(st); st.setSetting = async (k, v) => { if (k === 'dieta_publicada') throw new Error('cuota llena'); return set(k, v); }; return st; } });
+    await t.copiar();
+    assert.equal(t.$('.source-label').textContent, 'De: dieta del viernes');
+    assert.ok(errores.some((a) => /No se pudo guardar la copia de la dieta/.test(String(a[0])) && /cuota llena/.test(String(a[1]))));
+  } finally { console.error = original; }
+});
+
+test('Repetir con la dieta: un alimento ausente se etiqueta «no está en tu documento» (no «ya no está»)', { skip }, async () => {
+  const t = await setup({ dieta: JSON.stringify({ dias: { viernes: { cena: [L('alimento_nuevo_x', 50)] } } }) });
+  await t.copiar();
+  assert.equal(t.$('.repeat-item .tag').textContent, 'no está en tu documento');
 });

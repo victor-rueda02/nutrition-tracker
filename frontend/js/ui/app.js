@@ -541,35 +541,60 @@ export function mountApp(root, deps) {
     state.repeatBack = 'plantillas'; state.screen = 'repeat'; render();
   }
 
-  // data/dieta.json: siempre la versión publicada más reciente (deps.fetchDieta salta toda caché) y, si no hay red, la última
-  // que se pudo leer (guardada en el ajuste `dieta_publicada`) o, en su defecto, la copia que trae el service worker.
+  // data/dieta.json: siempre la versión publicada más reciente (deps.fetchDieta salta toda caché), con un límite de espera
+  // (deps.dietaTimeoutMs, 5 s por defecto). Si no hay red, falla o vence el plazo: la última copia válida leída (ajuste
+  // `dieta_publicada`) o, en su defecto, la que trae el service worker; entonces `copia` es true y la pantalla lo dice.
+  // Solo se guarda como copia un texto de estructura válida: un 200 con HTML o un JSON roto no pisa la copia buena.
   async function cargarDieta() {
-    let text;
+    const limite = deps.dietaTimeoutMs ?? 5000;
+    const control = new AbortController();
+    let reloj;
     try {
-      text = await deps.fetchDieta();
-      try { await deps.store.setSetting('dieta_publicada', text); } catch { /* sin guardar la copia: se sigue con la dieta leída */ }
+      const text = await Promise.race([
+        deps.fetchDieta({ signal: control.signal }),
+        new Promise((_, rechaza) => { reloj = setTimeout(() => { control.abort(); rechaza(new Error('tardó demasiado')); }, limite); }),
+      ]);
+      if (parseDieta(text).ok) {
+        try { await deps.store.setSetting('dieta_publicada', text); } catch (e) { globalThis.console?.error?.('No se pudo guardar la copia de la dieta', e); }
+      }
+      return { text, copia: false };
     } catch (e) {
-      text = await deps.store.getSetting('dieta_publicada');
-      if (typeof text !== 'string' && deps.fetchDietaCopia) { try { text = await deps.fetchDietaCopia(); } catch { /* sin copia */ } }
-      if (typeof text !== 'string') throw new Error(`no se pudo cargar data/dieta.json (¿sin conexión?): ${e?.message ?? e}`);
-    }
-    return text;
+      const guardada = await deps.store.getSetting('dieta_publicada');
+      if (typeof guardada === 'string' && parseDieta(guardada).ok) return { text: guardada, copia: true };
+      if (deps.fetchDietaCopia) {
+        try { const sw = await deps.fetchDietaCopia(); if (typeof sw === 'string' && parseDieta(sw).ok) return { text: sw, copia: true }; } catch { /* sin copia */ }
+      }
+      throw new Error(`no se pudo cargar data/dieta.json (¿sin conexión?): ${e?.message ?? e}`);
+    } finally { clearTimeout(reloj); }
   }
 
   // «Copiar dieta del día»: abre «Repetir» con la dieta del día de la semana del día mostrado, todo marcado y cada comida en la suya.
   // Los alimentos que el documento del iPhone no tiene se avisan en la pantalla y se copia el resto (el aviso no se pierde: sale
-  // arriba, en un recuadro, y los afectados quedan desmarcados y bloqueados).
+  // arriba, en un recuadro, y los afectados quedan desmarcados y bloqueados). Mientras descarga se ve «Cargando la dieta…» y
+  // una segunda pulsación no lanza otra descarga.
   function copyDieta(fecha) {
-    return track((async () => {
-      if (!deps.fetchDieta) throw new Error('esta versión de la app no carga la dieta');
-      const dia = diaDeSemana(fecha);
-      const res = parseDieta(await cargarDieta(), { foodIds: byId() });
-      if (!res.ok) throw new Error(`data/dieta.json no es válido: ${res.errores.slice(0, 3).join(' ')}${res.errores.length > 3 ? ` (y ${res.errores.length - 3} más)` : ''}`);
-      const meals = dietaComoComidas(res.dieta, dia);
-      if (!meals) throw new Error(`No hay dieta para el ${DIA_LABEL[dia]}`);
-      state.repeat = createRepeat({ meals, dieta: { dia, etiqueta: DIA_LABEL[dia] }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
-      state.repeatBack = 'diaryTarget'; state.screen = 'repeat'; render();
+    if (state.dietaCargando) return state.dietaCargando;
+    const mensaje = 'Cargando la dieta…';
+    state.diaryMsg = mensaje; render();
+    const trabajo = track((async () => {
+      try {
+        if (!deps.fetchDieta) throw new Error('esta versión de la app no carga la dieta');
+        const dia = diaDeSemana(fecha);
+        const { text, copia } = await cargarDieta();
+        const res = parseDieta(text, { foodIds: byId() });
+        if (!res.ok) throw new Error(`data/dieta.json no es válido: ${res.errores.slice(0, 3).join(' ')}${res.errores.length > 3 ? ` (y ${res.errores.length - 3} más)` : ''}`);
+        const meals = dietaComoComidas(res.dieta, dia);
+        if (!meals) throw new Error(`No hay dieta para el ${DIA_LABEL[dia]}`);
+        state.repeat = createRepeat({ meals, dieta: { dia, etiqueta: DIA_LABEL[dia], copia }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
+        state.repeatBack = 'diaryTarget'; state.screen = 'repeat';
+      } finally {
+        if (state.diaryMsg === mensaje) state.diaryMsg = '';
+        render();
+      }
     })(), 'No se pudo copiar la dieta');
+    state.dietaCargando = trabajo;
+    trabajo.then(() => { if (state.dietaCargando === trabajo) state.dietaCargando = null; });
+    return trabajo;
   }
 
   function saveRepeat() {

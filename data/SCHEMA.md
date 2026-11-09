@@ -121,7 +121,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
   botón con el motivo. `npm test` valida el fichero real contra `data/foods.csv` y `data/retirados.json`: todos los ids
   existen y no están retirados.
 - **Cambiarla**: editar el fichero, `npm test` y `git push`. La app lo pide a la red cada vez que pulsas el botón (nunca una
-  caché vieja); sin red usa la última versión leída (ajuste `dieta_publicada`) o, en su defecto, la copia del service worker.
+  caché vieja); sin red, o si no responde en 5 s, usa la última versión válida leída (ajuste `dieta_publicada`, que solo se actualiza con un fichero de estructura válida) o, en su defecto, la copia del service worker, y Repetir avisa de que puede no ser la más reciente.
 - «Copiar dieta del día» (tres puntos del Diario) abre la pantalla Repetir con la dieta del día de la semana del día mostrado,
   todo marcado, cada comida en la suya y el destino en ese día; se pueden cambiar gramos y desmarcar antes de «Añadir», que guarda
   registros normales. Si un `food_id` no está en el documento del dispositivo (p. ej. aún no has aceptado la actualización), se avisa
