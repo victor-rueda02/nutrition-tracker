@@ -20,6 +20,7 @@ import { diaryReport, dayTotals, evaluate, shiftDate, sinReferencia } from '../c
 import { avisoParciales } from '../core/parciales.js';
 import { createRepeat, validateRepeat, toRecords, marcadoInicialPara, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
+import { parseDieta, diaDeSemana, dietaComoComidas, DIA_LABEL } from '../core/dieta.js';
 import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTemplate, templateAsMeals, mergeTemplates } from '../core/templates.js';
 import { templatesScreen } from './templates-screen.js';
 import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
@@ -540,6 +541,37 @@ export function mountApp(root, deps) {
     state.repeatBack = 'plantillas'; state.screen = 'repeat'; render();
   }
 
+  // data/dieta.json: siempre la versión publicada más reciente (deps.fetchDieta salta toda caché) y, si no hay red, la última
+  // que se pudo leer (guardada en el ajuste `dieta_publicada`) o, en su defecto, la copia que trae el service worker.
+  async function cargarDieta() {
+    let text;
+    try {
+      text = await deps.fetchDieta();
+      try { await deps.store.setSetting('dieta_publicada', text); } catch { /* sin guardar la copia: se sigue con la dieta leída */ }
+    } catch (e) {
+      text = await deps.store.getSetting('dieta_publicada');
+      if (typeof text !== 'string' && deps.fetchDietaCopia) { try { text = await deps.fetchDietaCopia(); } catch { /* sin copia */ } }
+      if (typeof text !== 'string') throw new Error(`no se pudo cargar data/dieta.json (¿sin conexión?): ${e?.message ?? e}`);
+    }
+    return text;
+  }
+
+  // «Copiar dieta del día»: abre «Repetir» con la dieta del día de la semana del día mostrado, todo marcado y cada comida en la suya.
+  // Los alimentos que el documento del iPhone no tiene se avisan en la pantalla y se copia el resto (el aviso no se pierde: sale
+  // arriba, en un recuadro, y los afectados quedan desmarcados y bloqueados).
+  function copyDieta(fecha) {
+    return track((async () => {
+      if (!deps.fetchDieta) throw new Error('esta versión de la app no carga la dieta');
+      const dia = diaDeSemana(fecha);
+      const res = parseDieta(await cargarDieta(), { foodIds: byId() });
+      if (!res.ok) throw new Error(`data/dieta.json no es válido: ${res.errores.slice(0, 3).join(' ')}${res.errores.length > 3 ? ` (y ${res.errores.length - 3} más)` : ''}`);
+      const meals = dietaComoComidas(res.dieta, dia);
+      if (!meals) throw new Error(`No hay dieta para el ${DIA_LABEL[dia]}`);
+      state.repeat = createRepeat({ meals, dieta: { dia, etiqueta: DIA_LABEL[dia] }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
+      state.repeatBack = 'diaryTarget'; state.screen = 'repeat'; render();
+    })(), 'No se pudo copiar la dieta');
+  }
+
   function saveRepeat() {
     const r = state.repeat;
     if (!validateRepeat(r).ok) return;
@@ -548,7 +580,7 @@ export function mountApp(root, deps) {
       for (const rec of recs) await deps.store.addMeal(rec);
       const n = recs.reduce((a, x) => a + x.lines.length, 0);
       state.repeat = null;
-      const de = r.template ? `la plantilla «${r.template.nombre}»` : dayLabel(r.sourceDate).toLowerCase();
+      const de = r.dieta ? `la dieta del ${r.dieta.etiqueta}` : r.template ? `la plantilla «${r.template.nombre}»` : dayLabel(r.sourceDate).toLowerCase();
       await openDay(r.targetDate, `Añadidos ${n} ${n === 1 ? 'alimento' : 'alimentos'} de ${de}.`);
     })(), 'No se pudo guardar');
   }
@@ -1160,6 +1192,7 @@ export function mountApp(root, deps) {
       extras.push(popMenu({ h, doc, close: () => { state.menu = false; render(); }, items: [
         { label: 'Ver informe diario', icon: 'file', onclick: () => { state.menu = false; state.screen = 'informe'; render(); } },
         { label: 'Copiar día anterior', icon: 'copy', onclick: () => { state.menu = false; openRepeat({ sourceDate: shiftDate(state.day, -1), targetDate: state.day, back: 'diaryTarget', marcadoInicial: true }); } },
+        { label: 'Copiar dieta del día', icon: 'list', onclick: () => { state.menu = false; copyDieta(state.day); } },
         { label: '¿Qué ceno?', icon: 'spark', onclick: () => { state.menu = false; cenas.open(state.day); } },
         ...(state.day !== today() ? [{ label: 'Ir a hoy', icon: 'diario', onclick: () => { state.menu = false; openDay(today()); } }] : []),
       ] }));

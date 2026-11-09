@@ -79,6 +79,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
   Se regeneran con `npm run build:templates`.
 - `recetas.json`: recetas del catálogo (ver abajo). Las filas de receta de `foods.csv` se calculan desde aquí.
 - `retirados.json`: alimentos que se quitan del documento «como si no hubiesen estado nunca» (ver abajo).
+- `dieta.json`: la dieta predefinida por día de la semana, para «Copiar dieta del día» del Diario (ver abajo).
 
 ## Alimentos retirados (`data/retirados.json`)
 ```json
@@ -92,6 +93,39 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
   la app. La revisión los enseña antes y avisa de las líneas del diario y de las recetas que los usan. El diario y las
   recetas no se tocan (las líneas siguen en el diario con su id y sin datos nutricionales). Es la única excepción a «la actualización nunca borra
   alimentos». Si el `foods.csv` publicado vuelve a traer un `id` de la lista, no se borra; tampoco se borra un alimento con ese `id` creado después en la app (`tipo=usda_app` o receta). Se borra lo que la base tenía o lo que no es de esos tipos, aunque la base ya no lo tenga (la pudo guardar una versión antigua de la app tras actualizar); el aviso se ofrece aunque el hash del publicado no cambie, mientras haya algo que eliminar.
+
+## Dieta (`data/dieta.json`)
+```json
+{
+  "version": 1,
+  "nombre": "Volumen p20 (noviembre 2026)",
+  "dias": {
+    "lunes": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "bebida_de_avena", "gramos": 300 }
+      ],
+      "comida": [ { "food_id": "arroz_blanco_crudo", "gramos": 70 } ],
+      "merienda": [ { "food_id": "platano", "gramos": 100 } ],
+      "cena": [ { "food_id": "huevo", "gramos": 108 } ]
+    }
+  }
+}
+```
+- Días con nombre en español **sin tildes**: `lunes`, `martes`, `miercoles`, `jueves`, `viernes`, `sabado`, `domingo`. Un día que no
+  está (o sin líneas) no tiene dieta: el botón avisa «No hay dieta para el sábado».
+- Comidas: las de la app (`desayuno`, `comida`, `merienda`, `cena`, `otro`); cada una, una lista de `{ "food_id", "gramos" }`.
+  Todas opcionales. El almuerzo va dentro de `desayuno`. `food_id` es el `id` de `foods.csv`; `gramos` > 0 (máximo 2000), en crudo
+  y sin hueso como en el resto de la app. `version` y `nombre` son informativos.
+- Un error de estructura (día o comida inválidos, gramos que no son un número > 0, línea sin `food_id`, JSON roto) bloquea el
+  botón con el motivo. `npm test` valida el fichero real contra `data/foods.csv` y `data/retirados.json`: todos los ids
+  existen y no están retirados.
+- **Cambiarla**: editar el fichero, `npm test` y `git push`. La app lo pide a la red cada vez que pulsas el botón (nunca una
+  caché vieja); sin red usa la última versión leída (ajuste `dieta_publicada`) o, en su defecto, la copia del service worker.
+- «Copiar dieta del día» (tres puntos del Diario) abre la pantalla Repetir con la dieta del día de la semana del día mostrado,
+  todo marcado, cada comida en la suya y el destino en ese día; se pueden cambiar gramos y desmarcar antes de «Añadir», que guarda
+  registros normales. Si un `food_id` no está en el documento del dispositivo (p. ej. aún no has aceptado la actualización), se avisa
+  arriba, queda desmarcado y se copia el resto.
 
 ## Recetas (`data/recetas.json`)
 Una receta es **una fila más del catálogo**: la app la trata como cualquier alimento (dictas "300 g de lentejas").

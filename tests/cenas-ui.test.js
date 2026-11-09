@@ -93,7 +93,7 @@ test('«¿Qué ceno?» de los tres puntos abre la pantalla para el día mostrado
   const t = await setup();
   await t.ayer();
   await t.act(() => t.$('button[aria-label="Más opciones del día"]').click());
-  assert.deepEqual(t.$$('.popmenu button').map((b) => b.textContent), ['Ver informe diario', 'Copiar día anterior', '¿Qué ceno?', 'Ir a hoy']);
+  assert.deepEqual(t.$$('.popmenu button').map((b) => b.textContent), ['Ver informe diario', 'Copiar día anterior', 'Copiar dieta del día', '¿Qué ceno?', 'Ir a hoy']);
   await t.act(() => t.$$('.popmenu button').find((b) => b.textContent === '¿Qué ceno?').click());
   assert.ok(t.$('main.cenas'));
   assert.equal(t.app.state.cenas.fecha, AYER);

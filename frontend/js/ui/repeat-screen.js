@@ -85,12 +85,18 @@ export function repeatScreen(ui) {
     h('option', { value: DESTINO_ORIGEN, selected: r.targetMeal === DESTINO_ORIGEN }, 'Como en el origen'),
     MEALS.map((m) => h('option', { value: m, selected: r.targetMeal === m }, ui.MEAL_LABEL[m])));
 
+  // Alimentos de la dieta que el documento del iPhone no tiene (p. ej. aún no ha aceptado la actualización): se avisan, no se descartan en silencio.
+  const sinDocumento = r.dieta ? [...new Set(r.groups.flatMap((g) => g.items).filter((i) => !i.known).map((i) => i.food_id))] : [];
   const screen = h('main', { class: 'repeat' },
-    ui.header(r.template ? 'Usar plantilla' : 'Repetir', ui.back),
-    r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between daynav repeat-source', 'aria-label': 'Día de origen' },
+    ui.header(r.dieta ? 'Dieta del día' : r.template ? 'Usar plantilla' : 'Repetir', ui.back),
+    r.dieta ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: dieta del ${r.dieta.etiqueta}`)) : r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between daynav repeat-source', 'aria-label': 'Día de origen' },
       h('button', { class: 'icon', 'aria-label': 'Día de origen anterior', onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, -1)) }, '‹'),
       h('strong', { class: 'source-label' }, `De: ${ui.dayLabel(r.sourceDate)}`),
       h('button', { class: 'icon', 'aria-label': 'Día de origen siguiente', disabled: r.sourceDate >= ui.today(), onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, 1)) }, '›')),
+    sinDocumento.length ? h('p', { class: 'error alert-ul', role: 'alert' }, sinDocumento.length === 1
+      ? `Un alimento de la dieta no está en tu documento (${sinDocumento[0]}) y no se añadirá. `
+      : `${sinDocumento.length} alimentos de la dieta no están en tu documento (${sinDocumento.join(', ')}) y no se añadirán. `,
+    'Busca la actualización del documento (Más → Documento) y vuelve a copiar la dieta.') : null,
     r.recordId ? h('p', { class: 'muted small' }, 'Solo la comida que elegiste en el Diario. Con las flechas ves el día entero.') : null,
     r.groups.length === 0 ? h('p', { class: 'muted' }, 'No hay comidas guardadas ese día.') : r.groups.map((g) => h('section', { class: 'card meal repeat-group' },
       h('div', { class: 'row between meal-head' }, mealCheck(g), h('span', { class: 'muted small' }, `${g.items.length} ${g.items.length === 1 ? 'alimento' : 'alimentos'}`)),

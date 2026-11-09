@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "nombre": "Volumen p20 (noviembre 2026)",
+  "dias": {
+    "lunes": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "cacao_polvo", "gramos": 5 },
+        { "food_id": "bebida_de_avena", "gramos": 300 },
+        { "food_id": "pan_integral", "gramos": 70 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "crema_cacahuete", "gramos": 20 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "anacardos", "gramos": 10 },
+        { "food_id": "mandarina", "gramos": 70 }
+      ],
+      "comida": [
+        { "food_id": "lentejas_caseras", "gramos": 625 },
+        { "food_id": "arroz_blanco_crudo", "gramos": 70 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "chocolate_negro_85", "gramos": 8 },
+        { "food_id": "kiwi_verde", "gramos": 100 }
+      ],
+      "merienda": [
+        { "food_id": "corn_flakes", "gramos": 60 },
+        { "food_id": "muesli", "gramos": 25 },
+        { "food_id": "bebida_de_avena", "gramos": 250 },
+        { "food_id": "manzana_con_piel", "gramos": 150 },
+        { "food_id": "platano", "gramos": 100 }
+      ],
+      "cena": [
+        { "food_id": "patata_cruda", "gramos": 400 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 200 },
+        { "food_id": "zanahoria", "gramos": 50 },
+        { "food_id": "aceite_oliva", "gramos": 10 },
+        { "food_id": "huevo", "gramos": 108 },
+        { "food_id": "atun_lata_aceite", "gramos": 60 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "nueces", "gramos": 10 },
+        { "food_id": "datiles_deglet_noor", "gramos": 18 }
+      ]
+    },
+    "martes": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "cacao_polvo", "gramos": 5 },
+        { "food_id": "bebida_de_avena", "gramos": 300 },
+        { "food_id": "pan_integral", "gramos": 70 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "crema_cacahuete", "gramos": 20 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "anacardos", "gramos": 10 },
+        { "food_id": "mandarina", "gramos": 70 }
+      ],
+      "comida": [
+        { "food_id": "arroz_blanco_crudo", "gramos": 140 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 150 },
+        { "food_id": "pechuga_pollo_cruda", "gramos": 110 },
+        { "food_id": "aceite_oliva", "gramos": 7 },
+        { "food_id": "salsa_tomate_frito", "gramos": 60 },
+        { "food_id": "sal", "gramos": 0.3 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "chocolate_negro_85", "gramos": 8 },
+        { "food_id": "kiwi_verde", "gramos": 100 }
+      ],
+      "merienda": [
+        { "food_id": "corn_flakes", "gramos": 60 },
+        { "food_id": "muesli", "gramos": 25 },
+        { "food_id": "bebida_de_avena", "gramos": 250 },
+        { "food_id": "manzana_con_piel", "gramos": 150 },
+        { "food_id": "platano", "gramos": 100 }
+      ],
+      "cena": [
+        { "food_id": "patata_cruda", "gramos": 330 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 200 },
+        { "food_id": "zanahoria", "gramos": 50 },
+        { "food_id": "aceite_oliva", "gramos": 4 },
+        { "food_id": "salmon_atlantico", "gramos": 200 },
+        { "food_id": "sal", "gramos": 0.3 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "datiles_deglet_noor", "gramos": 18 }
+      ]
+    },
+    "miercoles": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "cacao_polvo", "gramos": 5 },
+        { "food_id": "bebida_de_avena", "gramos": 300 },
+        { "food_id": "pan_integral", "gramos": 70 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "crema_cacahuete", "gramos": 20 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "anacardos", "gramos": 10 },
+        { "food_id": "mandarina", "gramos": 70 }
+      ],
+      "comida": [
+        { "food_id": "arroz_blanco_crudo", "gramos": 105 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 150 },
+        { "food_id": "pechuga_pollo_cruda", "gramos": 200 },
+        { "food_id": "aceite_oliva", "gramos": 10 },
+        { "food_id": "salsa_tomate_frito", "gramos": 60 },
+        { "food_id": "sal", "gramos": 0.3 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "chocolate_negro_85", "gramos": 8 },
+        { "food_id": "kiwi_verde", "gramos": 100 }
+      ],
+      "merienda": [
+        { "food_id": "corn_flakes", "gramos": 60 },
+        { "food_id": "muesli", "gramos": 25 },
+        { "food_id": "bebida_de_avena", "gramos": 250 },
+        { "food_id": "manzana_con_piel", "gramos": 150 },
+        { "food_id": "platano", "gramos": 100 }
+      ],
+      "cena": [
+        { "food_id": "pasta_seca", "gramos": 100 },
+        { "food_id": "salteado_verduras_hacendado", "gramos": 150 },
+        { "food_id": "huevo", "gramos": 108 },
+        { "food_id": "aceite_oliva", "gramos": 6 },
+        { "food_id": "salsa_tomate_frito", "gramos": 50 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "nueces", "gramos": 10 },
+        { "food_id": "almendras_crudas", "gramos": 10 },
+        { "food_id": "datiles_deglet_noor", "gramos": 18 }
+      ]
+    },
+    "jueves": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "cacao_polvo", "gramos": 5 },
+        { "food_id": "bebida_de_avena", "gramos": 300 },
+        { "food_id": "pan_integral", "gramos": 70 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "crema_cacahuete", "gramos": 20 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "anacardos", "gramos": 10 },
+        { "food_id": "mandarina", "gramos": 70 }
+      ],
+      "comida": [
+        { "food_id": "lentejas_secas", "gramos": 120 },
+        { "food_id": "arroz_blanco_crudo", "gramos": 65 },
+        { "food_id": "zanahoria", "gramos": 120 },
+        { "food_id": "cebolla", "gramos": 120 },
+        { "food_id": "pimiento_rojo", "gramos": 60 },
+        { "food_id": "aceite_oliva", "gramos": 13 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "chocolate_negro_85", "gramos": 8 },
+        { "food_id": "kiwi_verde", "gramos": 100 }
+      ],
+      "merienda": [
+        { "food_id": "corn_flakes", "gramos": 60 },
+        { "food_id": "muesli", "gramos": 25 },
+        { "food_id": "bebida_de_avena", "gramos": 250 },
+        { "food_id": "manzana_con_piel", "gramos": 150 },
+        { "food_id": "platano", "gramos": 100 }
+      ],
+      "cena": [
+        { "food_id": "patata_cruda", "gramos": 330 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 200 },
+        { "food_id": "zanahoria", "gramos": 50 },
+        { "food_id": "aceite_oliva", "gramos": 6 },
+        { "food_id": "huevo", "gramos": 108 },
+        { "food_id": "atun_lata_aceite", "gramos": 60 },
+        { "food_id": "pechuga_pollo_cruda", "gramos": 60 },
+        { "food_id": "sal", "gramos": 0.3 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "nueces", "gramos": 10 },
+        { "food_id": "datiles_deglet_noor", "gramos": 18 }
+      ]
+    },
+    "viernes": {
+      "desayuno": [
+        { "food_id": "avena_copos", "gramos": 90 },
+        { "food_id": "cacao_polvo", "gramos": 5 },
+        { "food_id": "bebida_de_avena", "gramos": 300 },
+        { "food_id": "pan_integral", "gramos": 70 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "crema_cacahuete", "gramos": 20 },
+        { "food_id": "almendras_crudas", "gramos": 15 },
+        { "food_id": "anacardos", "gramos": 10 },
+        { "food_id": "mandarina", "gramos": 70 }
+      ],
+      "comida": [
+        { "food_id": "arroz_blanco_crudo", "gramos": 150 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 150 },
+        { "food_id": "pechuga_pollo_cruda", "gramos": 90 },
+        { "food_id": "huevo", "gramos": 108 },
+        { "food_id": "aceite_oliva", "gramos": 3 },
+        { "food_id": "salsa_tomate_frito", "gramos": 50 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "chocolate_negro_85", "gramos": 8 },
+        { "food_id": "kiwi_verde", "gramos": 100 }
+      ],
+      "merienda": [
+        { "food_id": "corn_flakes", "gramos": 60 },
+        { "food_id": "muesli", "gramos": 25 },
+        { "food_id": "bebida_de_avena", "gramos": 250 },
+        { "food_id": "manzana_con_piel", "gramos": 150 },
+        { "food_id": "platano", "gramos": 100 }
+      ],
+      "cena": [
+        { "food_id": "patata_cruda", "gramos": 330 },
+        { "food_id": "verduras_asadas_hacendado", "gramos": 200 },
+        { "food_id": "zanahoria", "gramos": 50 },
+        { "food_id": "aceite_oliva", "gramos": 10 },
+        { "food_id": "sardina_lata_reducida_sal", "gramos": 130 },
+        { "food_id": "yogur_griego_ligero", "gramos": 125 },
+        { "food_id": "semillas_chia", "gramos": 3 },
+        { "food_id": "almendras_crudas", "gramos": 10 },
+        { "food_id": "datiles_deglet_noor", "gramos": 18 }
+      ]
+    }
+  }
+}

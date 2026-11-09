@@ -13,9 +13,10 @@ const MIN_GRAMOS = 1;
 const redondea = (x) => Math.round(x * 10) / 10;
 
 // Estado de la pantalla a partir de las comidas guardadas de un día (o de una sola, desde el Diario), o de una
-// plantilla (template = { id, nombre }). Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
+// plantilla (template = { id, nombre }) o de la dieta de un día de la semana (dieta = { dia, etiqueta }, data/dieta.json).
+// Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
 // marcadoInicial: true (por defecto) deja marcados los conocidos; false los deja todos sin marcar (ver marcadoInicialPara).
-export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null, marcadoInicial = true }) {
+export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null, dieta = null, marcadoInicial = true }) {
   let n = 0;
   const groups = MEALS.map((meal) => ({
     meal,
@@ -24,7 +25,7 @@ export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, 
       return { key: `i${++n}`, food_id: l.food_id, nombre: foodsById.get(l.food_id)?.nombre ?? l.food_id, grams: l.grams, checked: known && marcadoInicial, known };
     })),
   })).filter((g) => g.items.length);
-  return { sourceDate, recordId, template, targetDate, targetMeal, groups };
+  return { sourceDate, recordId, template, dieta, targetDate, targetMeal, groups };
 }
 
 // ¿Se abre con todo marcado? Una sola comida elegida a propósito (desde el Diario) o una plantilla, sí; el día entero
@@ -80,7 +81,7 @@ export function validateRepeat(r) {
 // Registros a guardar (mismo formato que el resto del diario). Con "Como en el origen", uno por comida; si no, uno.
 export function toRecords(r, { now = new Date(), idGen = newId } = {}) {
   if (!validateRepeat(r).ok) throw new Error('Nada válido que añadir: revisa los gramos, la fecha y la comida');
-  const origen = r.template ? `plantilla «${r.template.nombre}»` : `repetido de ${r.sourceDate}`;
+  const origen = r.dieta ? `dieta del ${r.dieta.etiqueta}` : r.template ? `plantilla «${r.template.nombre}»` : `repetido de ${r.sourceDate}`;
   const linea = (i) => ({ food_id: i.food_id, grams: i.grams, source_text: origen });
   const grupos = r.targetMeal === DESTINO_ORIGEN
     ? r.groups.map((g) => ({ meal: g.meal, items: g.items.filter((i) => i.checked) }))
@@ -88,6 +89,6 @@ export function toRecords(r, { now = new Date(), idGen = newId } = {}) {
   return grupos.filter((g) => g.items.length).map((g, n) => ({
     id: idGen(), date: r.targetDate, meal: g.meal,
     createdAt: new Date(now.getTime() + n).toISOString(), // en orden, aunque se guarden a la vez
-    text: r.template ? `Plantilla: ${r.template.nombre}` : `Repetido de ${r.sourceDate}`, lines: g.items.map(linea),
+    text: r.dieta ? `Dieta del ${r.dieta.etiqueta}` : r.template ? `Plantilla: ${r.template.nombre}` : `Repetido de ${r.sourceDate}`, lines: g.items.map(linea),
   }));
 }
