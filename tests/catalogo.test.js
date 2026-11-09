@@ -10,6 +10,21 @@ const flagsOf = (food_id, source_text) => normalizeAiResponse({
   items: [{ food_id, cantidad: 100, unidad: 'g', source_text, confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [],
 }, realList).items[0].flags;
 
+test('AE (dieta fija): yogur ligero, sardinillas reducidas en sal, plátano, mandarina y sal; los alias nuevos no roban a los anteriores', () => {
+  const n = (id) => byId.get(id).nutrients;
+  assert.deepEqual([n('yogur_griego_ligero').energia_kcal, n('yogur_griego_ligero').proteina_g, n('yogur_griego_ligero').sodio_mg, n('yogur_griego_ligero').calcio_mg], [60, 5.8, 64, 150]);
+  assert.ok(Math.abs(n('sardina_lata_reducida_sal').energia_kcal - 138 / 0.65) < 0.01);
+  assert.ok(Math.abs(n('sardina_lata_reducida_sal').epa_g + n('sardina_lata_reducida_sal').dha_g - 0.71 * 90 / 65) < 0.002);
+  assert.deepEqual([n('platano').vitamina_b12_ug, n('platano').vitamina_d_ug, n('mandarina').vitamina_b12_ug, n('mandarina').vitamina_d_ug], [0, 0, 0, 0]);
+  assert.equal(n('sal').sodio_mg, 38758);
+  assert.deepEqual(flagsOf('yogur_griego_natural', '125 g de yogur'), []);
+  assert.deepEqual(flagsOf('yogur_griego_ligero', '125 g de yogur griego ligero'), []);
+  assert.deepEqual(flagsOf('yogur_griego_natural', '125 g de yogur griego ligero'), ['alias_mas_especifico']);
+  assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinillas'), []);
+  assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinillas reducidas en sal'), ['alias_mas_especifico']);
+  for (const [id, text] of [['platano', '100 g de plátano'], ['platano', '100 g de banana'], ['mandarina', '80 g de mandarinas'], ['sal', '2 g de sal']]) assert.deepEqual(flagsOf(id, text), [], text);
+});
+
 test('el fixture es copia exacta de data/foods.csv', () => {
   assert.equal(readFile('./fixtures/alimentos_iniciales.csv'), readFile('../data/foods.csv'));
 });
