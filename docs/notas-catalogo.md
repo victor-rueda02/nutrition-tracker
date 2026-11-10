@@ -202,3 +202,10 @@ Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-f
 - `platano` (NUEVO, USDA 173944), `mandarina` (NUEVO, USDA 169105), `sal` (NUEVO, USDA 173468): todo de USDA SR Legacy, 31/31. Plátano y mandarina: B12 y D = 0 ya vienen de USDA (vegetal sin enriquecer); porciones de USDA (plátano mediano 118 / pequeño 101 / grande 136; mandarina mediana 88 / pequeña 76 / grande 120). `sal`: `pizca:0.3` (dato de Victor; USDA tiene «dash» 0,4 g) y `cucharadita:6` (USDA); rol `otro`.
 - Los ids `mandarina` y `sal` ya existen en el iPhone (creados con «Estimar con IA», `tipo=usda_app`): al llegar publicados con el mismo id, la actualización del documento los trae por defecto como «Publicado». El export del iPhone del 22-10 (fixture) no los contiene (se crearon después), así que no hay prueba con datos reales de esa fila; `platano` no existe en el iPhone según el encargo.
 - Pendiente: Victor puede cambiar `rol_cena`; el selenio de las sardinillas es el de USDA (pescado, sin regla de suelo).
+
+## 10-11-2026: `yogur_griego_ligero` pasa de USDA 170903 a 170886
+
+- Decisión de Victor: los ingredientes de la etiqueta (leche parcialmente desnatada, leche en polvo desnatada, proteínas de la leche y fermentos) no son un yogur colado (su calcio es 150 mg), así que los micros salen de USDA 170886 «Yogurt, plain, low fat» (SR Legacy; 5,25 g de proteína, 1,55 g de grasa), tal cual por 100 g, sin reescalar los minerales por proteína. Sin fortificación (D = 0, A natural).
+- Aminoácidos: 170886 × 5,8/5,25. Mono, poli, colesterol y ALA: × 2/1,55. Trans, almidón, omega-3 y omega-6: sin dato en USDA, vacíos (antes trans 0,063 y almidón 0 venían de 170903).
+- Se conservan la etiqueta, vitamina A = 13,1 (BEDCA 118 reescalado) y selenio = 2 (BEDCA 1447). 31/31. Sustituye a la descripción de la fila en el apartado anterior (170903).
+- `usda/eleccion.csv` no tiene fila de este alimento (viene de etiqueta + USDA a mano), así que no se cambia.
