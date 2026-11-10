@@ -24,6 +24,11 @@ test('AE (dieta fija): yogur ligero, sardinillas reducidas en sal, plátano, man
   assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinillas reducidas en sal'), ['alias_mas_especifico']);
   assert.deepEqual(flagsOf('sardina_lata_aceite', '65 g de sardinas reducidas en sal'), ['alias_mas_especifico']);
   assert.equal(n('yogur_griego_ligero').vitamina_a_ug, 13.1); // BEDCA 118 reescalado, no el retinol añadido de USDA
+  // Micros de USDA 170886 (yogur natural bajo en grasa, no colado), no de 170903 (griego colado).
+  assert.equal(byId.get('yogur_griego_ligero').extra.fdc_id, '170886');
+  assert.deepEqual([n('yogur_griego_ligero').potasio_mg, n('yogur_griego_ligero').magnesio_mg, n('yogur_griego_ligero').selenio_ug], [234, 17, 2]);
+  assert.equal(n('yogur_griego_ligero').grasas_trans_g, undefined); // sin dato en 170886: vacío, nunca 0
+  assert.equal(n('yogur_griego_ligero').almidon_g, undefined);
   for (const [id, text] of [['platano', '100 g de plátano'], ['platano', '100 g de banana'], ['mandarina', '80 g de mandarinas'], ['sal', '2 g de sal']]) assert.deepEqual(flagsOf(id, text), [], text);
 });
 
