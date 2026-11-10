@@ -209,3 +209,11 @@ Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-f
 - Aminoácidos: 170886 × 5,8/5,25. Mono, poli, colesterol y ALA: × 2/1,55. Trans, almidón, omega-3 y omega-6: sin dato en USDA, vacíos (antes trans 0,063 y almidón 0 venían de 170903).
 - Se conservan la etiqueta, vitamina A = 13,1 (BEDCA 118 reescalado) y selenio = 2 (BEDCA 1447). 31/31. Sustituye a la descripción de la fila en el apartado anterior (170903).
 - `usda/eleccion.csv` no tiene fila de este alimento (viene de etiqueta + USDA a mano), así que no se cambia.
+
+## 10-11-2026: `tomate` (NUEVO, 75 alimentos, 72 a la IA, 75 completos, 56 roles)
+- Tomate natural rojo maduro crudo, para ponerlo rallado en el pan del almuerzo. Fuente: USDA 170457 «Tomatoes, red, ripe, raw, year round average» (SR Legacy, 31/31; el más parecido al término). Por 100 g: 18 kcal, proteína 0,88, hidratos 3,89, grasa 0,2, fibra 1,2, vitamina C 13,7 mg, potasio 237 mg, sodio 5 mg.
+- B12 y D = 0 (vegetal sin enriquecer; USDA ya traía 0), EPA/DHA = 0 (USDA ya traía 0). Omega-3 y omega-6 vacíos (como el resto del catálogo). ALA desde 18:3 (alternativa del script).
+- **Selenio 0,99 µg** de BEDCA 2421 «Tomate» (Ortega et al. 2004; dato europeo, no copiado de USDA: allí es 0); anotado en `fuente_usda`. Las otras fichas «Tomate» de BEDCA (1879, 2109) no traen selenio.
+- Alias «tomate|tomate natural|tomate rallado|tomates»; grupo propio `tomate`, `peso_en_crudo=si`, `rol_cena=verdura`, `tipo=generico`. «tomate frito» sigue yendo a `salsa_tomate_frito` (alias más largo): si la IA eligiera `tomate` con «tomate frito» salta `alias_mas_especifico`.
+- Porción `unidad:123` = «medium whole» de USDA (otras: large 182, Italian tomato 62, cherry 17). Con 120 g habría salido 240 g; con 123, «2 tomates» = 246 g. Victor puede cambiarla.
+- Fila añadida también a `usda/eleccion.csv`. Tests: recuentos (75/72/75/56 roles, 23 con `peso_en_crudo`, 27 en el plan de USDA) y un caso nuevo en `catalogo.test.js`.

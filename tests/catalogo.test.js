@@ -279,3 +279,17 @@ test('salteados Hacendado: «salteado de verduras» = el normal; «salteado de v
   const mal = r('salteado_verduras_hacendado', '200 g de salteado de verduras asadas').items[0];
   assert.deepEqual([mal.flags, mal.mas_especifico, mal.confidence], [['alias_mas_especifico'], 'verduras_asadas_hacendado', 'baja']);
 });
+
+test('tomate natural crudo (10-11-2026): USDA 170457 + selenio de BEDCA 2421; «tomate» y «tomate frito» no se pisan; 2 tomates = 2 × 123 g', () => {
+  const t = byId.get('tomate');
+  assert.deepEqual([t.nombre, t.estado, t.grupo, t.varianteDefecto, t.extra.rol_cena, t.extra.incluir, t.extra.fdc_id], ['Tomate natural crudo', 'crudo', 'tomate', true, 'verdura', 'si', '170457']);
+  assert.deepEqual([t.nutrients.energia_kcal, t.nutrients.vitamina_c_mg, t.nutrients.potasio_mg, t.nutrients.selenio_ug, t.nutrients.vitamina_b12_ug, t.nutrients.vitamina_d_ug, t.nutrients.epa_g, t.nutrients.dha_g], [18, 13.7, 237, 0.99, 0, 0, 0, 0]);
+  assert.match(t.extra.fuente_usda, /B12\/D = 0: vegetal sin enriquecer/);
+  assert.match(t.extra.fuente_usda, /selenio_ug = 0,99: BEDCA 2421/);
+  assert.deepEqual(flagsOf('tomate', '100 g de tomate'), []);
+  assert.deepEqual(flagsOf('tomate', '100 g de tomate rallado'), []);
+  assert.deepEqual(flagsOf('salsa_tomate_frito', '60 g de tomate frito'), []);
+  assert.deepEqual(flagsOf('tomate', '60 g de tomate frito'), ['alias_mas_especifico']);
+  const r = normalizeAiResponse({ items: [{ food_id: 'tomate', cantidad: 246, unidad: 'g', source_text: '2 tomates', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
+  assert.deepEqual([r.items[0].food_id, r.items[0].grams, r.items[0].flags], ['tomate', 246, []]);
+});

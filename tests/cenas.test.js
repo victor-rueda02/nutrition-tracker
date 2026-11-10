@@ -736,7 +736,7 @@ test('rol_cena sale de data/foods.csv (columna opcional): rolesDe solo da roles 
   assert.equal(roles.merluza_cruda, 'proteina');
   assert.equal(roles.lentejas_caseras, 'plato');
   assert.equal(roles.semillas_chia, 'postre_extra');
-  assert.equal(Object.keys(roles).length, 55);
+  assert.equal(Object.keys(roles).length, 56);
   // vacío o inválido: sin rol (un alimento sin rol cuenta como «otro»; una receta, como «plato»)
   const f = (extra) => new Map([['a', { id: 'a', extra }]]);
   assert.deepEqual(rolesDe(f({ rol_cena: ' Proteina ' })), { a: 'proteina' });
@@ -799,7 +799,7 @@ test('actualizar el documento en el iPhone: un documento sin rol_cena recibe las
     assert.ok(antiguo.filter((f) => !lista.some((r) => r.id === f.id)).every((f) => final.has(f.id)), nombre);
     assert.ok(lista.every((r) => !final.has(r.id)), nombre);
     assert.equal(rolesDe(final).merluza_cruda, 'proteina', nombre);
-    assert.equal(Object.keys(rolesDe(final)).length, 55, nombre);
+    assert.equal(Object.keys(rolesDe(final)).length, 56, nombre);
   }
   // y lo que cambié yo en el dispositivo (un alias) se conserva junto a los roles nuevos
   const conAlias = antiguo.map((f) => (f.id === 'huevo' ? { ...f, alias: [...f.alias, 'huevos de casa'] } : f));
