@@ -217,3 +217,18 @@ Los que no tienen término o son recetas siguen omitidos. Ejemplo: `node --env-f
 - Alias «tomate|tomate natural|tomate rallado|tomates»; grupo propio `tomate`, `peso_en_crudo=si`, `rol_cena=verdura`, `tipo=generico`. «tomate frito» sigue yendo a `salsa_tomate_frito` (alias más largo): si la IA eligiera `tomate` con «tomate frito» salta `alias_mas_especifico`.
 - Porción `unidad:123` = «medium whole» de USDA (otras: large 182, Italian tomato 62, cherry 17). Con 120 g habría salido 240 g; con 123, «2 tomates» = 246 g. Victor puede cambiarla.
 - Fila añadida también a `usda/eleccion.csv`. Tests: recuentos (75/72/75/56 roles, 23 con `peso_en_crudo`, 27 en el plan de USDA) y un caso nuevo en `catalogo.test.js`.
+
+## Rama `cat-ak` (11-11-2026): cerrar los avisos de totales parciales (vitamina A de los corn flakes y colina del salteado de verduras asadas)
+Decisiones de Victor (11-11-2026). El aviso quedaba como residuo aceptado desde el 29-10 (AD); ahora se cierra.
+- `corn_flakes` · vitamina_a_ug = 0 (0 real). Ingredientes: maíz 98 %, sal y tocoferoles; sin vitaminas añadidas ni ingredientes animales (retinol = 0); el maíz amarillo aporta luteína y zeaxantina, sin actividad de vitamina A. Respaldo BEDCA: maíz crudo (f_id 200) 0,06 µg RE; cereales de maíz y trigo (f_id 104 y 1032, Mataix 2003) 0 µg. `fuente_usda`: «A = 0: cereal de maíz sin enriquecer (…; la etiqueta no la declara)» en lugar de «vacío A: fortificación de EE. UU. …». C y D = 0 y la nota de ALA intactas. Ya no queda ningún nutriente obligatorio vacío en esa fila.
+- `pimiento_amarillo` · colina_mg = 5,6 (ESTIMADO). No hay colina analizada de pimiento amarillo en USDA (FDC 169383 vacía), BEDCA, CIQUAL ni AFCD (F010259). La base de colina de USDA (Release 2, CHOLN02.PDF) mide pimiento verde (11333) y rojo (11821) con el mismo valor, 5,6 mg/100 g. Excepción puntual a «no copiado de otro alimento» de la regla del AFCD; no sienta precedente.
+- Recetas recalculadas con `recetas.mjs --aplicar`: solo cambian las dos que usan el pimiento amarillo.
+
+| Fila | Nutriente | Antes | Después |
+|---|---|---|---|
+| corn_flakes | vitamina A (µg) | vacío | 0 |
+| pimiento_amarillo | colina (mg) | vacío | 5,6 (estimado) |
+| verduras_asadas_hacendado | colina (mg) | vacío | 11,482 |
+| parrillada_verduras_hacendado | colina (mg) | vacío | 9,763 |
+
+Comprobación a mano de `verduras_asadas_hacendado`: 20 g de cada ingrediente (calabacín 9,5; cebolla 6,1; berenjena 6,9; pimiento rojo 5,6; pimiento amarillo 5,6 mg/100 g) = 6,74 mg, entre un peso final de 58,7 g = 11,48 mg/100 g. El resto de recetas no cambia (salteado de verduras con etiqueta, lentejas caseras y atún con aceite). Sin llamadas a USDA, BEDCA ni Gemini.

@@ -132,16 +132,16 @@ test('chocolate negro 85: la vitamina D (D2 del cacao) no es un 0 falso; viene d
   assert.match(c.extra.fuente_usda, /vitamina_d_ug = 2\.16.*CIQUAL 31074/);
 });
 
-test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. UU. no declarada queda sin dato', () => {
+test('corn flakes: etiqueta de Hacendado 0 % azúcar; la fortificación de EE. UU. no declarada no se copia (C, D y A = 0 reales)', () => {
   const c = byId.get('corn_flakes').nutrients;
   assert.deepEqual([c.energia_kcal, c.proteina_g, c.hidratos_g, c.azucares_g, c.fibra_g, c.sodio_mg], [373, 6.7, 82, 0.9, 4.4, 600]); // sodio = sal 1,5 g ÷ 2,5
   assert.deepEqual([c.vitamina_b1_mg, c.vitamina_b9_ug, c.vitamina_b12_ug, c.hierro_mg], [0.3, 282.2, 2.1, 7]); // B9 en DFE = 1,7 × 166 µg de ácido fólico
-  assert.equal(c.vitamina_a_ug, undefined); // a propósito: fortificación de EE. UU. que la etiqueta no declara
+  assert.equal(c.vitamina_a_ug, 0); // AK (11-11-2026): maíz sin enriquecer, 0 real (antes vacía por la fortificación de EE. UU.)
   assert.equal(c.potasio_mg, 107); // natural del maíz: de USDA
   assert.equal(byId.get('corn_flakes').extra.termino_busqueda_usda, undefined); // usda.mjs no la vuelve a rellenar
 });
 
-test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y ALA de CIQUAL 20168 y colina vacía', () => {
+test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y ALA de CIQUAL 20168 (la colina, desde AK)', () => {
   const c = byId.get('corn_flakes');
   assert.equal(c.nutrients.vitamina_c_mg, 0);
   assert.equal(c.nutrients.vitamina_d_ug, 0);
@@ -149,13 +149,30 @@ test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y 
   assert.doesNotMatch(c.extra.fuente_usda, /vacíos A, C y D/);
   const p = byId.get('pimiento_amarillo');
   assert.deepEqual([p.nutrients.vitamina_e_mg, p.nutrients.vitamina_k_ug, p.nutrients.ala_g], [1.76, 1.18, 0.02]);
-  assert.equal(p.nutrients.colina_mg, undefined); // ni USDA, BEDCA, CIQUAL ni AFCD la traen
   assert.match(p.extra.fuente_usda, /CIQUAL 2020, 20168 «Sweet pepper, yellow, raw»/);
   for (const id of ['verduras_asadas_hacendado', 'parrillada_verduras_hacendado']) {
     const n = byId.get(id).nutrients;
     for (const k of ['vitamina_e_mg', 'vitamina_k_ug', 'ala_g']) assert.ok(n[k] > 0, id + ' ' + k);
-    assert.equal(n.colina_mg, undefined, id);
   }
+});
+
+test('AK (11-11-2026): corn flakes A = 0 y colina del pimiento amarillo (estimada) cierran los dos avisos de totales parciales', () => {
+  const cf = byId.get('corn_flakes');
+  assert.equal(cf.nutrients.vitamina_a_ug, 0);
+  assert.match(cf.extra.fuente_usda, /A = 0: cereal de maíz sin enriquecer \(BEDCA: maíz crudo 0,06 µg y cereales de maíz y trigo 0 µg, Mataix 2003; la etiqueta no la declara\)/);
+  assert.doesNotMatch(cf.extra.fuente_usda, /vacío A/);
+  assert.match(cf.extra.fuente_usda, /C y D = 0: cereal de maíz no enriquecido/);
+  // ningún nutriente obligatorio de los corn flakes queda vacío
+  assert.deepEqual(JSON.parse(readFile('../data/settings.json')).requiredNutrients.filter((k) => typeof cf.nutrients[k] !== 'number'), []);
+  const p = byId.get('pimiento_amarillo');
+  assert.equal(p.nutrients.colina_mg, 5.6);
+  assert.match(p.extra.fuente_usda, /colina_mg = 5\.6 \(estimado\): sin dato analizado de pimiento amarillo; copiado del pimiento rojo y verde de USDA Choline DB Release 2 \(11821 y 11333, ambos 5,6 mg\/100 g\)/);
+  assert.equal(byId.get('pimiento_rojo').nutrients.colina_mg, 5.6);
+  // recetas: colina = Σ(g × colina/100) ÷ peso final
+  const a = byId.get('verduras_asadas_hacendado').nutrients.colina_mg;
+  assert.ok(Math.abs(a - 20 * (9.5 + 6.1 + 6.9 + 5.6 + 5.6) / 100 / 58.7 * 100) < 0.01, `verduras asadas ${a}`);
+  assert.ok(byId.get('parrillada_verduras_hacendado').nutrients.colina_mg > 0);
+  assert.ok(byId.get('salteado_verduras_hacendado').nutrients.colina_mg > 0 || byId.get('salteado_verduras_hacendado').nutrients.colina_mg === undefined); // con etiqueta: no cambia
 });
 
 test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para que usda.mjs no los pise', () => {
