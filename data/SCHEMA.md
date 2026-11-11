@@ -114,13 +114,18 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - `periodo`: el `id` de un periodo de tu plan de objetivos (Objetivos; formato en `docs/OBJETIVOS-FORMATO.md`). No se repite.
   `nombre` (opcional; si falta, el `periodo`) se enseña en Repetir.
 - `dias`: el menú normal de cada día de la semana, con el mismo formato que la versión 1 (abajo).
-- `tipos` (opcional): menús propios de un tipo de día del plan (`descanso`, `carrera`...), por día de la semana.
+- `tipos` (opcional): menús propios de un tipo de día del plan (`descanso`, `carrera`...), por día de la semana. La clave es
+  la del tipo en el plan, tal cual (en minúsculas): una errata no da error, pero ese menú nunca se usa. Pueden ser parciales.
+- Un tramo creado al editar en Objetivos «desde hoy» (`<periodo>_AAAAMMDD`, `…_2`) usa la versión del periodo del que sale.
+- `dias` arriba del todo (opcional, fuera de `versiones`): la versión 2 lo ignora; sirve para que una app antigua (versión 1)
+  que aún no se ha actualizado siga copiando un menú en vez de dar error.
 - **Cómo elige el botón** (`elegirMenu` en `core/dieta.js`), para el día que muestra el Diario: el periodo de tu plan que manda
   esa fecha → la versión con ese `periodo`; después, el tipo de día de esa fecha (el de la excepción por fecha si la hay, como
   «Hoy es: Descanso»; si no, el de la `semana` del periodo): si `tipos[tipo][día]` existe, ese; si no, `dias[día]`.
 - Sin plan de objetivos: «Para copiar la dieta necesitas un plan de objetivos (Más → Objetivos).». Un periodo sin versión
   (vacaciones, Navidad): «Tu dieta no tiene menú para el periodo «…».». Un día sin menú: «No hay dieta para el sábado».
-- Repetir enseña «De: dieta del martes · Descanso» y, debajo, el nombre de la versión. Lo guardado es igual que en la versión 1.
+- Repetir enseña «De: dieta del martes · Descanso» y, debajo, el nombre de la versión; «· Descanso (menú normal)» si el día es
+  de otro tipo que el de su semana y no tiene menú propio. Lo guardado es igual que en la versión 1.
 - Los errores de estructura nombran la versión y el tipo («versión «p19», descanso, lunes, cena, huevo: …»).
 
 ### Versión 1 (se sigue aceptando): un menú por día de la semana, sin plan

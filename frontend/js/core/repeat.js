@@ -13,7 +13,8 @@ const MIN_GRAMOS = 1;
 const redondea = (x) => Math.round(x * 10) / 10;
 
 // Estado de la pantalla a partir de las comidas guardadas de un día (o de una sola, desde el Diario), o de una
-// plantilla (template = { id, nombre }) o de la dieta de un día de la semana (dieta = { dia, etiqueta }, data/dieta.json).
+// plantilla (template = { id, nombre }) o de la dieta de un día (dieta = { dia, etiqueta, copia, tipo, menuNormal, version },
+// data/dieta.json; los cuatro últimos solo para enseñar en la pantalla).
 // Un alimento que ya no está en el documento aparece desmarcado y no se puede marcar.
 // marcadoInicial: true (por defecto) deja marcados los conocidos; false los deja todos sin marcar (ver marcadoInicialPara).
 export function createRepeat({ meals, sourceDate = null, foodsById, targetDate, targetMeal = DESTINO_ORIGEN, recordId = null, template = null, dieta = null, marcadoInicial = true }) {

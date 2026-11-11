@@ -100,7 +100,9 @@ export const dietaComoComidas = (dieta, dia) => menuComoComidas(dieta?.dias?.[di
 // Qué menú toca en una fecha. Versión 1: el del día de la semana (no necesita plan). Versión 2: la versión del periodo vigente
 // de esa fecha en el plan de objetivos y, dentro, el menú de su tipo de día (con las excepciones por fecha: dayContext) si lo
 // tiene; si no, el normal de ese día de la semana.
-// Devuelve { ok: true, dia, etiqueta, comidas, tipo, version } (tipo y version: nombres para enseñar, o null) o
+// Devuelve { ok: true, dia, etiqueta, comidas, tipo, menuPropio, version } (tipo y version: nombres para enseñar, o null;
+// menuPropio: si el menú es el propio de ese tipo de día y no el normal; menuNormalDeOtroTipo: el día es de otro tipo que el
+// de su semana —p. ej. «Hoy es: Descanso»— pero no tiene menú propio, así que se copia el normal y hay que decirlo) o
 // { ok: false, error } con el texto para el usuario.
 export function elegirMenu(dieta, fecha, plan) {
   const dia = diaDeSemana(fecha);
@@ -113,10 +115,24 @@ export function elegirMenu(dieta, fecha, plan) {
   if (!plan) return { ok: false, error: SIN_PLAN };
   const ctx = dayContext(plan, fecha);
   if (!ctx.periodo) return { ok: false, error: 'Tu plan de objetivos no tiene ningún periodo para este día, así que no hay dieta que copiar.' };
-  const v = dieta.versiones.find((x) => x.periodo === ctx.periodo.id);
+  const v = versionDelPeriodo(dieta.versiones, ctx.periodo.id);
   if (!v) return { ok: false, error: `Tu dieta no tiene menú para el periodo «${ctx.periodo.nombre || ctx.periodo.id}».` };
   const propio = ctx.tipoClave ? menuComoComidas(v.tipos?.[ctx.tipoClave]?.[dia], dia) : null;
   const comidas = propio ?? menuComoComidas(v.dias?.[dia], dia);
   if (!comidas) return sinDia;
-  return { ok: true, dia, etiqueta, comidas, tipo: ctx.tipoClave ? nombreTipo(ctx.periodo, ctx.tipoClave) : null, version: v.nombre };
+  return { ok: true, dia, etiqueta, comidas, tipo: ctx.tipoClave ? nombreTipo(ctx.periodo, ctx.tipoClave) : null, menuPropio: Boolean(propio), menuNormalDeOtroTipo: Boolean(ctx.tipoClave && !propio && ctx.tipoClave !== ctx.tipoSemana), version: v.nombre };
+}
+
+// La versión de un periodo. Editar en Objetivos «desde hoy» parte el periodo y el tramo nuevo se llama `<id>_AAAAMMDD`
+// (y `_2`... si se repite; editPeriod en core/targets-plan.js): ese tramo usa la versión del periodo del que sale, quitando
+// sufijos uno a uno (también tras varias ediciones seguidas).
+function versionDelPeriodo(versiones, id) {
+  for (let actual = id; actual;) {
+    const v = versiones.find((x) => x.periodo === actual);
+    if (v) return v;
+    const sin = actual.replace(/_\d{8}(?:_\d+)?$/, '');
+    if (sin === actual) return null;
+    actual = sin;
+  }
+  return null;
 }

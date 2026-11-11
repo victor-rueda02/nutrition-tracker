@@ -3,6 +3,8 @@
 .repeat .repeat-source { margin:0 0 4px; }
 .repeat p.repeat-source { padding:4px 0; }
 .repeat .source-label { font-size:1.25rem; }
+/* Dieta versión 2: el nombre de la versión (periodo del plan), debajo del título. */
+.repeat .dieta-version { display:block; margin-top:2px; }
 .repeat nav .source-label { text-transform:capitalize; }
 .repeat .repeat-group .meal-head h2 { margin:0; font-size:1.1rem; }
 /* Casilla de la comida a la izquierda del nombre: la etiqueta entera es la zona táctil (≥ 44 px), como las de los alimentos. */

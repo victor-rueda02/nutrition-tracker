@@ -568,7 +568,8 @@ export function mountApp(root, deps) {
     } finally { clearTimeout(reloj); }
   }
 
-  // «Copiar dieta del día»: abre «Repetir» con la dieta del día de la semana del día mostrado, todo marcado y cada comida en la suya.
+  // «Copiar dieta del día»: abre «Repetir» con el menú que toca el día mostrado (elegirMenu: versión 1, el del día de la semana;
+  // versión 2, el de la versión del periodo de tu plan y de su tipo de día), todo marcado y cada comida en la suya.
   // Los alimentos que el documento del iPhone no tiene se avisan en la pantalla y se copia el resto (el aviso no se pierde: sale
   // arriba, en un recuadro, y los afectados quedan desmarcados y bloqueados). Mientras descarga se ve «Cargando la dieta…» y
   // una segunda pulsación no lanza otra descarga.
@@ -585,7 +586,7 @@ export function mountApp(root, deps) {
         // Versión 2: el menú del periodo de tu plan en esa fecha y de su tipo de día (descanso, carrera...).
         const sel = elegirMenu(res.dieta, fecha, state.plan);
         if (!sel.ok) throw new Error(sel.error);
-        state.repeat = createRepeat({ meals: sel.comidas, dieta: { dia: sel.dia, etiqueta: sel.etiqueta, copia, tipo: sel.tipo, version: sel.version }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
+        state.repeat = createRepeat({ meals: sel.comidas, dieta: { dia: sel.dia, etiqueta: sel.etiqueta, copia, tipo: sel.tipo, menuNormal: sel.menuNormalDeOtroTipo, version: sel.version }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
         state.repeatBack = 'diaryTarget'; state.screen = 'repeat';
       } finally {
         if (state.diaryMsg === mensaje) state.diaryMsg = '';
