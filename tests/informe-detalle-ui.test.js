@@ -283,3 +283,13 @@ test('regla 4: con faltas, la cifra del día dice «(parcial)» en tabla, leyend
   await abrir(t3, 'metionina_cistina');
   assert.equal(t3.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas ese día (parcial)');
 });
+
+test('informe y detalle de nutriente de un día futuro: «Mañana · …» y «Qué aporta ese día» (no en pasado)', async () => {
+  const t = await setup({ meals: [MEAL('f0', '2026-10-17', 'desayuno', [['avena_copos', 80]])] });
+  await t.act(() => t.$('button[aria-label="Día siguiente"]').click());
+  await t.informe();
+  await abrir(t, 'proteina_g');
+  assert.match(t.$('header.top .title-block small').textContent, /^Mañana · sáb,? 17 oct$/);
+  assert.equal(t.$('.rango-tabla tr[data-fila="hoy"] th').textContent, 'Llevas ese día');
+  assert.equal(t.$('.aportes-dia h2').textContent, 'Qué aporta ese día');
+});

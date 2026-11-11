@@ -1040,7 +1040,7 @@ export function mountApp(root, deps) {
       objetivosTexto: objetivosTexto(obj), abrirNutriente: abrirNutrienteDia,
       back: () => { state.screen = 'diary'; render(); } });
   }
-  const diaTexto = (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d));
+  const diaTexto = (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : d === shiftDate(today(), 1) ? `Mañana · ${shortDate(d)}` : shortDate(d));
   const objetivosTexto = (obj) => (obj.periodo ? `Objetivos: ${obj.periodo.nombre}${obj.tipoDia ? ` · ${obj.tipoDia.nombre}` : ''}${obj.excepcion ? ' · excepción del día' : ''}` : 'Objetivos: referencias EFSA');
 
   // ---------- detalle de un alimento y de un nutriente (ui/detalle-*-screen.js; cuentas en core/detalle.js) ----------
@@ -1108,7 +1108,7 @@ export function mountApp(root, deps) {
     const esHoy = d.fecha === today();
     return { h, doc, state, byId, header, fmtQty: fmtQtyDet, nf0, nf1, catalog: deps.catalog, objetivos: obj, objetivosTexto: objetivosTexto(obj), targets, foods: state.foods, info: infoNutrientes,
       modo: 'dia', filaDia, aportes: aportesDelDia({ meals: state.dayMeals, byId: byId(), clave: d.nutriente, suma: filaDia.suma ?? null }),
-      MEAL_LABEL, fechaTexto: diaTexto(d.fecha), etiquetaHoy: esHoy ? 'Llevas hoy' : 'Llevas ese día', tituloAportes: esHoy ? 'Qué te ha aportado hoy' : 'Qué te aportó ese día',
+      MEAL_LABEL, fechaTexto: diaTexto(d.fecha), etiquetaHoy: esHoy ? 'Llevas hoy' : 'Llevas ese día', tituloAportes: esHoy ? 'Qué te ha aportado hoy' : d.fecha > today() ? 'Qué aporta ese día' : 'Qué te aportó ese día',
       abrirAlimento: abrirAlimentoDeDia };
   }
   function detalleCtx() {
@@ -1203,7 +1203,7 @@ export function mountApp(root, deps) {
         { icon: 'edit', label: 'Pulir el documento', onclick: abrirSeccion('pulir') },
       ],
     });
-    const cenasPantalla = () => cenasScreen({ h, state, byId, header, nf0, nf1, dayLabel: (d) => (d === today() ? `Hoy · ${shortDate(d)}` : d === shiftDate(today(), -1) ? `Ayer · ${shortDate(d)}` : shortDate(d)), actions: cenas, back: () => openDay(state.cenas.fecha) });
+    const cenasPantalla = () => cenasScreen({ h, state, byId, header, nf0, nf1, dayLabel: diaTexto, actions: cenas, back: () => openDay(state.cenas.fecha) });
     const informe = informeScreen;
     const screens = { home: homeScreen, confirm: confirmScreen, doc: docScreen, diary: diaryScreen, informe, alimentos, micatalogo, mas, objetivos, repeat, plantillas, registro, catalogo, estimar, recetas, cenas: cenasPantalla, detalle, 'detalle-nutriente': detalleNutriente };
     const screen = screens[state.screen]();

@@ -403,7 +403,7 @@ test('Diario: se puede ir a mañana (y más allá), se ve vacío y «Copiar diet
   assert.equal(t.$('.daylabel').textContent, 'Mañana');
   assert.equal(t.$('.alert-fail'), null);
   assert.equal((await t.store.allMeals()).length, 0);
-  await t.act(() => sig().click()); // lunes 19: sin dieta de prueba
+  await t.act(() => sig().click()); // sábado 17: sin dieta de prueba (la de prueba solo tiene viernes)
   assert.notEqual(t.$('.daylabel').textContent, 'Mañana');
   await t.act(() => t.$('button[aria-label="Día anterior"]').click());
   await t.act(() => t.$('button[aria-label="Día anterior"]').click()); // vuelve a hoy
