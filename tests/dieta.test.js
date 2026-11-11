@@ -93,6 +93,14 @@ test('data/dieta.json real: estructura válida y todos los ids existen en data/f
     // pero los periodos no se repiten y todas tienen nombre
     assert.equal(new Set(r.dieta.versiones.map((v) => v.periodo)).size, r.dieta.versiones.length);
     assert.ok(r.dieta.versiones.every((v) => v.nombre));
+    // el «dias» de la raíz (para la app antigua, versión 1) también tiene que ser válido
+    const raw = JSON.parse(readFile('../data/dieta.json'));
+    if (raw.dias) {
+      const v1 = validarDieta({ dias: raw.dias }, { foodIds: ids });
+      assert.deepEqual([v1.ok, v1.errores, v1.desconocidos], [true, [], []]);
+      const idsV1 = Object.values(v1.dieta.dias).flatMap((d) => Object.values(d).flat()).map((l) => l.food_id);
+      assert.deepEqual(idsV1.filter((id) => retirados.has(id)), []);
+    }
   }
 });
 
@@ -165,6 +173,11 @@ test('elegirMenu: versión del periodo vigente y menú del tipo de día (con exc
   const e2 = editPeriod(editPeriod(e1, { fecha: '2026-10-14', peso_kg: 81, modo: 'desde_hoy' }).plan, { fecha: '2026-10-15', peso_kg: 82, modo: 'desde_hoy' }).plan;
   assert.ok(e2.periodos.length > e1.periodos.length);
   assert.equal(elegirMenu(d2, '2026-10-16', e2).version, 'p20 · prueba');
+  // con versión propia para un tramo intermedio, el tramo siguiente usa esa (no salta a la del periodo base)
+  const d3 = validarDieta({ versiones: [...V2.versiones, { periodo: 'p20_20261013', nombre: 'tramo 13', dias: { viernes: { cena: [L('huevo', 60)] } } }] }).dieta;
+  const e3 = editPeriod(e1, { fecha: '2026-10-14', peso_kg: 81, modo: 'desde_hoy' }).plan;
+  assert.ok(e3.periodos.some((p) => p.id === 'p20_20261013_20261014'));
+  assert.equal(elegirMenu(d3, '2026-10-16', e3).version, 'tramo 13');
   assert.equal(elegirMenu(d2, '2026-10-16', { ...PLAN, periodos: [{ ...PLAN.periodos[0], id: 'otro_20261001' }] }).ok, false); // sin «p20» no inventa
   // periodo sin versión y fecha sin periodo
   assert.deepEqual(elegirMenu(d2, '2026-11-02', PLAN), { ok: false, error: 'Tu dieta no tiene menú para el periodo «Vacaciones».' });

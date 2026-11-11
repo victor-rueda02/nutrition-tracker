@@ -130,7 +130,7 @@ function versionDelPeriodo(versiones, id) {
   for (let actual = id; actual;) {
     const v = versiones.find((x) => x.periodo === actual);
     if (v) return v;
-    const sin = actual.replace(/_\d{8}(?:_\d+)?$/, '');
+    const sin = actual.replace(/_\d{8}(?:_\d{1,3})?$/, ''); // `_n` corto: dos fechas seguidas se quitan de una en una
     if (sin === actual) return null;
     actual = sin;
   }
