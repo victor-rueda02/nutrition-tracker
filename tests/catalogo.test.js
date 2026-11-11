@@ -159,20 +159,21 @@ test('AD (29-10-2026): corn flakes C y D = 0 real; pimiento amarillo con E, K y 
 test('AK (11-11-2026): corn flakes A = 0 y colina del pimiento amarillo (estimada) cierran los dos avisos de totales parciales', () => {
   const cf = byId.get('corn_flakes');
   assert.equal(cf.nutrients.vitamina_a_ug, 0);
-  assert.match(cf.extra.fuente_usda, /A = 0: cereal de maíz sin enriquecer \(BEDCA: maíz crudo 0,06 µg y cereales de maíz y trigo 0 µg, Mataix 2003; la etiqueta no la declara\)/);
+  assert.match(cf.extra.fuente_usda, /A = 0: no enriquecido con vitamina A \(BEDCA: maíz crudo 0,06 µg y cereales de maíz y trigo 0 µg, Mataix 2003; la etiqueta no la declara\)/);
   assert.doesNotMatch(cf.extra.fuente_usda, /vacío A/);
   assert.match(cf.extra.fuente_usda, /C y D = 0: cereal de maíz no enriquecido/);
   // ningún nutriente obligatorio de los corn flakes queda vacío
   assert.deepEqual(JSON.parse(readFile('../data/settings.json')).requiredNutrients.filter((k) => typeof cf.nutrients[k] !== 'number'), []);
   const p = byId.get('pimiento_amarillo');
   assert.equal(p.nutrients.colina_mg, 5.6);
-  assert.match(p.extra.fuente_usda, /colina_mg = 5\.6 \(estimado\): sin dato analizado de pimiento amarillo; copiado del pimiento rojo y verde de USDA Choline DB Release 2 \(11821 y 11333, ambos 5,6 mg\/100 g\)/);
+  assert.match(p.extra.fuente_usda, /colina_mg = 5\.6 \(estimado\): sin dato analizado de pimiento amarillo; copiado del pimiento rojo de USDA \(11821, 5,6 mg\/100 g; el verde, 11333, da 5,5-5,6\)/);
   assert.equal(byId.get('pimiento_rojo').nutrients.colina_mg, 5.6);
   // recetas: colina = Σ(g × colina/100) ÷ peso final
   const a = byId.get('verduras_asadas_hacendado').nutrients.colina_mg;
   assert.ok(Math.abs(a - 20 * (9.5 + 6.1 + 6.9 + 5.6 + 5.6) / 100 / 58.7 * 100) < 0.01, `verduras asadas ${a}`);
-  assert.ok(byId.get('parrillada_verduras_hacendado').nutrients.colina_mg > 0);
-  assert.ok(byId.get('salteado_verduras_hacendado').nutrients.colina_mg > 0 || byId.get('salteado_verduras_hacendado').nutrients.colina_mg === undefined); // con etiqueta: no cambia
+  const par = byId.get('parrillada_verduras_hacendado').nutrients.colina_mg; // (25 × 33,7 + 75 × 14,8 de la patata asada) ÷ 200 g
+  assert.ok(Math.abs(par - (25 * 33.7 + 75 * 14.8) / 200) < 0.01, `parrillada ${par}`);
+  assert.equal(byId.get('salteado_verduras_hacendado').nutrients.colina_mg, 12.6); // con etiqueta: no cambia
 });
 
 test('tarea 6: BEDCA para alimentos españoles, sin fdcId en eleccion.csv para que usda.mjs no los pise', () => {
