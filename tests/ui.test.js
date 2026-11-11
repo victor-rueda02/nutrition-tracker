@@ -243,7 +243,7 @@ test('Diario: lo guardado hoy, con totales frente a los objetivos, por comida y 
   await t.act(() => t.btn('Guardar').click()); // 80 g de avena + 100 g de huevo
   await t.act(() => t.btn('Diario').click());
   assert.equal(t.$('.daylabel').textContent, 'Hoy');
-  assert.equal(t.$('button[aria-label="Día siguiente"]').disabled, true);
+  assert.equal(t.$('button[aria-label="Día siguiente"]').disabled, false); // se puede ir a días futuros (preparar la dieta)
   assert.match(comidaCon(t).textContent, /Desayuno.*450 kcal/);
   assert.match(comidaCon(t).textContent, /Avena \(copos\/molida\) · 80 g · 307 kcal/);
   assert.equal(t.$('.alert-ul'), null);
@@ -458,7 +458,7 @@ test('editar una comida pasada: gramos, quitar línea, cambiar comida y fecha; m
   await t.act(() => t.btn('Editar').click());
   assert.match(t.$('header').textContent, /Editar comida/);
   assert.equal(t.$('input[aria-label="Fecha"]').value, '2026-10-15');
-  assert.equal(t.$('input[aria-label="Fecha"]').max, '2026-10-16');
+  assert.equal(t.$('input[aria-label="Fecha"]').max, ''); // sin fecha máxima: también se puede mover una comida a un día futuro
   assert.equal(t.$$('li.card[data-key]').length, 3);
   t.type(t.$$('input.grams')[0], '120');
   await t.act(() => t.$$('button[aria-label^="Borrar"]')[1].click()); // quita el kiwi
