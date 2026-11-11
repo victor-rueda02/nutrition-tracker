@@ -2,7 +2,7 @@
 // del día de la semana. Sin IA ni red: el fichero publicado se simula.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DIAS, DIA_LABEL, diaDeSemana, validarDieta, parseDieta, dietaComoComidas } from '../frontend/js/core/dieta.js';
+import { DIAS, DIA_LABEL, diaDeSemana, validarDieta, parseDieta, dietaComoComidas, menuComoComidas, elegirMenu, SIN_PLAN } from '../frontend/js/core/dieta.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { cleanRetirados } from '../frontend/js/core/catalog-update.js';
 import { createRepeat, toRecords, DESTINO_ORIGEN } from '../frontend/js/core/repeat.js';
@@ -74,11 +74,86 @@ test('data/dieta.json real: estructura válida y todos los ids existen en data/f
   const r = parseDieta(readFile('../data/dieta.json'), { foodIds: ids });
   assert.deepEqual(r.errores, []);
   assert.deepEqual(r.desconocidos, [], 'ids de la dieta que no están en data/foods.csv');
-  const usados = Object.values(r.dieta.dias).flatMap((d) => Object.values(d).flat()).map((l) => l.food_id);
+  // Todos los menús: los de la versión 1 o, en la 2, los normales y los de cada tipo de día de cada versión.
+  const menus = r.dieta.version === 2
+    ? r.dieta.versiones.flatMap((v) => [['', v.dias], ...Object.entries(v.tipos).map(([t, d]) => [t, d])].map(([t, d]) => [`${v.periodo}${t ? `/${t}` : ''}`, d]))
+    : [['', r.dieta.dias]];
+  const usados = menus.flatMap(([, dias]) => Object.values(dias).flatMap((d) => Object.values(d).flat())).map((l) => l.food_id);
   assert.ok(usados.length > 0);
   assert.deepEqual(usados.filter((id) => retirados.has(id)), [], 'ids de la dieta que están en retirados.json');
-  for (const dia of Object.keys(r.dieta.dias)) assert.ok(dietaComoComidas(r.dieta, dia), `${dia} sin líneas`);
-  assert.ok(['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].every((d) => r.dieta.dias[d] && MEALS.slice(0, 4).every((m) => r.dieta.dias[d][m]?.length)));
+  for (const [donde, dias] of menus) {
+    for (const dia of Object.keys(dias)) assert.ok(menuComoComidas(dias[dia], dia), `${donde} ${dia} sin líneas`);
+    assert.ok(['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].every((d) => dias[d] && MEALS.slice(0, 4).every((m) => dias[d][m]?.length)), `${donde}: falta algún día de lunes a viernes o alguna comida`);
+  }
+  if (r.dieta.version === 2) {
+    // cada versión es de un periodo que existe en algún plan de Victor no se puede comprobar aquí (el plan está en el iPhone),
+    // pero los periodos no se repiten y todas tienen nombre
+    assert.equal(new Set(r.dieta.versiones.map((v) => v.periodo)).size, r.dieta.versiones.length);
+    assert.ok(r.dieta.versiones.every((v) => v.nombre));
+  }
+});
+
+// ---------- versión 2: una versión por periodo del plan y menús por tipo de día ----------
+
+const PLAN = {
+  tipo: 'plan_objetivos', version: 1, nombre: 'prueba',
+  periodos: [
+    { id: 'p20', nombre: 'Volumen p20', inicio: '2026-10-05',
+      tipos: { fuerza: { nombre: 'Fuerza', valores: { energia_kcal: { objetivo: 3700 } } }, descanso: { nombre: 'Descanso', valores: { energia_kcal: { objetivo: 3300 } } } },
+      semana: { lun: 'fuerza', mar: 'fuerza', mie: 'fuerza', jue: 'fuerza', vie: 'fuerza', sab: 'descanso', dom: 'descanso' } },
+    { id: 'p19', nombre: 'Volumen p19', inicio: '2026-10-19', semana: {} },
+    { id: 'vacaciones', nombre: 'Vacaciones', inicio: '2026-11-01', fin: '2026-11-08' },
+  ],
+  excepciones: [{ fecha: '2026-10-15', tipo: 'descanso' }],
+};
+const V2 = { version: 2, nombre: 'prueba v2', versiones: [
+  { periodo: 'p20', nombre: 'p20 · prueba', dias: { jueves: { cena: [L('huevo', 108)] }, viernes: { cena: [L('huevo', 54)] } }, tipos: { descanso: { jueves: { cena: [L('patata_cruda', 200)] } } } },
+  { periodo: 'p19', dias: { lunes: { comida: [L('arroz_blanco_crudo', 100)] } } },
+] };
+
+test('validarDieta versión 2: versiones por periodo con menús por tipo de día; errores con la versión y el tipo', () => {
+  const r = validarDieta(V2, { foodIds: IDS });
+  assert.deepEqual([r.ok, r.errores, r.desconocidos], [true, [], []]);
+  assert.deepEqual(r.dieta.versiones.map((v) => [v.periodo, v.nombre, Object.keys(v.dias), Object.keys(v.tipos)]), [['p20', 'p20 · prueba', ['jueves', 'viernes'], ['descanso']], ['p19', 'p19', ['lunes'], []]]);
+  const malos = [
+    [{ version: 2 }, /Falta «versiones»/],
+    [{ versiones: [] }, /Falta «versiones»/],
+    [{ versiones: [{ dias: {} }] }, /versión 1: falta «periodo»/],
+    [{ versiones: [{ periodo: 'a', dias: {} }, { periodo: 'a', dias: {} }] }, /versión «a»: periodo repetido/],
+    [{ versiones: [{ periodo: 'a', dias: {}, tipos: [] }] }, /versión «a»: «tipos» debe ser un objeto/],
+    [{ versiones: [{ periodo: 'a', dias: { lunez: {} } }] }, /versión «a», día no válido «lunez»/],
+    [{ versiones: [{ periodo: 'a', tipos: { descanso: { lunes: { cena: [L('huevo', 0)] } } } }] }, /versión «a», descanso, lunes, cena, huevo: los gramos deben ser un número mayor que 0/],
+  ];
+  for (const [raw, re] of malos) { const x = validarDieta(raw); assert.equal(x.ok, false, JSON.stringify(raw)); assert.match(x.errores.join(' | '), re); }
+  const d = validarDieta({ versiones: [{ periodo: 'a', tipos: { descanso: { lunes: { cena: [L('no_existe', 5)] } } } }] }, { foodIds: IDS });
+  assert.deepEqual([d.ok, d.desconocidos], [true, [{ periodo: 'a', tipo: 'descanso', dia: 'lunes', comida: 'cena', food_id: 'no_existe' }]]);
+});
+
+test('elegirMenu: versión del periodo vigente y menú del tipo de día (con excepciones); mensajes cuando no hay', () => {
+  const d1 = validarDieta({ dias: { viernes: { cena: [L('huevo', 108)] } } }).dieta;
+  const d2 = validarDieta(V2).dieta;
+  const cena = (sel) => sel.comidas.map((m) => [m.meal, m.lines.map((l) => [l.food_id, l.grams])]);
+  // versión 1: sin plan, el del día de la semana
+  assert.deepEqual([elegirMenu(d1, '2026-10-16', null).ok, elegirMenu(d1, '2026-10-16', null).tipo], [true, null]);
+  assert.deepEqual(elegirMenu(d1, '2026-10-15', null), { ok: false, error: 'No hay dieta para el jueves' });
+  // versión 2: hace falta plan
+  assert.deepEqual(elegirMenu(d2, '2026-10-16', null), { ok: false, error: SIN_PLAN });
+  // viernes 16 en p20, fuerza (sin menú propio de fuerza): el normal
+  const vie = elegirMenu(d2, '2026-10-16', PLAN);
+  assert.deepEqual([vie.ok, vie.dia, vie.etiqueta, vie.tipo, vie.version, cena(vie)], [true, 'viernes', 'viernes', 'Fuerza', 'p20 · prueba', [['cena', [['huevo', 54]]]]]);
+  // jueves 15: la semana dice fuerza, la excepción lo cambia a descanso -> su menú propio
+  const jue = elegirMenu(d2, '2026-10-15', PLAN);
+  assert.deepEqual([jue.tipo, cena(jue)], ['Descanso', [['cena', [['patata_cruda', 200]]]]]);
+  // jueves 8 (fuerza, sin excepción): el normal
+  assert.deepEqual(cena(elegirMenu(d2, '2026-10-08', PLAN)), [['cena', [['huevo', 108]]]]);
+  // sábado 10: descanso, pero ni descanso ni normal tienen sábado
+  assert.deepEqual(elegirMenu(d2, '2026-10-10', PLAN), { ok: false, error: 'No hay dieta para el sábado' });
+  // p19 (sin tipos ni semana): el normal, sin tipo
+  const lun = elegirMenu(d2, '2026-10-19', PLAN);
+  assert.deepEqual([lun.ok, lun.tipo, lun.version], [true, null, 'p19']);
+  // periodo sin versión y fecha sin periodo
+  assert.deepEqual(elegirMenu(d2, '2026-11-02', PLAN), { ok: false, error: 'Tu dieta no tiene menú para el periodo «Vacaciones».' });
+  assert.deepEqual(elegirMenu(d2, '2026-10-01', PLAN), { ok: false, error: 'Tu plan de objetivos no tiene ningún periodo para este día, así que no hay dieta que copiar.' });
 });
 
 test('Repetir con la dieta: todo marcado, cada comida en la suya y registros normales (sin vínculo a plantilla)', () => {
@@ -274,4 +349,20 @@ test('Repetir con la dieta: un alimento ausente se etiqueta «no está en tu doc
   const t = await setup({ dieta: JSON.stringify({ dias: { viernes: { cena: [L('alimento_nuevo_x', 50)] } } }) });
   await t.copiar();
   assert.equal(t.$('.repeat-item .tag').textContent, 'no está en tu documento');
+});
+
+test('Copiar dieta del día (versión 2): elige con el plan del iPhone el menú del periodo y del tipo de día; sin plan, lo dice', { skip }, async () => {
+  const sinPlan = await setup({ dieta: JSON.stringify(V2) });
+  await sinPlan.copiar();
+  assert.match(sinPlan.$('.alert-fail').textContent, /No se pudo copiar la dieta: Para copiar la dieta necesitas un plan de objetivos \(Más → Objetivos\)\./);
+  assert.equal(sinPlan.$('.repeat'), null);
+  // viernes 16 de descanso por excepción; el viernes no tiene menú propio de descanso: el normal, con el nombre de su tipo
+  const plan = { ...PLAN, excepciones: [{ fecha: '2026-10-16', tipo: 'descanso' }] };
+  const t = await setup({ dieta: JSON.stringify(V2), ajustes: { plan_objetivos: plan } });
+  await t.copiar();
+  assert.equal(t.$('.source-label').textContent, 'De: dieta del viernes · Descanso');
+  assert.equal(t.$('.dieta-version').textContent, 'p20 · prueba');
+  assert.equal(t.$$('.repeat-item input[type=checkbox]').length, 1);
+  await t.act(() => t.btn('Añadir').click());
+  assert.deepEqual((await t.store.allMeals()).map((m) => [m.date, m.meal, m.text]), [['2026-10-16', 'cena', 'Dieta del viernes']]);
 });

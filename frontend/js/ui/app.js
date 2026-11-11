@@ -20,7 +20,7 @@ import { diaryReport, dayTotals, evaluate, shiftDate, sinReferencia } from '../c
 import { avisoParciales } from '../core/parciales.js';
 import { createRepeat, validateRepeat, toRecords, marcadoInicialPara, DESTINO_ORIGEN } from '../core/repeat.js';
 import { repeatScreen } from './repeat-screen.js';
-import { parseDieta, diaDeSemana, dietaComoComidas, DIA_LABEL } from '../core/dieta.js';
+import { parseDieta, elegirMenu } from '../core/dieta.js';
 import { cleanTemplates, nameError, templateFromRecord, addTemplate, removeTemplate, templateAsMeals, mergeTemplates } from '../core/templates.js';
 import { templatesScreen } from './templates-screen.js';
 import { newEntry, resolveEntry, cleanLog, addEntry, updateEntry, removeEntry, logToCSV, mergeLog } from '../core/phrase-log.js';
@@ -579,13 +579,13 @@ export function mountApp(root, deps) {
     const trabajo = track((async () => {
       try {
         if (!deps.fetchDieta) throw new Error('esta versión de la app no carga la dieta');
-        const dia = diaDeSemana(fecha);
         const { text, copia } = await cargarDieta();
         const res = parseDieta(text, { foodIds: byId() });
         if (!res.ok) throw new Error(`data/dieta.json no es válido: ${res.errores.slice(0, 3).join(' ')}${res.errores.length > 3 ? ` (y ${res.errores.length - 3} más)` : ''}`);
-        const meals = dietaComoComidas(res.dieta, dia);
-        if (!meals) throw new Error(`No hay dieta para el ${DIA_LABEL[dia]}`);
-        state.repeat = createRepeat({ meals, dieta: { dia, etiqueta: DIA_LABEL[dia], copia }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
+        // Versión 2: el menú del periodo de tu plan en esa fecha y de su tipo de día (descanso, carrera...).
+        const sel = elegirMenu(res.dieta, fecha, state.plan);
+        if (!sel.ok) throw new Error(sel.error);
+        state.repeat = createRepeat({ meals: sel.comidas, dieta: { dia: sel.dia, etiqueta: sel.etiqueta, copia, tipo: sel.tipo, version: sel.version }, foodsById: byId(), targetDate: fecha, targetMeal: DESTINO_ORIGEN, marcadoInicial: true });
         state.repeatBack = 'diaryTarget'; state.screen = 'repeat';
       } finally {
         if (state.diaryMsg === mensaje) state.diaryMsg = '';

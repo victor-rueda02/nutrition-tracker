@@ -89,7 +89,8 @@ export function repeatScreen(ui) {
   const sinDocumento = r.dieta ? [...new Set(r.groups.flatMap((g) => g.items).filter((i) => !i.known).map((i) => i.food_id))] : [];
   const screen = h('main', { class: 'repeat' },
     ui.header(r.dieta ? 'Dieta del día' : r.template ? 'Usar plantilla' : 'Repetir', ui.back),
-    r.dieta ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: dieta del ${r.dieta.etiqueta}`)) : r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between daynav repeat-source', 'aria-label': 'Día de origen' },
+    r.dieta ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: dieta del ${r.dieta.etiqueta}${r.dieta.tipo ? ` · ${r.dieta.tipo}` : ''}`),
+      r.dieta.version ? h('span', { class: 'muted small dieta-version' }, r.dieta.version) : null) : r.template ? h('p', { class: 'repeat-source' }, h('strong', { class: 'source-label' }, `De: plantilla «${r.template.nombre}»`)) : h('nav', { class: 'row between daynav repeat-source', 'aria-label': 'Día de origen' },
       h('button', { class: 'icon', 'aria-label': 'Día de origen anterior', onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, -1)) }, '‹'),
       h('strong', { class: 'source-label' }, `De: ${ui.dayLabel(r.sourceDate)}`),
       h('button', { class: 'icon', 'aria-label': 'Día de origen siguiente', disabled: r.sourceDate >= ui.today(), onclick: () => irAOrigen(ui.shiftDate(r.sourceDate, 1)) }, '›')),
