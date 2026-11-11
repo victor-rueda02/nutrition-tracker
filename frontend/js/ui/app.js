@@ -838,7 +838,7 @@ export function mountApp(root, deps) {
     };
 
     footer.append(totalsEl, hint, h('div', { class: 'row' }, saveBtn));
-    const dateIn = editing ? h('input', { type: 'date', 'aria-label': 'Fecha', value: d.date, max: today(), onchange: (e) => { state.draft = setDate(state.draft, e.target.value); paintFooter(); } }) : null;
+    const dateIn = editing ? h('input', { type: 'date', 'aria-label': 'Fecha', value: d.date, onchange: (e) => { state.draft = setDate(state.draft, e.target.value); paintFooter(); } }) : null;
     const screen = h('main', {},
       editing ? header('Editar comida', () => { state.draft = null; openDay(editing.date); }) : header('Confirmar', () => { if (d.volver) { state.screen = d.volver; state.draft = null; } else state.screen = 'home'; render(); }),
       editing ? h('p', { class: 'muted small' }, 'Los cambios no se guardan hasta pulsar «Guardar cambios».') : null,
@@ -927,6 +927,7 @@ export function mountApp(root, deps) {
   const dayLabel = (date) => {
     if (date === today()) return 'Hoy';
     if (date === shiftDate(today(), -1)) return 'Ayer';
+    if (date === shiftDate(today(), 1)) return 'Mañana';
     const [y, m, d] = date.split('-').map(Number);
     return new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(y, m - 1, d)));
   };
@@ -974,12 +975,12 @@ export function mountApp(root, deps) {
   const ordinarias = MEALS.filter((m) => m !== 'otro');
 
   function dayHeader() {
-    const rel = state.day === today() ? 'Hoy' : state.day === shiftDate(today(), -1) ? 'Ayer' : null;
+    const rel = state.day === today() ? 'Hoy' : state.day === shiftDate(today(), -1) ? 'Ayer' : state.day === shiftDate(today(), 1) ? 'Mañana' : null;
     return h('header', { class: 'top diary-top' },
       h('nav', { class: 'daynav', 'aria-label': 'Día' },
         h('button', { class: 'icon', 'aria-label': 'Día anterior', onclick: () => openDay(shiftDate(state.day, -1)) }, icon(doc, 'prev')),
         h('div', { class: 'daytitle' }, h('strong', { class: 'daylabel' }, rel ?? shortDate(state.day)), rel ? h('small', { class: 'muted' }, shortDate(state.day)) : null),
-        h('button', { class: 'icon', 'aria-label': 'Día siguiente', disabled: state.day >= today(), onclick: () => openDay(shiftDate(state.day, 1)) }, icon(doc, 'next'))),
+        h('button', { class: 'icon', 'aria-label': 'Día siguiente', onclick: () => openDay(shiftDate(state.day, 1)) }, icon(doc, 'next'))),
       h('button', { type: 'button', class: 'icon top-action', 'aria-label': 'Más opciones del día', 'aria-haspopup': 'menu', 'aria-expanded': String(state.menu), onclick: () => { state.menu = !state.menu; render(); } }, h('span', { class: 'dots-ring' }, icon(doc, 'dots'))));
   }
 

@@ -80,7 +80,7 @@ export function repeatScreen(ui) {
   };
 
   const irAOrigen = (date) => ui.openRepeat({ sourceDate: date, targetDate: state.repeat.targetDate, targetMeal: state.repeat.targetMeal, marcadoInicial: !!state.repeatMarcarDia });
-  const dateIn = h('input', { type: 'date', 'aria-label': 'Fecha de destino', value: r.targetDate, max: ui.today(), onchange: (e) => { state.repeat = setTarget(state.repeat, { date: e.target.value }); paint(); } });
+  const dateIn = h('input', { type: 'date', 'aria-label': 'Fecha de destino', value: r.targetDate, onchange: (e) => { state.repeat = setTarget(state.repeat, { date: e.target.value }); paint(); } });
   const mealSel = h('select', { 'aria-label': 'Comida de destino', onchange: (e) => { state.repeat = setTarget(state.repeat, { meal: e.target.value }); paint(); } },
     h('option', { value: DESTINO_ORIGEN, selected: r.targetMeal === DESTINO_ORIGEN }, 'Como en el origen'),
     MEALS.map((m) => h('option', { value: m, selected: r.targetMeal === m }, ui.MEAL_LABEL[m])));

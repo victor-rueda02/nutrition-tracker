@@ -394,3 +394,25 @@ test('Copiar dieta del día (versión 2): elige con el plan del iPhone el menú 
   await t.act(() => t.btn('Añadir').click());
   assert.deepEqual((await t.store.allMeals()).map((m) => [m.date, m.meal, m.text]), [['2026-10-16', 'cena', 'Dieta del viernes']]);
 });
+
+test('Diario: se puede ir a mañana (y más allá), se ve vacío y «Copiar dieta del día» guarda en la fecha futura', { skip }, async () => {
+  const t = await setup(); // hoy: viernes 2026-10-16; la dieta de prueba solo tiene viernes
+  const sig = () => t.$('button[aria-label="Día siguiente"]');
+  assert.equal(sig().disabled, false);
+  await t.act(() => sig().click());
+  assert.equal(t.$('.daylabel').textContent, 'Mañana');
+  assert.equal(t.$('.alert-fail'), null);
+  assert.equal((await t.store.allMeals()).length, 0);
+  await t.act(() => sig().click()); // lunes 19: sin dieta de prueba
+  assert.notEqual(t.$('.daylabel').textContent, 'Mañana');
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click());
+  await t.act(() => t.$('button[aria-label="Día anterior"]').click()); // vuelve a hoy
+  // viernes de la semana siguiente (2026-10-23): dieta del viernes copiada con destino en esa fecha
+  for (let i = 0; i < 7; i++) await t.act(() => sig().click());
+  await t.copiar();
+  assert.equal(t.$('input[aria-label="Fecha de destino"]').value, '2026-10-23');
+  assert.equal(t.$('input[aria-label="Fecha de destino"]').max, '');
+  await t.act(() => t.btn('Añadir').click());
+  const guardadas = await t.store.allMeals();
+  assert.ok(guardadas.length > 0 && guardadas.every((m) => m.date === '2026-10-23'));
+});
