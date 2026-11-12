@@ -322,10 +322,14 @@ test('AM (12-11-2026): estimaciones que cierran los totales parciales de la diet
   assert.equal(n('atun_lata_aceite').vitamina_k_ug, Math.round((17.513 * 0.602 + 82.487 * 0.025) * 10) / 10);
   assert.match(fu('atun_lata_aceite'), /vitamina_k_ug = 12\.6 \(estimado\)/);
   // morro de cerdo (solo ingrediente de las lentejas): manitas (167859) y corteza de cerdo (167961) escalada por la proteína
-  assert.deepEqual(['vitamina_k_ug', 'azucares_g', 'vitamina_e_mg', 'vitamina_d_ug'].map((k) => n('morro_cerdo')[k]), [0, 0, 0.02, 0]);
+  assert.deepEqual(['vitamina_k_ug', 'azucares_g', 'vitamina_e_mg'].map((k) => n('morro_cerdo')[k]), [0, 0, 0.02]);
+  assert.equal(n('morro_cerdo').vitamina_d_ug, undefined); // el 0 de USDA en la corteza es supuesto, no medido: sin dato (regla 4)
+  assert.match(fu('morro_cerdo'), /vitamina_d_ug vacía/);
   assert.ok(Math.abs(n('morro_cerdo').colina_mg - 164 * 22.45 / 61.3) < 0.01);
   assert.match(fu('morro_cerdo'), /estimados \(sin dato de oreja de cerdo en USDA\)/);
   // las recetas que los usan ya no tienen huecos en esos nutrientes
-  for (const k of ['azucares_g', 'vitamina_d_ug', 'vitamina_e_mg', 'vitamina_k_ug', 'colina_mg']) assert.equal(typeof n('lentejas_caseras')[k], 'number', k);
+  for (const k of ['azucares_g', 'vitamina_e_mg', 'vitamina_k_ug', 'colina_mg']) assert.equal(typeof n('lentejas_caseras')[k], 'number', k);
+  assert.equal(n('lentejas_caseras').vitamina_d_ug, undefined); // sigue sin dato por el morro
+  assert.doesNotMatch(fu('atun_lata_aceite'), /vitamina K vac[ií]a/);
   assert.equal(typeof n('atun_lata_con_aceite').vitamina_k_ug, 'number');
 });
