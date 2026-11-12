@@ -7,6 +7,7 @@ import { hashText } from './core/catalog-update.js';
 import { openIdbStore } from './storage/idb-store.js';
 import { createAiClient } from './ai-client.js';
 import { mountApp } from './ui/app.js';
+import { vigilarVersion } from './sw-update.js';
 
 async function fetchText(path) {
   const res = await fetch(DATA_BASE + path);
@@ -20,37 +21,6 @@ async function fetchPublished() {
   const res = await fetch(`${DATA_BASE}foods.csv?fresco=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`foods.csv: ${res.status}`);
   return res.text();
-}
-
-// Service worker y avisos de versión nueva. iOS suele reanudar la app instalada sin volver a cargarla, y sin carga no busca
-// versión nueva: al volver a primer plano se pide (como mucho cada 5 min) y, cuando la versión nueva toma el control, se avisa
-// arriba con «Recargar». Nunca se recarga solo: un borrador sin guardar se perdería.
-function registrarServiceWorker() {
-  if (!('serviceWorker' in navigator)) return;
-  const sw = navigator.serviceWorker;
-  const habiaVersion = Boolean(sw.controller); // la primera instalación no es «versión nueva»
-  sw.register('sw.js').then((reg) => {
-    let ultima = Date.now();
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState !== 'visible' || Date.now() - ultima < 5 * 60 * 1000) return;
-      ultima = Date.now();
-      reg.update().catch((e) => globalThis.console?.error?.('No se pudo buscar una versión nueva de la app', e));
-    });
-  }).catch((e) => globalThis.console?.error?.('No se pudo registrar el service worker', e));
-  sw.addEventListener('controllerchange', () => {
-    if (!habiaVersion || document.querySelector('.aviso-version')) return;
-    const aviso = document.createElement('div');
-    aviso.className = 'aviso-version';
-    aviso.setAttribute('role', 'status');
-    const texto = document.createElement('span');
-    texto.textContent = 'Hay una versión nueva de la app.';
-    const boton = document.createElement('button');
-    boton.type = 'button';
-    boton.textContent = 'Recargar';
-    boton.addEventListener('click', () => location.reload());
-    aviso.append(texto, boton);
-    document.body.append(aviso);
-  });
 }
 
 // data/dieta.json publicado, siempre fresco (como el foods.csv: sin caché del navegador ni del service worker). Lanza si no hay red.
@@ -94,6 +64,7 @@ async function boot() {
   } catch (e) {
     root.textContent = `No se pudo iniciar la app: ${e.message}`;
   }
-  registrarServiceWorker();
 }
+// Antes de arrancar: así no se pierde el aviso si la versión nueva toma el control durante el arranque.
+vigilarVersion({ sw: 'serviceWorker' in navigator ? navigator.serviceWorker : null, doc: document, reload: () => location.reload() });
 boot();

@@ -24,8 +24,8 @@ test('service worker: instala y actualiza saltándose la caché HTTP (si no, abr
   assert.ok(sw.includes('if (res.ok && !res.redirected)'), 'una respuesta redirigida no se guarda');
   const main = readFileSync(join(fe, 'js', 'main.js'), 'utf8');
   assert.match(main, /mountApp\(root, \{[^}]*\bappVersion: APP_VERSION\b/, 'main pasa la versión del código a la app');
-  assert.ok(main.includes("reg.update()") && main.includes("'controllerchange'") && main.includes("'visibilitychange'"), 'busca versión nueva al volver a primer plano y avisa al cambiar');
-  assert.ok(!main.includes('location.reload();\n') || main.includes("boton.addEventListener('click', () => location.reload())"), 'solo recarga si lo pide Victor');
+  // el aviso de versión nueva se activa antes de arrancar (no se pierde si el service worker cambia durante el arranque)
+  assert.ok(main.indexOf('vigilarVersion({') > -1 && main.indexOf('vigilarVersion({') < main.lastIndexOf('boot();'), 'vigilarVersion antes de boot()');
 });
 
 test('versión de la app: APP_VERSION de config.js es igual que VERSION de sw.js (al publicar se suben las dos)', () => {

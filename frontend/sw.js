@@ -56,6 +56,7 @@ const ASSETS = [
   'js/core/usda-cache.js',
   'js/core/usda-core.js',
   'js/main.js',
+  'js/sw-update.js',
   'js/storage/idb-store.js',
   'js/storage/store.js',
   'js/ui/app.js',
