@@ -154,7 +154,7 @@ summary::-webkit-details-marker { display:none; }
 button.danger { color:var(--bar-over); } button.link.danger { color:var(--bar-over); }
 .confirm-delete { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 
-/* Aviso de versión nueva de la app (main.js, al tomar el control el service worker nuevo): arriba, sobre la cabecera fija. */
+/* Aviso de versión nueva de la app (js/sw-update.js, al tomar el control el service worker nuevo): arriba, sobre la cabecera fija. */
 .aviso-version { position:fixed; z-index:50; left:12px; right:12px; top:calc(env(safe-area-inset-top, 0px) + 8px); display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:var(--radius); background:var(--surface); color:var(--fg); border:1px solid var(--line); box-shadow:var(--shadow); }
 .aviso-version-botones { display:flex; gap:8px; margin-left:auto; }
 .aviso-version button.secondary { background:var(--soft); color:var(--fg); }
