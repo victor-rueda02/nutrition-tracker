@@ -22,3 +22,6 @@
 .repeat .repeat-qty input.grams { flex:none; width:5.5rem; background:var(--bg); }
 .repeat .repeat-target label { display:block; }
 .repeat .bar .totals { color:var(--fg); }
+/* Aceite: «≈ N flus» debajo de la fila de gramos */
+.repeat .repeat-flus { margin-top:4px; }
+.repeat .repeat-item.off .repeat-flus { opacity:.5; }

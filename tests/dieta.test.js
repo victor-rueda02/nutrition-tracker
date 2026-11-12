@@ -438,6 +438,7 @@ test('aceite en flus: «≈ N flus» junto a los gramos en el Diario y en Repeti
   assert.deepEqual(flusVisibles(), [`≈ ${flusDeGramos(aceite, 20)} flus`]);
   await t.act(() => t.$('button[aria-label="−10 g a Aceite de oliva"]').click());
   assert.equal(flusDeGramos(aceite, 0.1), 1); // nunca «≈ 0 flus»
+  assert.equal(flusDeGramos({ porciones: [{ nombre: 'Flus', gramos: 0.3 }] }, 3), 10); // sin distinguir mayúsculas
   await t.act(() => t.btn('Añadir').click());
   assert.ok(t.$$('.line-grams').some((s) => s.textContent === `10 g (≈ ${flusDeGramos(aceite, 10)} flus)`));
   assert.ok(t.$$('.line-grams').some((s) => s.textContent === '100 g')); // el arroz, sin flus
