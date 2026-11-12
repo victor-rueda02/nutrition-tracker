@@ -388,7 +388,8 @@ test('porción nombrada: el número es el de la porción («y medio» suma); con
   const cuch = aceite.porciones.find((p) => p.nombre === 'cucharada').gramos;
   const vaso = leche.porciones.find((p) => p.nombre === 'vaso').gramos;
   const bien = [['una cucharada y media de aceite', aceite, 1.5 * cuch], ['1 cucharada y media de aceite', aceite, 1.5 * cuch], ['dos cucharadas y media de aceite', aceite, 2.5 * cuch],
-    ['un vaso y medio de leche', leche, 1.5 * vaso], ['un cuarto de vaso de leche', leche, vaso / 4], ['medio vaso de leche', leche, vaso / 2], ['1,5 cucharadas de aceite', aceite, 1.5 * cuch]];
+    ['un vaso y medio de leche', leche, 1.5 * vaso], ['un cuarto de vaso de leche', leche, vaso / 4], ['medio vaso de leche', leche, vaso / 2], ['1,5 cucharadas de aceite', aceite, 1.5 * cuch],
+    ['tres cuartos de vaso de leche', leche, 0.75 * vaso], ['dos tercios de vaso de leche', leche, (2 / 3) * vaso], ['un tercio de vaso de leche', leche, vaso / 3]];
   for (const [t, f, g] of bien) assert.equal(gramosDePorcionNombrada(t, f), Math.round(g * 1000) / 1000, t);
   const dudosos = [['cucharada y media de aceite', aceite], ['un vaso de leche con dos cucharaditas de cacao', leche], ['un vaso de leche con dos cucharaditas de cacao', cacao],
     ['dos cucharaditas de cacao y un vaso de leche', leche], ['4 flus de aceite y una cucharada de aceite', aceite], ['3 rebanadas de pan de molde integral de 30', pan], ['125 de yogur ligero', realFoods.find((f) => f.id === 'yogur_griego_ligero')]];

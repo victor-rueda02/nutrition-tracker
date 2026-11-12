@@ -100,7 +100,12 @@ export function gramosDePorcionNombrada(text, food) {
   let ini = s;
   if (letras[ini - 1] === 'de') ini--;
   const desde = Math.max(0, ini - 2);
-  const n0 = cantidadDicha(tw.slice(desde, ini).join(' '));
+  // Fracción en plural justo delante («tres cuartos de vaso», «dos tercios de vaso»): número ÷ 4, 3 o 2.
+  const FRACCION = { cuartos: 4, tercios: 3, medios: 2 };
+  const den = FRACCION[letras[ini - 1]];
+  const num = den ? cantidadDicha(tw.slice(desde, ini - 1).join(' ')) : null;
+  if (den && num === null) return null;
+  const n0 = den ? num / den : cantidadDicha(tw.slice(desde, ini).join(' '));
   if (n0 === null || !(n0 > 0)) return null;
   let fin = e;
   let n = n0;
