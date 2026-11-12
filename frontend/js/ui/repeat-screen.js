@@ -4,6 +4,7 @@
 import { toggleItem, toggleComida, estadoComida, setItemGrams, nudge, setTarget, repeatTotals, validateRepeat, findItem, PASOS, DESTINO_ORIGEN } from '../core/repeat.js';
 import { MEALS } from '../core/meal-defaults.js';
 import { MAX_GRAMS } from '../core/ai-contract.js';
+import { textoFlus } from '../core/portions.js';
 
 const fmtGramos = (g) => (g === null || g === undefined ? '' : String(g).replace('.', ','));
 const signo = (d) => `${d > 0 ? '+' : '−'}${Math.abs(d)}`;
@@ -47,8 +48,10 @@ export function repeatScreen(ui) {
       onfocus: (e) => seleccionar(e.target),
       oninput: (e) => { state.repeat = setItemGrams(state.repeat, it.key, e.target.value); marcarMal(); paint(); },
     });
+    const unidad = h('span', { class: 'repeat-unidad' }, 'g');
     const marcarMal = () => {
       const cur = findItem(state.repeat, it.key);
+      unidad.textContent = `g${textoFlus(ui.byId().get(it.food_id), cur.grams)}`; // aceite: «g (≈ N flus)»
       const mal = cur.checked && !(cur.grams > 0 && cur.grams <= MAX_GRAMS);
       input.classList.toggle('bad', mal);
       input.setAttribute('aria-invalid', String(mal));
@@ -63,7 +66,7 @@ export function repeatScreen(ui) {
     }, signo(d));
     row = h('li', { class: `repeat-item${it.checked ? '' : ' off'}`, 'data-key': it.key },
       h('label', { class: 'row repeat-name' }, check, h('span', {}, it.nombre), it.known ? null : h('span', { class: 'tag' }, r.dieta ? 'no está en tu documento' : 'ya no está en tu documento')),
-      h('div', { class: 'row repeat-qty' }, boton(PASOS[0]), boton(PASOS[1]), input, h('span', {}, 'g'), boton(PASOS[2]), boton(PASOS[3])));
+      h('div', { class: 'row repeat-qty' }, boton(PASOS[0]), boton(PASOS[1]), input, unidad, boton(PASOS[2]), boton(PASOS[3])));
     marcarMal();
     refrescos.push(() => { const cur = findItem(state.repeat, it.key); check.checked = cur.checked; row.classList.toggle('off', !cur.checked); marcarMal(); });
     return row;

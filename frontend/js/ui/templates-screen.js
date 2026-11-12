@@ -2,6 +2,7 @@
 // (para ajustar gramos, fecha y comida) y «Borrar» pide confirmación dentro de la app.
 // Mismo aspecto que una comida del Diario (card meal, meal-head, line-*); estilos propios en css/plantillas.css.
 import { nutrientsForGrams } from '../core/nutrients.js';
+import { textoFlus } from '../core/portions.js';
 
 // ui: { h, state, byId, header, nf0, nf1, MEAL_LABEL, useTemplate, deleteTemplate, back }
 export function templatesScreen(ui) {
@@ -22,7 +23,7 @@ export function templatesScreen(ui) {
     const kcal = kcalLinea(l);
     return h('li', { class: 'line' },
       h('span', { class: 'line-name' }, ui.byId().get(l.food_id)?.nombre ?? l.food_id), h('span', { class: 'sep' }, ' · '),
-      h('span', { class: 'line-grams' }, `${ui.nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
+      h('span', { class: 'line-grams' }, `${ui.nf1.format(l.grams)} g${textoFlus(ui.byId().get(l.food_id), l.grams)}`), h('span', { class: 'sep' }, ' · '),
       h('span', { class: kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, kcal === null ? 'sin dato' : `${ui.nf0.format(kcal)} kcal`));
   };
   return h('main', { class: 'plantillas' },

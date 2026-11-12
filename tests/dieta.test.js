@@ -416,3 +416,17 @@ test('Diario: se puede ir a mañana (y más allá), se ve vacío y «Copiar diet
   const guardadas = await t.store.allMeals();
   assert.ok(guardadas.length > 0 && guardadas.every((m) => m.date === '2026-10-23'));
 });
+
+test('aceite en flus: «≈ N flus» junto a los gramos en el Diario y en Repetir (la app sigue guardando gramos)', { skip }, async () => {
+  const { flusDeGramos, textoFlus } = await import('../frontend/js/core/portions.js');
+  const aceite = realFoods.find((f) => f.id === 'aceite_oliva');
+  assert.equal(flusDeGramos(aceite, 7), Math.round(7 / aceite.porciones.find((p) => p.nombre === 'flus').gramos));
+  assert.equal(flusDeGramos(realFoods.find((f) => f.id === 'huevo'), 108), null); // sin porción flus: nada
+  assert.equal(textoFlus(aceite, 0), '');
+  const t = await setup({ dieta: JSON.stringify({ dias: { viernes: { comida: [L('arroz_blanco_crudo', 100), L('aceite_oliva', 7)] } } }) });
+  await t.copiar();
+  assert.deepEqual(t.$$('.repeat-unidad').map((s) => s.textContent), ['g', `g (≈ ${flusDeGramos(aceite, 7)} flus)`]);
+  await t.act(() => t.btn('Añadir').click());
+  assert.ok(t.$$('.line-grams').some((s) => s.textContent === `7 g (≈ ${flusDeGramos(aceite, 7)} flus)`));
+  assert.deepEqual((await t.store.allMeals())[0].lines.map((l) => l.grams), [100, 7]); // se guardan gramos
+});

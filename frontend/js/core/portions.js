@@ -51,3 +51,11 @@ export function portionToGrams(food, name, quantity = 1) {
   }
   return match.length === 1 ? match[0].gramos * quantity : null;
 }
+
+// Flus (pulsaciones del pulverizador) que son unos gramos, si el alimento tiene esa porción (el aceite): para enseñar
+// «≈ N flus» junto a los gramos. null si no la tiene o no hay gramos.
+export function flusDeGramos(food, grams) {
+  const p = (food?.porciones ?? []).find((x) => x.nombre === 'flus' && x.gramos > 0);
+  return p && grams > 0 ? Math.round(grams / p.gramos) : null;
+}
+export const textoFlus = (food, grams) => { const n = flusDeGramos(food, grams); return n === null ? '' : ` (≈ ${n} flus)`; };

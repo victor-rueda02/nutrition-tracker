@@ -40,6 +40,7 @@ import { masScreen } from './more-screen.js';
 import { cenasActions, cenasScreen } from './cenas-screen.js';
 import { detalleAlimentoScreen } from './detalle-alimento-screen.js';
 import { detalleNutrienteScreen } from './detalle-nutriente-screen.js';
+import { flusDeGramos, textoFlus } from '../core/portions.js';
 
 const FLAG_TEXT = {
   variante_por_defecto: 'No dijiste el estado: se usa la variante por defecto',
@@ -789,6 +790,8 @@ export function mountApp(root, deps) {
         if (cur.grams > 0) {
           const n = nutrientsForGrams(f, cur.grams, ['energia_kcal', 'proteina_g']);
           txt = `${n.energia_kcal === null ? 'sin dato de kcal' : `${nf0.format(n.energia_kcal)} kcal`} · ${n.proteina_g === null ? 'sin dato de proteína' : `${nf1.format(n.proteina_g)} g prot.`}`;
+          const flus = flusDeGramos(f, cur.grams);
+          if (flus !== null) txt += ` · ≈ ${flus} flus`;
         }
         prev.textContent = txt;
         const isHigh = cur.grams > MAX_GRAMS;
@@ -999,7 +1002,7 @@ export function mountApp(root, deps) {
         h('ul', { class: 'lines' }, r.lines.map((l, i) => h('li', { class: 'line' },
           // el nombre abre el detalle del alimento con los gramos de esa línea (si el alimento ya no está en el documento, no hay detalle)
           h('span', { class: 'line-name' }, byId().has(l.food_id) ? h('button', { type: 'button', class: 'line-open', 'aria-label': `Ver detalle de ${l.nombre}`, onclick: () => abrirDetalle({ foodId: l.food_id, origen: 'diary', record: r.record, lineIndex: i }) }, l.nombre) : l.nombre), h('span', { class: 'sep' }, ' · '),
-          h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g`), h('span', { class: 'sep' }, ' · '),
+          h('span', { class: 'line-grams' }, `${nf1.format(l.grams)} g${textoFlus(byId().get(l.food_id), l.grams)}`), h('span', { class: 'sep' }, ' · '),
           h('span', { class: l.kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, l.kcal === null ? 'sin dato' : `${nf0.format(l.kcal)} kcal`)))),
         h('div', { class: 'row between registro-actions' },
           h('span', { class: 'muted small' }, c.registros.length > 1 ? fmtKcal(r) : ''),
