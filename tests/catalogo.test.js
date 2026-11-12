@@ -327,7 +327,7 @@ test('AM (12-11-2026): estimaciones que cierran los totales parciales de la diet
   assert.match(fu('morro_cerdo'), /vitamina_d_ug vacía/);
   assert.ok(Math.abs(n('morro_cerdo').colina_mg - 164 * 22.45 / 61.3) < 0.01);
   assert.match(fu('morro_cerdo'), /estimados \(sin dato de oreja de cerdo en USDA\)/);
-  // las recetas que los usan ya no tienen huecos en esos nutrientes
+  // las recetas que los usan ya no tienen huecos en esos nutrientes, salvo la vitamina D
   for (const k of ['azucares_g', 'vitamina_e_mg', 'vitamina_k_ug', 'colina_mg']) assert.equal(typeof n('lentejas_caseras')[k], 'number', k);
   assert.equal(n('lentejas_caseras').vitamina_d_ug, undefined); // sigue sin dato por el morro
   assert.doesNotMatch(fu('atun_lata_aceite'), /vitamina K vac[ií]a/);
