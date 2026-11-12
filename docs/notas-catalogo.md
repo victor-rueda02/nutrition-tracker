@@ -244,8 +244,8 @@ Aprobadas por Victor el 12-11-2026 («ok» a estimar con un dato parecido de USD
 |---|---|---|---|
 | pasta_seca | colina (mg) | vacío | 15,1 |
 | atun_lata_aceite | vitamina K (µg) | vacío | 12,6 |
-| morro_cerdo | K / azúcares / E / colina | vacíos | 0 / 0 / 0,02 / 60,06 (D sigue vacía) |
-| lentejas_caseras | azúcares / E / K / colina | vacíos | 0,574 / 0,136 / 1,814 / 26,726 (D sigue vacía) |
+| morro_cerdo | K / azúcares / E / colina | vacíos | 0 / 0 / 0,02 / 60,06 (D 0,6 desde AM2) |
+| lentejas_caseras | azúcares / E / K / colina | vacíos | 0,574 / 0,136 / 1,814 / 26,726 (D 0,096 desde AM2) |
 | atun_lata_con_aceite | vitamina K (µg) | vacío | 19,985 |
 
 Los tests de totales parciales usan ahora `foodsPastaSinColina` (helpers.js) como ejemplo de dato que falta, para no depender del catálogo.
