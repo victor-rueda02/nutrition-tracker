@@ -249,3 +249,4 @@ Aprobadas por Victor el 12-11-2026 («ok» a estimar con un dato parecido de USD
 | atun_lata_con_aceite | vitamina K (µg) | vacío | 19,985 |
 
 Los tests de totales parciales usan ahora `foodsPastaSinColina` (helpers.js) como ejemplo de dato que falta, para no depender del catálogo.
+- **Vitamina D del morro de cerdo** (decidido por Victor el 12-11-2026): 0,6 µg (estimado) = lomo de cerdo con su grasa (USDA 167818, 0,5 µg con 12,6 g de grasa) × 15,1/12,6, en lugar del 0 «supuesto» de la corteza. `lentejas_caseras` queda 31/31 y la dieta ya no tiene totales parciales.
