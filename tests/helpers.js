@@ -19,6 +19,9 @@ import { buildCompactList } from '../frontend/js/core/ai-contract.js';
 // Documento real de Victor (fixture) y su lista compacta para la IA.
 export const realFoods = parseFoodsCSV(read('./fixtures/alimentos_iniciales.csv'), { catalog }).foods;
 export const realList = buildCompactList(realFoods);
+// El documento real con la pasta SIN colina: los tests de totales parciales la usan como ejemplo de dato que falta (desde el
+// 12-11-2026 la pasta real tiene colina estimada) y así no dependen de cómo se pula el catálogo.
+export const foodsPastaSinColina = realFoods.map((f) => (f.id === 'pasta_seca' ? { ...f, nutrients: Object.fromEntries(Object.entries(f.nutrients).filter(([k]) => k !== 'colina_mg')) } : f));
 // Alimentos de prueba SIN ningún dato y con incluir=no (fixtures/sin_datos.csv): el catálogo real ya no tiene ninguno
 // (los 11 que había se retiraron el 23-10-2026), pero hay que probar cómo se tratan. `foodsConSinDatos` = real + estos.
 export const sinDatosFoods = parseFoodsCSV(read('./fixtures/sin_datos.csv'), { catalog }).foods;

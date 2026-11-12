@@ -8,11 +8,12 @@ import { createDraft, addLine, changeFood } from '../frontend/js/core/draft.js';
 import { foodSinDatos, lineasSinDatos, detectarPlatos, tratarComoPlato, lineaAEstimar, deshacerPlato } from '../frontend/js/core/sin-datos.js';
 import { diaryReport } from '../frontend/js/core/diary.js';
 import { loadTargets, resolveTargets } from '../frontend/js/core/targets.js';
-import { realFoods, catalog, settings, readFile } from './helpers.js';
+import { foodsPastaSinColina, catalog, settings, readFile } from './helpers.js';
 
 const TARGETS = JSON.parse(readFile('../data/targets.json'));
 // El catálogo real ya trae datos de las lentejas (receta); el caso original, una fila sin ningún nutriente, se reproduce así.
-const foods = realFoods.map((f) => (f.id === 'lentejas_caseras' ? { ...f, nutrients: {} } : f));
+// (la pasta, sin colina: el ejemplo de dato a medias; ver helpers.js)
+const foods = foodsPastaSinColina.map((f) => (f.id === 'lentejas_caseras' ? { ...f, nutrients: {} } : f));
 const byId = new Map(foods.map((f) => [f.id, f]));
 const item = (food_id, grams, source_text) => ({ food_id, grams, source_text, confidence: 'alta', flags: [], requiresConfirmation: false });
 const draftDe = (text, items, extra = {}) => createDraft({ text, meal: 'comida', result: { items, unmatched: [], warnings: [] }, foodsById: byId, ...extra });

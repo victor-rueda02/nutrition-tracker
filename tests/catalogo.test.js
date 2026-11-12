@@ -258,8 +258,9 @@ test('lata de atún con aceite: receta de 80 g (60 g de atún + 14 g de aceite, 
   for (const k of ['vitamina_e_mg', 'calcio_mg']) {
     assert.ok(Math.abs(r.nutrients[k] - (t.nutrients[k] * 60 + byId.get('aceite_oliva').nutrients[k] * 14) / 80) < 0.01, k);
   }
-  assert.equal(t.nutrients.vitamina_k_ug, undefined); // la K de USDA era de aceite de soja: sin dato en el atún y, por tanto, en la lata
-  assert.equal(r.nutrients.vitamina_k_ug, undefined);
+  // la K de USDA era de aceite de soja; desde el 12-11-2026 (AM), estimada con aceite de oliva + atún al natural
+  assert.equal(t.nutrients.vitamina_k_ug, 12.6);
+  assert.ok(Math.abs(r.nutrients.vitamina_k_ug - (12.6 * 60 + byId.get('aceite_oliva').nutrients.vitamina_k_ug * 14) / 80) < 0.01);
   const lata = normalizeAiResponse({ items: [{ food_id: 'atun_lata_con_aceite', cantidad: 80, unidad: 'g', source_text: 'una lata de atún', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
   assert.deepEqual([lata.items[0].food_id, lata.items[0].grams, lata.items[0].flags, lata.unmatched.length], ['atun_lata_con_aceite', 80, [], 0]);
   assert.ok(!flagsOf('atun_lata_aceite', '80 g de atún en lata').includes('sin_alias'));
@@ -310,4 +311,21 @@ test('tomate natural crudo (10-11-2026): USDA 170457 + selenio de BEDCA 2421; «
   assert.deepEqual(flagsOf('tomate', '60 g de tomate frito'), ['alias_mas_especifico']);
   const r = normalizeAiResponse({ items: [{ food_id: 'tomate', cantidad: 246, unidad: 'g', source_text: '2 tomates', confidence: 'alta', estado_dicho: 'ninguno' }], unmatched: [] }, realList);
   assert.deepEqual([r.items[0].food_id, r.items[0].grams, r.items[0].flags], ['tomate', 246, []]);
+});
+
+test('AM (12-11-2026): estimaciones que cierran los totales parciales de la dieta fija (pasta, atún, lentejas caseras)', () => {
+  const n = (id) => byId.get(id).nutrients;
+  const fu = (id) => byId.get(id).extra.fuente_usda;
+  assert.equal(n('pasta_seca').colina_mg, 15.1);
+  assert.match(fu('pasta_seca'), /colina_mg = 15\.1 \(estimado\): de USDA 169736 Pasta, dry, enriched/);
+  // atún en aceite de oliva: 17,51 g de aceite × 60,2 µg/100 g + 82,49 g de atún × 2,5 µg/100 g
+  assert.equal(n('atun_lata_aceite').vitamina_k_ug, Math.round((17.513 * 0.602 + 82.487 * 0.025) * 10) / 10);
+  assert.match(fu('atun_lata_aceite'), /vitamina_k_ug = 12\.6 \(estimado\)/);
+  // morro de cerdo (solo ingrediente de las lentejas): manitas (167859) y corteza de cerdo (167961) escalada por la proteína
+  assert.deepEqual(['vitamina_k_ug', 'azucares_g', 'vitamina_e_mg', 'vitamina_d_ug'].map((k) => n('morro_cerdo')[k]), [0, 0, 0.02, 0]);
+  assert.ok(Math.abs(n('morro_cerdo').colina_mg - 164 * 22.45 / 61.3) < 0.01);
+  assert.match(fu('morro_cerdo'), /estimados \(sin dato de oreja de cerdo en USDA\)/);
+  // las recetas que los usan ya no tienen huecos en esos nutrientes
+  for (const k of ['azucares_g', 'vitamina_d_ug', 'vitamina_e_mg', 'vitamina_k_ug', 'colina_mg']) assert.equal(typeof n('lentejas_caseras')[k], 'number', k);
+  assert.equal(typeof n('atun_lata_con_aceite').vitamina_k_ug, 'number');
 });

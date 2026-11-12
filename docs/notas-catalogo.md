@@ -232,3 +232,20 @@ Decisiones de Victor (11-11-2026). El aviso quedaba como residuo aceptado desde 
 | parrillada_verduras_hacendado | colina (mg) | vacío | 9,763 |
 
 Comprobación a mano de `verduras_asadas_hacendado`: 20 g de cada ingrediente (calabacín 9,5; cebolla 6,1; berenjena 6,9; pimiento rojo 5,6; pimiento amarillo 5,6 mg/100 g) = 6,74 mg, entre un peso final de 58,7 g = 11,48 mg/100 g. El resto de recetas no cambia (salteado de verduras con etiqueta, lentejas caseras y atún con aceite). Sin llamadas a USDA, BEDCA ni Gemini.
+
+## Rama `cat-am` (12-11-2026): estimaciones para cerrar los totales parciales de la dieta fija
+Aprobadas por Victor el 12-11-2026 («ok» a estimar con un dato parecido de USDA, marcado «estimado»). 4 búsquedas a USDA.
+- `pasta_seca` · colina_mg = 15,1 (estimado): USDA 169736 «Pasta, dry, enriched» (SR Legacy), con la misma composición que la 168927 sin enriquecer (grasa 1,51, proteína 13, hidratos 74,7); el enriquecimiento añade vitaminas B y hierro, no colina.
+- `atun_lata_aceite` · vitamina_k_ug = 12,6 (estimado): aceite de oliva de la lata (18,33 g de grasa de la etiqueta − 0,82 del atún al natural, USDA 171986 = 17,51 g) × 60,2 µg/100 g (USDA 171413) + pescado (82,49 g) × 2,5 µg/100 g (USDA 175158). La receta `atun_lata_con_aceite` hereda la K (19,985).
+- `morro_cerdo` (solo ingrediente de las lentejas caseras; USDA no trae esos datos de la oreja de cerdo, 167857): K 0, azúcares 0 y E 0,02 de las manitas de cerdo (167859); colina 60,06 (164 × 22,45/61,3) y D 0 de la corteza de cerdo (167961), escalada por la proteína. Todo «estimado».
+- `lentejas_caseras` recalculada (`recetas.mjs --aplicar`): azúcares 0,574, D 0,054, E 0,136, K 1,814 y colina 26,726 (31/31). Kcal y macros sin cambios.
+
+| Fila | Nutriente | Antes | Después |
+|---|---|---|---|
+| pasta_seca | colina (mg) | vacío | 15,1 |
+| atun_lata_aceite | vitamina K (µg) | vacío | 12,6 |
+| morro_cerdo | K / azúcares / E / D / colina | vacíos | 0 / 0 / 0,02 / 0 / 60,06 |
+| lentejas_caseras | azúcares / D / E / K / colina | vacíos | 0,574 / 0,054 / 0,136 / 1,814 / 26,726 |
+| atun_lata_con_aceite | vitamina K (µg) | vacío | 19,985 |
+
+Los tests de totales parciales usan ahora `foodsPastaSinColina` (helpers.js) como ejemplo de dato que falta, para no depender del catálogo.

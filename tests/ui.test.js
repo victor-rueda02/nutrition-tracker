@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mountApp } from '../frontend/js/ui/app.js';
 import { createMemoryStore } from '../frontend/js/storage/store.js';
 import { AiClientError } from '../frontend/js/ai-client.js';
-import { realFoods, rulesFoods, catalog, settings, readFile, foodsConSinDatos } from './helpers.js';
+import { realFoods, rulesFoods, catalog, settings, readFile, foodsConSinDatos, foodsPastaSinColina } from './helpers.js';
 import { parseFoodsCSV } from '../frontend/js/core/foods-parser.js';
 import { hashText } from '../frontend/js/core/catalog-update.js';
 
@@ -303,12 +303,12 @@ test('Diario: un alimento sin datos deja los totales parciales y se dice cuál',
 });
 
 // Día con ambos casos: pasta (sin colina) = menor; "Bizcocho" sin kcal ni proteína = importante.
-const BIZCOCHO = (() => { const p = realFoods.find((f) => f.id === 'pasta_seca'); return { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } }; })();
+const BIZCOCHO = (() => { const p = foodsPastaSinColina.find((f) => f.id === 'pasta_seca'); return { ...p, id: 'bizcocho', nombre: 'Bizcocho', extra: {}, nutrients: { ...p.nutrients, energia_kcal: null, proteina_g: null } }; })();
 const CHIA_SIN_B5 = (() => { const c = realFoods.find((f) => f.id === 'semillas_chia'); return { ...c, id: 'chia_sin_b5', nombre: 'Semillas de chía', extra: {}, nutrients: { ...c.nutrients, vitamina_b5_mg: null } }; })();
 const DIA_PARCIAL = [MEAL('m', '2026-10-16', 'comida', [['chia_sin_b5', 15], ['pasta_seca', 80], ['bizcocho', 60], ['huevo', 0]])];
 
 test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) primero y en negrita; lo menor, discreto y plegado', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...foodsPastaSinColina, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   const avisos = t.$$('.parciales');
   assert.equal(avisos.length, 2);
@@ -325,7 +325,7 @@ test('Diario: totales parciales con gravedad: lo importante (kcal y proteína) p
 });
 
 test('Informe diario: el detalle de parciales, agrupado y por gravedad (importante primero)', { skip }, async () => {
-  const t = await setup({ foods: [...realFoods, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
+  const t = await setup({ foods: [...foodsPastaSinColina, BIZCOCHO, CHIA_SIN_B5], meals: DIA_PARCIAL });
   await t.act(() => t.btn('Diario').click());
   await t.act(() => verInforme(t));
   const panel = t.$('.parciales-informe');

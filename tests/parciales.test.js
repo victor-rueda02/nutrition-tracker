@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { avisoParciales, listaEs, nombreAlimento } from '../frontend/js/core/parciales.js';
 import { diaryReport } from '../frontend/js/core/diary.js';
 import { loadTargets, resolveTargets } from '../frontend/js/core/targets.js';
-import { catalog, readFile, realFoods } from './helpers.js';
+import { catalog, readFile, foodsPastaSinColina } from './helpers.js';
 
 const comida = (...lines) => ({ id: 'm', date: '2026-10-18', meal: 'comida', createdAt: 't', lines: lines.map(([food_id, grams]) => ({ food_id, grams })) });
 const food = (id, nombre, nutrients = { energia_kcal: 100 }, extra = {}) => ({ id, nombre, nutrients, extra });
@@ -117,7 +117,7 @@ test('sin parciales no hay aviso', () => {
 
 test('con el documento real: pasta (sin colina) da totales parciales menores; un alimento con kcal sin dato sería importante', () => {
   const { targets } = loadTargets(JSON.parse(readFile('../data/targets.json')), catalog);
-  const byId = new Map(realFoods.map((f) => [f.id, f]));
+  const byId = new Map(foodsPastaSinColina.map((f) => [f.id, f]));
   const sinKcal = { ...byId.get('pasta_seca'), id: 'pasta_sin_kcal', nombre: 'Pasta sin kcal', nutrients: { ...byId.get('pasta_seca').nutrients, energia_kcal: null } };
   byId.set(sinKcal.id, sinKcal);
   const meals = [comida(['semillas_chia', 15], ['pasta_seca', 80])];
