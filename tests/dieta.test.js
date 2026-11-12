@@ -425,8 +425,21 @@ test('aceite en flus: «≈ N flus» junto a los gramos en el Diario y en Repeti
   assert.equal(textoFlus(aceite, 0), '');
   const t = await setup({ dieta: JSON.stringify({ dias: { viernes: { comida: [L('arroz_blanco_crudo', 100), L('aceite_oliva', 7)] } } }) });
   await t.copiar();
-  assert.deepEqual(t.$$('.repeat-unidad').map((s) => s.textContent), ['g', `g (≈ ${flusDeGramos(aceite, 7)} flus)`]);
+  // los flus van en una línea aparte, debajo de la fila de gramos (en la fila no caben a 375 px)
+  const flusVisibles = () => t.$$('.repeat-flus').filter((x) => !x.hidden).map((x) => x.textContent);
+  assert.deepEqual(flusVisibles(), [`≈ ${flusDeGramos(aceite, 7)} flus`]);
+  assert.ok(t.$$('.repeat-qty').every((q) => !/flus/.test(q.textContent)));
+  const campo = t.$('input[aria-label="Gramos de Aceite de oliva"]');
+  assert.equal(t.root.querySelector(`#${campo.getAttribute('aria-describedby')}`).textContent, `≈ ${flusDeGramos(aceite, 7)} flus`);
+  // en vivo: escribir y los botones
+  campo.value = '10'; campo.dispatchEvent(new campo.ownerDocument.defaultView.Event('input', { bubbles: true }));
+  assert.deepEqual(flusVisibles(), [`≈ ${flusDeGramos(aceite, 10)} flus`]);
+  await t.act(() => t.$('button[aria-label="+10 g a Aceite de oliva"]').click());
+  assert.deepEqual(flusVisibles(), [`≈ ${flusDeGramos(aceite, 20)} flus`]);
+  await t.act(() => t.$('button[aria-label="−10 g a Aceite de oliva"]').click());
+  assert.equal(flusDeGramos(aceite, 0.1), 1); // nunca «≈ 0 flus»
   await t.act(() => t.btn('Añadir').click());
-  assert.ok(t.$$('.line-grams').some((s) => s.textContent === `7 g (≈ ${flusDeGramos(aceite, 7)} flus)`));
-  assert.deepEqual((await t.store.allMeals())[0].lines.map((l) => l.grams), [100, 7]); // se guardan gramos
+  assert.ok(t.$$('.line-grams').some((s) => s.textContent === `10 g (≈ ${flusDeGramos(aceite, 10)} flus)`));
+  assert.ok(t.$$('.line-grams').some((s) => s.textContent === '100 g')); // el arroz, sin flus
+  assert.deepEqual((await t.store.allMeals())[0].lines.map((l) => l.grams), [100, 10]); // se guardan gramos
 });

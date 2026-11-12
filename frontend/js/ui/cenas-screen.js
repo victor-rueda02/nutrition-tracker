@@ -7,6 +7,7 @@ import { foodSinDatos } from '../core/completeness.js';
 import { proponerCenas, deficitsParaIA, textoDescartados, rolesDe, rolesConRecetas } from '../core/cenas.js';
 import { normalizeCenas, textoDescarteCenas } from '../core/cenas-validate.js';
 import { nutrientsForGrams } from '../core/nutrients.js';
+import { textoFlus } from '../core/portions.js';
 
 // ctx: { state, deps, track, render, byId, targetsFor, today, loadTemplates, recetasTodas }
 export function cenasActions(ctx) {
@@ -127,7 +128,7 @@ export function cenasScreen(ui) {
       return h('li', { class: 'line' },
         h('span', { class: 'line-name' }, l.nombre, l.añadida ? h('span', { class: 'tag' }, 'añadida para completar') : l.postre ? h('span', { class: 'tag' }, 'postre habitual') : null),
         h('span', { class: 'sep' }, ' · '),
-        h('span', { class: 'line-grams' }, `${nf(l.gramos, l.gramos % 1 ? 1 : 0)} g`),
+        h('span', { class: 'line-grams' }, `${nf(l.gramos, l.gramos % 1 ? 1 : 0)} g${textoFlus(food, l.gramos)}`),
         h('span', { class: 'sep' }, ' · '),
         h('span', { class: kcal === null ? 'line-kcal sin-dato' : 'line-kcal' }, kcal === null ? 'sin dato' : `${nf(kcal)} kcal`));
     })),
