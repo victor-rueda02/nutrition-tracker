@@ -392,7 +392,7 @@ test('porción nombrada: el número es el de la porción («y medio» suma); con
     ['tres cuartos de vaso de leche', leche, 0.75 * vaso], ['dos tercios de vaso de leche', leche, (2 / 3) * vaso], ['un tercio de vaso de leche', leche, vaso / 3]];
   for (const [t, f, g] of bien) assert.equal(gramosDePorcionNombrada(t, f), Math.round(g * 1000) / 1000, t);
   const dudosos = [['cucharada y media de aceite', aceite], ['un vaso de leche con dos cucharaditas de cacao', leche], ['un vaso de leche con dos cucharaditas de cacao', cacao],
-    ['dos cucharaditas de cacao y un vaso de leche', leche], ['4 flus de aceite y una cucharada de aceite', aceite], ['3 rebanadas de pan de molde integral de 30', pan], ['125 de yogur ligero', realFoods.find((f) => f.id === 'yogur_griego_ligero')]];
+    ['dos cucharaditas de cacao y un vaso de leche', leche], ['4 flus de aceite y una cucharada de aceite', aceite], ['3 rebanadas de pan de molde integral de 30', pan], ['125 de yogur ligero', realFoods.find((f) => f.id === 'yogur_griego_ligero')], ['la mitad de un vaso de leche', leche], ['el doble de un vaso de leche', leche]];
   for (const [t, f] of dudosos) assert.equal(gramosDePorcionNombrada(t, f), null, t);
   // con la IA: lo dudoso vuelve a la regla de siempre (sin porción si la cuenta no cuadra), nunca gramos inventados
   assert.equal(run([line('leche_entera', 'dos cucharaditas de cacao y un vaso de leche', { cantidad: 250 })]).unmatched[0]?.motivo, 'sin_porcion');

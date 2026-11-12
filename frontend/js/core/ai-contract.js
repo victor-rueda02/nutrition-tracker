@@ -96,6 +96,7 @@ export function gramosDePorcionNombrada(text, food) {
     }
   }
   if (hits.length !== 1) return null;
+  if (letras.some((w) => /^(mitad|doble|triple|parte)$/.test(w))) return null; // «la mitad de un vaso»: no está claro
   const { p, s, e } = hits[0];
   let ini = s;
   if (letras[ini - 1] === 'de') ini--;
