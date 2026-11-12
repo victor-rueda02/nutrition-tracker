@@ -1,6 +1,6 @@
 // Contrato compartido cliente/worker: qué viaja a la IA (lista compacta SIN nutrientes) y cómo se detecta el estado.
 // El prompt y el esquema de salida viven en worker/src/prompt.js (para ajustarlos sin tocar la app).
-import { normalizeText } from './text.js';
+import { normalizeText, containsTerm, removeTerms } from './text.js';
 
 export const MAX_GRAMS = 2000; // por encima se pide confirmación
 
@@ -71,4 +71,17 @@ export function cantidadDicha(text) {
   else if (['medio', 'media'].includes(w[i]) && w[i + 1] === 'docena') n = 6;
   if (w[i + 1] === 'y' && ['medio', 'media'].includes(w[i + 2])) n += 0.5;
   return n;
+}
+
+// Porción nombrada con su número ("4 flus de aceite", "25 flus de aceite", "2 cucharadas de aceite"): gramos = número ×
+// porción, sea cual sea el número (también 20 o más: no se asumen gramos si se nombra la porción). El nombre y los alias
+// del alimento se quitan antes de buscar la porción ("125 de yogur" no nombra la porción «yogur»). null si no hay
+// porción nombrada o número. Lo usan la validación de la IA y el borrador: el código decide los gramos (regla 3).
+export function gramosDePorcionNombrada(text, food) {
+  const nombres = [food?.nombre, ...(food?.alias ?? [])].filter(Boolean);
+  const resto = removeTerms(String(text ?? ''), nombres);
+  const p = (food?.porciones ?? []).filter((x) => x.gramos > 0).find((x) => containsTerm(resto, x.nombre));
+  if (!p) return null;
+  const n = cantidadDicha(resto);
+  return n !== null && n > 0 ? Math.round(n * p.gramos * 1000) / 1000 : null;
 }

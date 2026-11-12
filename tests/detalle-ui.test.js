@@ -48,7 +48,7 @@ test('desde Mi catálogo: 100 g por defecto, fuente, completitud, resumen de mac
   assert.match(t.$('.detalle-fuente').textContent, /Fuente de datos: Etiqueta del producto/);
   assert.match(t.$('.detalle-comp').textContent, /^\d+\/31 nutrientes obligatorios con dato/);
   assert.match(t.$('.detalle-fuente-completa p').textContent, /Oil, olive/);
-  assert.deepEqual([...t.$('select.detalle-porcion').options].map((o) => o.textContent), ['g', '1 cucharada (13,5 g)', '1 cucharadita (4,5 g)']);
+  assert.deepEqual([...t.$('select.detalle-porcion').options].map((o) => o.textContent), ['g', '1 cucharada (13,5 g)', '1 cucharadita (4,5 g)', '1 flus (0,3 g)']);
   // resumen de energía y macros: valor / objetivo, % y barra
   const kcal = t.$('.detalle-resumen [data-clave="energia_kcal"]');
   assert.match(kcal.querySelector('.nut-valor').textContent, /903 kcal/);

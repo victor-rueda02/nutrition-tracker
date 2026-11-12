@@ -250,3 +250,6 @@ Aprobadas por Victor el 12-11-2026 («ok» a estimar con un dato parecido de USD
 
 Los tests de totales parciales usan ahora `foodsPastaSinColina` (helpers.js) como ejemplo de dato que falta, para no depender del catálogo.
 - **Vitamina D del morro de cerdo** (decidido por Victor el 12-11-2026): 0,6 µg (estimado) = lomo de cerdo con su grasa (USDA 167818, 0,5 µg con 12,6 g de grasa) × 15,1/12,6, en lugar del 0 «supuesto» de la corteza. `lentejas_caseras` queda 31/31 y la dieta ya no tiene totales parciales.
+
+## Rama `flus` (12-11-2026): porción «flus» del aceite
+- `aceite_oliva` · porción `flus:0.3` (pulverizador). Provisional: Victor dijo «15 flus son unos 5 ml»; 5 ml × 0,91 g/ml = 4,55 g ÷ 15 = 0,30 g. Se cambia cuando dé la relación exacta (un número en `porciones`).

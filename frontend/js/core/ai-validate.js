@@ -1,6 +1,6 @@
 // Validación en código de la respuesta de la IA + elección determinista de variante crudo/cocinado.
 // La IA propone; aquí se descarta lo inválido y se aplican las reglas de variantes.
-import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectEstado, detectVolumen, detectPeso, cantidadDicha } from './ai-contract.js';
+import { MAX_GRAMS, UMBRAL_GRAMOS_SIN_UNIDAD, detectEstado, detectVolumen, detectPeso, cantidadDicha, gramosDePorcionNombrada } from './ai-contract.js';
 import { normalizeText, containsTerm, removeTerms, words, spansIn } from './text.js';
 
 const CONF = ['alta', 'media', 'baja'];
@@ -212,7 +212,12 @@ export function normalizeAiResponse(data, compactList, { maxGrams = MAX_GRAMS } 
     //  - desde el umbral ("150 de arroz"): se asume que son gramos, con aviso; no bloquea el guardado.
     let cantidad = qty;
     let unidadFinal = unidad;
-    if (!detectPeso(text) && !detectVolumen(text)) {
+    const dePorcion = !detectPeso(text) && !detectVolumen(text) ? gramosDePorcionNombrada(text, index.byId.get(v.food_id)) : null;
+    if (dePorcion !== null) {
+      // Porción nombrada con su número ("25 flus de aceite"): son porciones aunque sea 20 o más; el código pone los gramos.
+      cantidad = dePorcion;
+      unidadFinal = 'g';
+    } else if (!detectPeso(text) && !detectVolumen(text)) {
       const n = cantidadDicha(removeTerms(text, foods.flatMap(nameTerms)));
       if (n !== null && n >= UMBRAL_GRAMOS_SIN_UNIDAD) {
         cantidad = n;

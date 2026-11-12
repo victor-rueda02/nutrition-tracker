@@ -303,9 +303,28 @@ test('unidades con porción: número en cifras o palabras, y la porción nombrad
     ['yogur_griego_natural', 'un yogur griego', 125], ['zanahoria', 'una zanahoria', 61], ['huevo', 'un huevo', 54], ['huevo', 'un huevo y medio', 81],
     ['huevo', 'media docena de huevos', 324], ['leche_entera', 'vaso de leche', 250]]; // sin número: una porción entera
   for (const [id, text, cantidad] of ok) assert.deepEqual(run([line(id, text, { cantidad })]).items.map((x) => [x.food_id, x.grams]), [[id, cantidad]], text);
-  const mal = [['kiwi_verde', 'un kiwi', 100, 'g'], ['aceite_oliva', 'una cucharadita de aceite', 13.5, 'g'], ['leche_entera', 'un vaso de leche', 250, 'ml'],
+  const mal = [['kiwi_verde', 'un kiwi', 100, 'g'],
     ['aceite_oliva', '15 de aceite', 15, 'g']]; // 15 < 20: son unidades, y 15 cucharadas no son 15 g
   for (const [id, text, cantidad, unidad] of mal) assert.equal(run([line(id, text, { cantidad, unidad })]).unmatched[0]?.motivo, 'sin_porcion', text);
+  // porción nombrada con su número: los gramos los pone el código (número × porción), aunque la IA se equivoque
+  assert.deepEqual(run([line('aceite_oliva', 'una cucharadita de aceite', { cantidad: 13.5 })]).items.map((x) => [x.food_id, x.grams]), [['aceite_oliva', 4.5]]);
+  assert.deepEqual(run([line('leche_entera', 'un vaso de leche', { cantidad: 250, unidad: 'ml' })]).items.map((x) => [x.food_id, x.grams]), [['leche_entera', 250]]); // el vaso de la porción, no 250 ml
+});
+
+test('flus de aceite: la porción nombrada manda, también con 20 o más (no se asumen gramos); el borrador igual', () => {
+  const aceite = realFoods.find((f) => f.id === 'aceite_oliva');
+  const flus = aceite.porciones.find((p) => p.nombre === 'flus').gramos;
+  for (const [text, n, modelo] of [['4 flus de aceite', 4, 4], ['25 flus de aceite', 25, 25], ['veinte flus de aceite', 20, 20], ['30 flus de aceite de oliva', 30, 9]]) {
+    const r = run([line('aceite_oliva', text, { cantidad: modelo })]);
+    assert.deepEqual(r.items.map((x) => [x.food_id, x.grams, x.flags.includes('gramos_asumidos')]), [['aceite_oliva', Math.round(n * flus * 1000) / 1000, false]], text);
+  }
+  // sin nombrar la porción, como siempre: 25 de aceite = 25 g asumidos; 5 ml con densidad
+  assert.deepEqual(run([line('aceite_oliva', '25 de aceite', { cantidad: 25 })]).items.map((x) => [x.grams, x.flags.includes('gramos_asumidos')]), [[25, true]]);
+  // el nombre del alimento no es una porción: «125 de yogur» siguen siendo 125 g aunque «yogur» sea una porción
+  assert.deepEqual(run([line('yogur_griego_ligero', '125 de yogur ligero', { cantidad: 125 })]).items.map((x) => x.grams), [125]);
+  // al resolver un «sin resolver» en la confirmación
+  const d = resolveUnmatched(createDraft({ meal: 'comida', result: { items: [], unmatched: [{ text: '30 flus de aceite', motivo: 'no_en_catalogo' }] }, foodsById: new Map(realFoods.map((f) => [f.id, f])) }), 0, 'aceite_oliva', null, aceite);
+  assert.deepEqual([d.lines[0].grams, d.lines[0].flags ?? []], [Math.round(30 * flus * 1000) / 1000, []]);
 });
 
 test('un número del nombre no es una cantidad ("chocolate 85")', () => {
