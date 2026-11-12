@@ -144,7 +144,7 @@ Prioridad: llegar cuanto antes a un MVP usable en el iPhone. Después, la tarea 
   - Worker: https://nutrition-tracker-ai.victorueda2002.workers.dev (cuenta de Cloudflare victorueda2002@gmail.com; subdominio `victorueda2002`). `ALLOWED_ORIGIN = "https://victor-rueda02.github.io"`. Secretos `GEMINI_API_KEY` y `APP_TOKEN` puestos por mí (el token está en mi gestor de contraseñas, no en el repositorio).
   - Comprobado en el iPhone: instalación desde Safari, «Probar» (todo correcto), dictado real, diario y exportar la copia por el menú Compartir.
   - Herramientas: `wrangler` como dependencia de desarrollo; `npm run dev`, `token`, `worker:check` (empaqueta sin publicar), `worker:deploy`, `worker:secret:gemini`, `worker:secret:token`, `worker:logs`. «Probar» (Documento → Conexión) comprueba sin gastar IA que el Worker responde, tiene sus secretos y el token es el correcto.
-- **Para publicar cambios**: app → `git push` (se ve en la segunda apertura en el iPhone); Worker → `npm run worker:deploy`.
+- **Para publicar cambios**: app → `git push` (se ve en la segunda apertura en el iPhone; si la app ya estaba abierta, sale arriba «Hay una versión nueva de la app · Recargar»; en Más → «Versión de la app» se comprueba cuál corre); al cambiar ficheros de la app, sube a la vez `VERSION` de `frontend/sw.js` y `APP_VERSION` de `frontend/js/config.js` (un test exige que coincidan); Worker → `npm run worker:deploy`.
 - **Las claves están en `.env`** (ignorado por git), con `GEMINI_API_KEY` y `USDA_API_KEY`. Úsalas solo con `node --env-file=.env`. Nunca leas ni muestres el fichero.
 
 ## 6. Trabajo pendiente, en este orden

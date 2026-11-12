@@ -104,6 +104,9 @@ export function mountApp(root, deps) {
   const targets = loadTargets(deps.targets ?? {}, deps.catalog).targets;
   // Plan de objetivos (docs/OBJETIVOS-FORMATO.md): cada día se evalúa con los objetivos vigentes ESE día.
   state.plan = null;
+  // Versión del código que corre (APP_VERSION de config.js; igual que la caché del service worker), para ver en Más si el
+  // iPhone está al día. Es la del código en marcha, no la de una caché descargada que aún no se usa.
+  state.appVersion = typeof deps.appVersion === 'string' && deps.appVersion ? deps.appVersion : null;
   const targetsFor = (fecha) => targetsForDate(fecha, { plan: state.plan, targets, catalog: deps.catalog });
   let pending = Promise.resolve();
   // Toda acción asíncrona pasa por aquí. Ninguna falla en silencio: si algo lanza un error, se muestra arriba en
@@ -1237,8 +1240,6 @@ export function mountApp(root, deps) {
     root.replaceChildren(screen, ...extras);
   }
   openDay(today());
-  // Versión instalada de la app (la caché del service worker, «nt-vNN»), para ver en Más si el iPhone está al día.
-  if (deps.appVersion) track(deps.appVersion().then((v) => { state.appVersion = v || null; render(); }).catch(() => {}), 'No se pudo leer la versión');
   track(loadPlan(), 'No se pudo cargar el plan de objetivos');
   checkCatalogUpdate();
   return { state, render, whenIdle };

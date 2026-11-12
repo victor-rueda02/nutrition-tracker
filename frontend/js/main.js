@@ -1,5 +1,5 @@
 // Arranque: abre IndexedDB, carga el documento (o la copia por defecto del repo) y monta la interfaz.
-import { DATA_BASE } from './config.js';
+import { DATA_BASE, APP_VERSION } from './config.js';
 import { buildCatalog } from './core/catalog.js';
 import { loadSettings } from './core/settings.js';
 import { parseFoodsCSV } from './core/foods-parser.js';
@@ -22,11 +22,35 @@ async function fetchPublished() {
   return res.text();
 }
 
-// Versión instalada: el nombre de la caché del service worker («nt-vNN»). Sin caché (http por la IP, sin service worker): null.
-async function appVersion() {
-  if (!('caches' in globalThis)) return null;
-  const keys = await caches.keys();
-  return keys.filter((k) => /^nt-v\d+$/.test(k)).sort((a, b) => Number(b.slice(4)) - Number(a.slice(4)))[0] ?? null;
+// Service worker y avisos de versión nueva. iOS suele reanudar la app instalada sin volver a cargarla, y sin carga no busca
+// versión nueva: al volver a primer plano se pide (como mucho cada 5 min) y, cuando la versión nueva toma el control, se avisa
+// arriba con «Recargar». Nunca se recarga solo: un borrador sin guardar se perdería.
+function registrarServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  const sw = navigator.serviceWorker;
+  const habiaVersion = Boolean(sw.controller); // la primera instalación no es «versión nueva»
+  sw.register('sw.js').then((reg) => {
+    let ultima = Date.now();
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible' || Date.now() - ultima < 5 * 60 * 1000) return;
+      ultima = Date.now();
+      reg.update().catch((e) => globalThis.console?.error?.('No se pudo buscar una versión nueva de la app', e));
+    });
+  }).catch((e) => globalThis.console?.error?.('No se pudo registrar el service worker', e));
+  sw.addEventListener('controllerchange', () => {
+    if (!habiaVersion || document.querySelector('.aviso-version')) return;
+    const aviso = document.createElement('div');
+    aviso.className = 'aviso-version';
+    aviso.setAttribute('role', 'status');
+    const texto = document.createElement('span');
+    texto.textContent = 'Hay una versión nueva de la app.';
+    const boton = document.createElement('button');
+    boton.type = 'button';
+    boton.textContent = 'Recargar';
+    boton.addEventListener('click', () => location.reload());
+    aviso.append(texto, boton);
+    document.body.append(aviso);
+  });
 }
 
 // data/dieta.json publicado, siempre fresco (como el foods.csv: sin caché del navegador ni del service worker). Lanza si no hay red.
@@ -63,13 +87,13 @@ async function boot() {
     let retirados = null; // data/retirados.json: alimentos que Victor retira del documento (sin él, nada se elimina)
     try { retirados = JSON.parse(await fetchText('retirados.json')); } catch { /* sin lista de retirados */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, appVersion, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados,
+      store, createAiClient, catalog, settings, targets, fetchPublished, appVersion: APP_VERSION, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });
   } catch (e) {
     root.textContent = `No se pudo iniciar la app: ${e.message}`;
   }
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  registrarServiceWorker();
 }
 boot();

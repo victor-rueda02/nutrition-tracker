@@ -107,8 +107,8 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req).then((cached) => {
       // La actualización en segundo plano revalida con el servidor (no-cache), para no volver a guardar una copia vieja.
-      const network = fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' })).then((res) => {
-        if (res.ok) caches.open(VERSION).then((cache) => cache.put(req, res.clone()));
+      const network = fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: req.redirect })).then((res) => {
+        if (res.ok && !res.redirected) caches.open(VERSION).then((cache) => cache.put(req, res.clone()));
         return res;
       }).catch(() => cached);
       return cached || network;

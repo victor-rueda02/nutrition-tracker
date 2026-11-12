@@ -277,7 +277,7 @@ test('cuatro tipos de día: «Hoy es» y «Qué valores» los listan todos y el 
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2600 kcal/); // el sábado 10, con lo de entonces
 });
 
-test('Más: enseña la versión instalada de la app (la caché del service worker); sin ella, no enseña nada', { skip }, async () => {
+test('Más: enseña la versión del código que corre (APP_VERSION); sin ella, no enseña nada', { skip }, async () => {
   const conVersion = async (appVersion) => {
     const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
     const root = dom.window.document.getElementById('app');
@@ -290,8 +290,7 @@ test('Más: enseña la versión instalada de la app (la caché del service worke
     await app.whenIdle();
     return root.querySelector('.app-version')?.textContent ?? null;
   };
-  assert.equal(await conVersion(async () => 'nt-v42'), 'Versión de la app: nt-v42');
-  assert.equal(await conVersion(async () => null), null);
+  assert.equal(await conVersion('nt-v42'), 'Versión de la app: nt-v42');
+  assert.equal(await conVersion(''), null);
   assert.equal(await conVersion(undefined), null);
-  assert.equal(await conVersion(async () => { throw new Error('sin caches'); }), null); // nunca rompe la app
 });

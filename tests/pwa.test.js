@@ -20,9 +20,18 @@ test('service worker: precachea TODOS los ficheros de la app (y solo ficheros qu
 test('service worker: instala y actualiza saltándose la caché HTTP (si no, abrir justo tras publicar guardaba el código viejo)', () => {
   const sw = readFileSync(join(fe, 'sw.js'), 'utf8');
   assert.ok(sw.includes("cache.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))"), 'la instalación debe pedir cada fichero con cache: reload');
-  assert.ok(sw.includes("fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }))"), 'la actualización en segundo plano debe revalidar (no-cache)');
+  assert.ok(sw.includes("fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin', redirect: req.redirect }))"), 'la actualización en segundo plano debe revalidar (no-cache) respetando las redirecciones');
+  assert.ok(sw.includes('if (res.ok && !res.redirected)'), 'una respuesta redirigida no se guarda');
   const main = readFileSync(join(fe, 'js', 'main.js'), 'utf8');
-  assert.ok(main.includes('async function appVersion()') && /mountApp\(root, \{[^}]*\bappVersion\b/.test(main), 'main pasa la versión instalada a la app');
+  assert.match(main, /mountApp\(root, \{[^}]*\bappVersion: APP_VERSION\b/, 'main pasa la versión del código a la app');
+  assert.ok(main.includes("reg.update()") && main.includes("'controllerchange'") && main.includes("'visibilitychange'"), 'busca versión nueva al volver a primer plano y avisa al cambiar');
+  assert.ok(!main.includes('location.reload();\n') || main.includes("boton.addEventListener('click', () => location.reload())"), 'solo recarga si lo pide Victor');
+});
+
+test('versión de la app: APP_VERSION de config.js es igual que VERSION de sw.js (al publicar se suben las dos)', () => {
+  const sw = readFileSync(join(fe, 'sw.js'), 'utf8').match(/const VERSION = '([^']+)'/)[1];
+  const cfg = readFileSync(join(fe, 'js', 'config.js'), 'utf8').match(/export const APP_VERSION = '([^']+)'/)[1];
+  assert.equal(cfg, sw);
 });
 
 test('data/retirados.json: se carga como los demás data/*.json y, si falta o no se puede leer, la app arranca igual', () => {
