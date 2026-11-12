@@ -125,7 +125,7 @@ export function gramosAsumidos(text, food = null) {
 export function resolveUnmatched(d, index, food_id, grams = null, food = null) {
   const u = d.unmatched[index];
   const text = u?.text ?? '';
-  let g = grams ?? gramsFromText(text, food) ?? (detectVolumen(text) ? null : gramosDePorcionNombrada(text, food));
+  let g = grams ?? gramsFromText(text, food) ?? (detectVolumen(text) || detectPeso(text) ? null : gramosDePorcionNombrada(text, food));
   const asumido = g === null ? gramosAsumidos(text, food) : null;
   if (asumido !== null) g = asumido;
   const d2 = addLine(dropUnmatched(d, index), food_id, g, text);

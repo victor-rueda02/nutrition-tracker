@@ -2,7 +2,7 @@
 // Las respuestas del modelo son SIMULADAS: se prueba la capa determinista, no la calidad del modelo.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectVolumen, toCompact, UMBRAL_GRAMOS_SIN_UNIDAD, cantidadDicha } from '../frontend/js/core/ai-contract.js';
+import { detectVolumen, toCompact, UMBRAL_GRAMOS_SIN_UNIDAD, cantidadDicha, gramosDePorcionNombrada } from '../frontend/js/core/ai-contract.js';
 import { normalizeAiResponse, stripNameStates } from '../frontend/js/core/ai-validate.js';
 import { createDraft, mlToGrams, resolveUnmatched, lineProblem, gramsFromText, gramosAsumidos, validateDraft, setGrams, confirmFood, changeFood, toMealRecord } from '../frontend/js/core/draft.js';
 import { parseFoodsCSV, foodsToCSV, foodsToJSON } from '../frontend/js/core/foods-parser.js';
@@ -378,4 +378,27 @@ test('"pan tostado": sin variante tostada, "tostado" se ignora sin aviso (se pes
   assert.equal(t.food_id, 'pistachos_tostados_sin_sal');
   // y "cocido" sin variante cocinada sigue avisando (salvo peso_en_crudo)
   assert.ok(run([line('kiwi_verde', 'un kiwi cocido', { cantidad: 69, estado_dicho: 'cocinado' })]).items[0].flags.includes('variante_no_disponible'));
+});
+
+test('porción nombrada: el número es el de la porción («y medio» suma); con otro número o dos porciones, la regla de siempre', () => {
+  const aceite = realFoods.find((f) => f.id === 'aceite_oliva');
+  const leche = realFoods.find((f) => f.id === 'leche_entera');
+  const cacao = realFoods.find((f) => f.id === 'cacao_polvo');
+  const pan = realFoods.find((f) => f.id === 'pan_molde_integral');
+  const cuch = aceite.porciones.find((p) => p.nombre === 'cucharada').gramos;
+  const vaso = leche.porciones.find((p) => p.nombre === 'vaso').gramos;
+  const bien = [['una cucharada y media de aceite', aceite, 1.5 * cuch], ['1 cucharada y media de aceite', aceite, 1.5 * cuch], ['dos cucharadas y media de aceite', aceite, 2.5 * cuch],
+    ['un vaso y medio de leche', leche, 1.5 * vaso], ['un cuarto de vaso de leche', leche, vaso / 4], ['medio vaso de leche', leche, vaso / 2], ['1,5 cucharadas de aceite', aceite, 1.5 * cuch]];
+  for (const [t, f, g] of bien) assert.equal(gramosDePorcionNombrada(t, f), Math.round(g * 1000) / 1000, t);
+  const dudosos = [['cucharada y media de aceite', aceite], ['un vaso de leche con dos cucharaditas de cacao', leche], ['un vaso de leche con dos cucharaditas de cacao', cacao],
+    ['dos cucharaditas de cacao y un vaso de leche', leche], ['4 flus de aceite y una cucharada de aceite', aceite], ['3 rebanadas de pan de molde integral de 30', pan], ['125 de yogur ligero', realFoods.find((f) => f.id === 'yogur_griego_ligero')]];
+  for (const [t, f] of dudosos) assert.equal(gramosDePorcionNombrada(t, f), null, t);
+  // con la IA: lo dudoso vuelve a la regla de siempre (sin porción si la cuenta no cuadra), nunca gramos inventados
+  assert.equal(run([line('leche_entera', 'dos cucharaditas de cacao y un vaso de leche', { cantidad: 250 })]).unmatched[0]?.motivo, 'sin_porcion');
+  assert.deepEqual(run([line('aceite_oliva', 'una cucharada y media de aceite', { cantidad: 99 })]).items.map((x) => x.grams), [20.25]);
+  assert.deepEqual(run([line('huevo', 'un huevo y medio', { cantidad: 81 })]).items.map((x) => x.grams), [81]); // el nombre del alimento: la regla de siempre
+  // en el borrador: con un peso dicho no se usa la porción
+  const pb = pan;
+  const d = resolveUnmatched(createDraft({ meal: 'desayuno', result: { items: [], unmatched: [{ text: '1 rebanada de 30 g y otra de 40 g de pan de molde integral', motivo: 'no_en_catalogo' }] }, foodsById: new Map(realFoods.map((f) => [f.id, f])) }), 0, 'pan_molde_integral', null, pb);
+  assert.equal(d.lines[0].grams, null);
 });

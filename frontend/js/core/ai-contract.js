@@ -1,6 +1,6 @@
 // Contrato compartido cliente/worker: qué viaja a la IA (lista compacta SIN nutrientes) y cómo se detecta el estado.
 // El prompt y el esquema de salida viven en worker/src/prompt.js (para ajustarlos sin tocar la app).
-import { normalizeText, containsTerm, removeTerms } from './text.js';
+import { normalizeText, removeTerms, sameWord } from './text.js';
 
 export const MAX_GRAMS = 2000; // por encima se pide confirmación
 
@@ -73,15 +73,38 @@ export function cantidadDicha(text) {
   return n;
 }
 
-// Porción nombrada con su número ("4 flus de aceite", "25 flus de aceite", "2 cucharadas de aceite"): gramos = número ×
-// porción, sea cual sea el número (también 20 o más: no se asumen gramos si se nombra la porción). El nombre y los alias
-// del alimento se quitan antes de buscar la porción ("125 de yogur" no nombra la porción «yogur»). null si no hay
-// porción nombrada o número. Lo usan la validación de la IA y el borrador: el código decide los gramos (regla 3).
+// Porción nombrada con su número ("4 flus de aceite", "25 flus de aceite", "2 cucharadas y media de aceite"): gramos =
+// número × porción, sea cual sea el número (también 20 o más: no se asumen gramos si se nombra la porción). Solo cuando
+// está claro: UNA porción del alimento nombrada una vez, su número justo delante («un cuarto de vaso», «un par de
+// cucharadas»: el «de» se salta), «y medio/a» detrás suma 0,5, y ningún otro número en el fragmento («un vaso de leche
+// con dos cucharaditas…», «3 rebanadas … de 30»). Si no, null y sigue la regla de siempre (sin porción o gramos asumidos).
+// El nombre y los alias del alimento se quitan antes («125 de yogur» no nombra la porción «yogur»). Lo usan la validación
+// de la IA y el borrador: el código decide los gramos (regla 3).
+const ficha = (t) => t.replace(/[^a-z0-9.,/]/g, '');
 export function gramosDePorcionNombrada(text, food) {
   const nombres = [food?.nombre, ...(food?.alias ?? [])].filter(Boolean);
-  const resto = removeTerms(String(text ?? ''), nombres);
-  const p = (food?.porciones ?? []).filter((x) => x.gramos > 0).find((x) => containsTerm(resto, x.nombre));
-  if (!p) return null;
-  const n = cantidadDicha(resto);
-  return n !== null && n > 0 ? Math.round(n * p.gramos * 1000) / 1000 : null;
+  const tw = removeTerms(String(text ?? ''), nombres).split(' ').map(ficha).filter(Boolean);
+  const letras = tw.map((t) => t.replace(/[^a-z0-9]/g, ''));
+  const porciones = (food?.porciones ?? []).filter((x) => x.gramos > 0)
+    .map((p) => ({ p, ws: normalizeText(p.nombre).split(/[^a-z0-9]+/).filter(Boolean) }))
+    .sort((a, b) => b.ws.length - a.ws.length); // la más larga primero («rebanada fina» antes que «rebanada»)
+  const hits = [];
+  for (const { p, ws } of porciones) {
+    for (let i = 0; i + ws.length <= letras.length; i++) {
+      const e = i + ws.length;
+      if (ws.every((w, j) => sameWord(letras[i + j], w)) && !hits.some((h) => i < h.e && e > h.s)) hits.push({ p, s: i, e });
+    }
+  }
+  if (hits.length !== 1) return null;
+  const { p, s, e } = hits[0];
+  let ini = s;
+  if (letras[ini - 1] === 'de') ini--;
+  const desde = Math.max(0, ini - 2);
+  const n0 = cantidadDicha(tw.slice(desde, ini).join(' '));
+  if (n0 === null || !(n0 > 0)) return null;
+  let fin = e;
+  let n = n0;
+  if (letras[e] === 'y' && ['medio', 'media'].includes(letras[e + 1])) { n += 0.5; fin = e + 2; }
+  if (cantidadDicha([...tw.slice(0, desde), ...tw.slice(fin)].join(' ')) !== null) return null; // otro número: no está claro
+  return Math.round(n * p.gramos * 1000) / 1000;
 }
