@@ -22,6 +22,13 @@ async function fetchPublished() {
   return res.text();
 }
 
+// Versión instalada: el nombre de la caché del service worker («nt-vNN»). Sin caché (http por la IP, sin service worker): null.
+async function appVersion() {
+  if (!('caches' in globalThis)) return null;
+  const keys = await caches.keys();
+  return keys.filter((k) => /^nt-v\d+$/.test(k)).sort((a, b) => Number(b.slice(4)) - Number(a.slice(4)))[0] ?? null;
+}
+
 // data/dieta.json publicado, siempre fresco (como el foods.csv: sin caché del navegador ni del service worker). Lanza si no hay red.
 async function fetchDieta({ signal } = {}) {
   const res = await fetch(`${DATA_BASE}dieta.json?fresco=${Date.now()}`, { cache: 'no-store', signal });
@@ -56,7 +63,7 @@ async function boot() {
     let retirados = null; // data/retirados.json: alimentos que Victor retira del documento (sin él, nada se elimina)
     try { retirados = JSON.parse(await fetchText('retirados.json')); } catch { /* sin lista de retirados */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados,
+      store, createAiClient, catalog, settings, targets, fetchPublished, appVersion, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });

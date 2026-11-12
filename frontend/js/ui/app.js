@@ -1237,6 +1237,8 @@ export function mountApp(root, deps) {
     root.replaceChildren(screen, ...extras);
   }
   openDay(today());
+  // Versión instalada de la app (la caché del service worker, «nt-vNN»), para ver en Más si el iPhone está al día.
+  if (deps.appVersion) track(deps.appVersion().then((v) => { state.appVersion = v || null; render(); }).catch(() => {}), 'No se pudo leer la versión');
   track(loadPlan(), 'No se pudo cargar el plan de objetivos');
   checkCatalogUpdate();
   return { state, render, whenIdle };

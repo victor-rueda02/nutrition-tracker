@@ -276,3 +276,22 @@ test('cuatro tipos de día: «Hoy es» y «Qué valores» los listan todos y el 
   assert.deepEqual(dias, ['Pierna · excepción del día', 'Pierna', 'Fuerza', 'Pierna', 'Fuerza', 'Descanso', 'RH + movilidad']); // vie 16 … sáb 10
   assert.match(fila(t, 'energia_kcal').textContent, /\/ 2600 kcal/); // el sábado 10, con lo de entonces
 });
+
+test('Más: enseña la versión instalada de la app (la caché del service worker); sin ella, no enseña nada', { skip }, async () => {
+  const conVersion = async (appVersion) => {
+    const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
+    const root = dom.window.document.getElementById('app');
+    const app = mountApp(root, {
+      store: createMemoryStore(), createAiClient: () => ({}), catalog, settings, targets: TARGETS, objetivos: {}, initial: { foods: realFoods, extraHeaders: [], docName: 'doc.csv' }, conn: {},
+      now: () => NOW, idGen: () => 'x', appVersion,
+    });
+    await app.whenIdle();
+    [...root.querySelectorAll('button')].find((b) => b.textContent.includes('Más')).click();
+    await app.whenIdle();
+    return root.querySelector('.app-version')?.textContent ?? null;
+  };
+  assert.equal(await conVersion(async () => 'nt-v42'), 'Versión de la app: nt-v42');
+  assert.equal(await conVersion(async () => null), null);
+  assert.equal(await conVersion(undefined), null);
+  assert.equal(await conVersion(async () => { throw new Error('sin caches'); }), null); // nunca rompe la app
+});

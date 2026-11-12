@@ -14,5 +14,6 @@ export function masScreen(ui) {
       h('button', { type: 'button', class: 'menu-row', onclick: it.onclick },
         h('span', { class: 'menu-ico' }, icon(doc, it.icon)),
         h('span', { class: 'menu-text' }, h('span', {}, it.label), it.hint ? h('small', { class: 'muted' }, it.hint) : null),
-        icon(doc, 'chevron', 'menu-chev'))))));
+        icon(doc, 'chevron', 'menu-chev'))))),
+    state.appVersion ? h('p', { class: 'muted small app-version' }, `Versión de la app: ${state.appVersion}`) : null);
 }

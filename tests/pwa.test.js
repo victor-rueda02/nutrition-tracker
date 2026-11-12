@@ -17,6 +17,14 @@ test('service worker: precachea TODOS los ficheros de la app (y solo ficheros qu
   for (const d of ['../data/nutrients.json', '../data/settings.json', '../data/targets.json', '../data/foods.csv', '../data/retirados.json']) assert.ok(list.includes(d), d);
 });
 
+test('service worker: instala y actualiza saltándose la caché HTTP (si no, abrir justo tras publicar guardaba el código viejo)', () => {
+  const sw = readFileSync(join(fe, 'sw.js'), 'utf8');
+  assert.ok(sw.includes("cache.addAll(ASSETS.map((u) => new Request(u, { cache: 'reload' })))"), 'la instalación debe pedir cada fichero con cache: reload');
+  assert.ok(sw.includes("fetch(new Request(req.url, { cache: 'no-cache', credentials: 'same-origin' }))"), 'la actualización en segundo plano debe revalidar (no-cache)');
+  const main = readFileSync(join(fe, 'js', 'main.js'), 'utf8');
+  assert.ok(main.includes('async function appVersion()') && /mountApp\(root, \{[^}]*\bappVersion\b/.test(main), 'main pasa la versión instalada a la app');
+});
+
 test('data/retirados.json: se carga como los demás data/*.json y, si falta o no se puede leer, la app arranca igual', () => {
   const main = readFileSync(join(fe, 'js', 'main.js'), 'utf8');
   assert.match(main, /try \{ retirados = JSON\.parse\(await fetchText\('retirados\.json'\)\); \} catch/);
