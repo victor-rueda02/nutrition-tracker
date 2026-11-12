@@ -34,7 +34,7 @@ alimento que use la dieta. Estado a 12-11-2026.
 - Rutina (desde el 02-11): lunes, martes, jueves, viernes y sábado **fuerza** (3700 kcal, hidratos 57 %); miércoles y
   domingo **carrera** (3600 kcal, 56 %); **descanso** 3300 kcal (55 %), solo para días sin entreno. Todos los periodos:
   proteína mínimo 1,6 g/kg, grasa 25-30 % de las kcal, fibra ≥ 35 g, saturadas ≤ 10 % (meta de Victor ≈ 8 %).
-- Excepciones: del 17 al 22-11-2026, descanso (operación; ver memoria). Los pesos de p19 en adelante son estimados: se
+- Excepciones: del 17 al 22-11-2026, descanso (decisión de Victor; el motivo está en la memoria privada del coordinador). Los pesos de p19 en adelante son estimados: se
   cambian en Objetivos cuando Victor tenga la media real («desde hoy» crea un tramo `<periodo>_AAAAMMDD`, que la dieta
   sigue reconociendo).
 
@@ -46,25 +46,25 @@ alimento que use la dieta. Estado a 12-11-2026.
   hidratos 90-110 % del objetivo; fibra ≥ 35 g; saturadas ≤ 10 %; sodio ≤ 2000 mg; B1, B3 y ALA por energía; mínimos
   EFSA de vitamina C, B2, B5, B6, B9, colina, calcio, hierro, magnesio, fósforo, potasio, zinc, cobre y manganeso; nunca
   por encima de un UL.
-- Por semana (media de lunes a viernes): vitaminas A, D, E, K y B12, EPA+DHA y selenio. La vitamina D se queda en
+- Por semana (media de lunes a viernes): vitaminas A, D, E, K y B12, EPA+DHA y selenio (`comprobar.mjs` las enseña). La vitamina D se queda en
   ≈ 9 µg/día: la cubre el suplemento (no se cuenta en la app).
 - Azúcares por encima de 90 g (fruta entera): aceptado.
 - Sin totales parciales: todos los alimentos de la dieta tienen sus 31 nutrientes obligatorios (algunos estimados; ver
   `docs/notas-catalogo.md`, ramas AK, AM y AM2).
 
-## Estructura de la semana (p20 normal; las demás versiones mueven gramos)
+## Estructura de la semana (p20 normal; las demás versiones mueven gramos y en p17 y p16 quitan el pollo del jueves y del viernes)
 
 - **Fijos**: desayuno avena 90 + cacao 5 + bebida de avena 300 + crema de cacahuete 10; almuerzo (dentro del desayuno en
   la app) pan integral 70 con tomate natural 60 y aceite, almendras 15, anacardos 10 y una mandarina; merienda corn flakes,
   muesli 25, bebida de avena 300, manzana 150 y plátano 100. Postre de la comida: yogur griego ligero 125, chía 3,
-  chocolate 85 % 8 y kiwi 100. Postre de la cena: yogur ligero 125, chía 3 y dátiles.
+  chocolate 85 % 8 y kiwi 100. Postre de la cena: yogur ligero 125, chía 3, dátiles y, según el día, nueces o almendras.
 - **Lunes**: táper de lentejas caseras 625 g + arroz; cena patata, verduras asadas, zanahoria, 2 huevos y atún (1 lata).
 - **Martes**: arroz con verduras asadas, pollo y tomate frito; cena patata y salmón 200 g.
 - **Miércoles** (carrera): arroz, verduras asadas, pollo 200 y tomate frito; cena macarrones con salteado de verduras,
   2 huevos y tomate frito.
 - **Jueves**: arroz con lentejas (lentejas secas, zanahoria, cebolla, pimiento rojo); cena patata, verduras, 2 huevos,
   atún (1 lata), pollo y tomate frito.
-- **Viernes**: arroz, verduras asadas, pimiento rojo, pollo y 2 huevos; cena patata y sardinillas reducidas en sal 130 g.
+- **Viernes**: arroz, verduras asadas, pimiento rojo, pollo, 2 huevos y tomate frito; cena patata y sardinillas reducidas en sal 130 g.
 
 ## Decisiones de Victor (no cambiarlas sin preguntar)
 
@@ -87,5 +87,6 @@ alimento que use la dieta. Estado a 12-11-2026.
 - Para cambiar la dieta: edita la semana base (`scripts/dieta/semana-base.mjs`: alimentos fijos y palancas con su
   rango) o las versiones y tipos (`reglas-optimizador.mjs`, que copia el plan del iPhone), y luego
   `node scripts/dieta/generar.mjs` (enseña cada día) y `--escribir` (escribe `data/dieta.json`). p20 normal no se
-  reoptimiza: es la semana que Victor sigue. `npm test` valida el fichero; después, `git push`.
+  reoptimiza: es la semana que Victor sigue. Regenerar con el catálogo de otro día puede mover unos gramos de los menús
+  que no son fijos (p. ej. tras las estimaciones AM y AM2, p16 lunes de descanso): revisa el diff antes de publicar. `npm test` valida el fichero; después, `git push`.
 - Al cambiar la dieta, actualizar también la página privada (memoria del coordinador).

@@ -21,6 +21,10 @@ const MIN = {
   cobre_mg: 1.6, manganeso_mg: 3,
 };
 const UL = { vitamina_d_ug: 100, vitamina_e_mg: 300, vitamina_b6_mg: 12, calcio_mg: 2500, zinc_mg: 25, cobre_mg: 5, selenio_ug: 255, vitamina_a_ug: 3000 };
+// Nutrientes que miran las reglas (diarias y semanales): comprobar.mjs avisa si a un alimento de la dieta le falta alguno.
+export const CLAVES_REGLAS = [...new Set(['energia_kcal', 'proteina_g', 'grasa_total_g', 'hidratos_g', 'fibra_g', 'grasas_saturadas_g', 'sodio_mg',
+  'vitamina_b1_mg', 'vitamina_b3_mg', 'ala_g', 'epa_g', 'dha_g', 'vitamina_a_ug', 'vitamina_d_ug', 'vitamina_e_mg', 'vitamina_k_ug', 'vitamina_b12_ug', 'selenio_ug',
+  ...Object.keys(MIN), ...Object.keys(UL)])];
 
 const VEC = new Map();
 for (const [id, f] of F) VEC.set(id, KEYS.map((k) => (typeof f.nutrients?.[k] === 'number' ? f.nutrients[k] : 0)));
