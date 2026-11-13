@@ -51,26 +51,29 @@ test('tickets-mercadona.json: las correspondencias confirmadas por Victor están
     chia: 'semillas_chia', 'almendra natural': 'almendras_crudas', 'nuez cascara natural': 'nueces', 'datil sin hueso': 'datiles_deglet_noor',
     'roja dulce bolsa': 'manzana_con_piel', 'roja acidulce bolsa': 'manzana_con_piel', mandarina: 'mandarina', patata: 'patata_cruda',
     'filete pechuga fino': 'pechuga_pollo_cruda', 'pechuga familiar': 'pechuga_pollo_cruda', 'filete salmon': 'salmon_atlantico',
-    'atun claro oliva pk6': 'atun_lata_aceite', 'sardinilla re. sal o': 'sardina_lata_reducida_sal', '12 huevos super gran': 'huevo',
-    '6 huevos grandes-l': 'huevo', 'cebolla tubo': 'cebolla', 'barra 100% integral': 'pan_integral',
+    'atun claro oliva pk6': 'atun_lata_aceite', 'sardinilla re. sal o': 'sardina_lata_reducida_sal',
+    'cebolla tubo': 'cebolla', 'barra 100% integral': 'pan_integral',
     'salteado verd. asada': 'verduras_asadas_hacendado', 'salteado de verduras': 'salteado_verduras_hacendado', 'tom.frito est.casero': 'salsa_tomate_frito',
   };
   for (const [k, id] of Object.entries(esperado)) assert.equal(tabla.productos[k]?.food_id, id, k);
   for (const k of ['lenteja cocida', 'muesli con frutas', 'griego natural p-6', 'tom. receta artesana', 'tomate frito brick', 't.cherry pera negro',
-    'parrillada verdura a', 'pim piq tradicional', 'patata prefreg. fina', 'salmon con verduras', 'leche semi', 'leche etera gaza pa']) {
+    'parrillada verdura a', 'pim piq tradicional', '12 huevos super gran', '6 huevos grandes-l', 'patata prefreg. fina', 'salmon con verduras', 'leche semi', 'leche etera gaza pa']) {
     assert.equal(tabla.productos[k]?.ignorar, true, k);
   }
 });
 
-test('tickets-mercadona.json: tamaños coherentes con el catálogo (latas escurridas, bebida con su densidad, huevos con cáscara)', () => {
+test('tickets-mercadona.json: tamaños coherentes con el catálogo (latas escurridas, bebida con su densidad) y respuestas de Victor', () => {
   const p = tabla.productos;
   assert.deepEqual([p['atun claro oliva pk6'].unidades_por_envase, p['atun claro oliva pk6'].gramos_por_unidad], [6, 60]);
   assert.deepEqual([p['sardinilla re. sal o'].unidades_por_envase, p['sardinilla re. sal o'].gramos_por_unidad], [2, 65]);
   assert.equal(p['bebida avena'].gramos_por_unidad, Math.round(1000 * byId.get('bebida_de_avena').densidad));
-  assert.equal(p['12 huevos super gran'].unidades_por_envase, 12);
-  assert.equal(p['6 huevos grandes-l'].unidades_por_envase, 6);
-  assert.ok(p['12 huevos super gran'].gramos_por_unidad > p['6 huevos grandes-l'].gramos_por_unidad);
-  assert.ok(p['12 huevos super gran'].estimado && p['6 huevos grandes-l'].estimado);
+  // Respuestas de Victor (13-11-2026): huevos caseros (los del súper se ignoran), bolsa de manzanas de peso variable,
+  // malla de cebolla de 1 kg y macarrón de 1 kg.
+  assert.equal(p['roja dulce bolsa'].preguntar_gramos, true);
+  assert.equal(p['roja acidulce bolsa'].preguntar_gramos, true);
+  assert.equal(p['cebolla tubo'].gramos_por_unidad, 1000);
+  assert.equal(p.macarron.gramos_por_unidad, 1000);
+  assert.ok(Object.values(p).every((x) => !x.confirmar), 'no queda nada por confirmar');
 });
 
 test('porcion_comestible: vacía o en (0, 1], con su fuente en fuente_usda; huevo 0,88 y nueces con cáscara', () => {
@@ -86,6 +89,7 @@ test('porcion_comestible: vacía o en (0, 1], con su fuente en fuente_usda; huev
   assert.ok(con >= 30);
   assert.equal(Number(byId.get('huevo').extra.porcion_comestible), 0.88);
   assert.equal(Number(byId.get('nueces').extra.porcion_comestible), 0.45);
+  assert.equal(Number(byId.get('manzana_con_piel').extra.porcion_comestible), 0.9); // Victor: con piel, 0,90
   assert.match(byId.get('nueces').extra.fuente_usda, /con cáscara/i);
 });
 

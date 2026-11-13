@@ -24,8 +24,7 @@
       "unidades_por_envase": 1,
       "gramos_por_unidad": 1000,
       "fuente": "https://tienda.mercadona.es/product/6250/macarron-hacendado-paquete (consultado el 13-11-2026)",
-      "nota": "Hoy hay dos Macarrón Hacendado en la web: 1 kg (1,20 €, id 6250) y 500 g (0,85 €, id 6326). El ticket (1,15 €) encaja con el de 1 kg; Victor debe confirmarlo.",
-      "confirmar": true
+      "nota": "Paquete de 1 kg, confirmado por Victor, 13-11-2026."
     },
     "lenteja pardina": {
       "descripcion": "LENTEJA PARDINA",
@@ -104,22 +103,16 @@
     "roja dulce bolsa": {
       "descripcion": "ROJA DULCE BOLSA",
       "food_id": "manzana_con_piel",
-      "nombre_envase": "bolsa 1,5 kg",
-      "unidades_por_envase": 1,
-      "gramos_por_unidad": 1500,
+      "preguntar_gramos": true,
       "fuente": "https://tienda.mercadona.es/product/8280/manzanas-rojas-dulces-bolsa (consultado el 13-11-2026)",
-      "nota": "Peso de la bolsa de la web (1,5 kg); si cambia el tamaño de la bolsa, el ticket (2,88 €) ya no coincide con el precio actual (2,70 €): confirmar.",
-      "confirmar": true
+      "nota": "El peso de la bolsa varía (Victor, 13-11-2026): la línea va a Dudas para que ponga los gramos de la etiqueta."
     },
     "roja acidulce bolsa": {
       "descripcion": "ROJA ACIDULCE BOLSA",
       "food_id": "manzana_con_piel",
-      "nombre_envase": "bolsa 1,62 kg",
-      "unidades_por_envase": 1,
-      "gramos_por_unidad": 1620,
+      "preguntar_gramos": true,
       "fuente": "https://tienda.mercadona.es/product/8268/manzanas-rojas-acidulces-bolsa (consultado el 13-11-2026)",
-      "nota": "Peso de la bolsa de la web (1,62 kg); el ticket (3,10 €) no coincide con el precio actual (3,40 €): confirmar.",
-      "confirmar": true
+      "nota": "El peso de la bolsa varía (Victor, 13-11-2026): la línea va a Dudas para que ponga los gramos de la etiqueta."
     },
     "mandarina": {
       "descripcion": "MANDARINA",
@@ -166,37 +159,22 @@
     },
     "12 huevos super gran": {
       "descripcion": "12 HUEVOS SUPER GRAN",
-      "food_id": "huevo",
-      "nombre_envase": "paquete 12 huevos",
-      "unidades_por_envase": 12,
-      "gramos_por_unidad": 76,
-      "fuente": "https://tienda.mercadona.es/product/31592/huevos-super-grandes-xl-paquete (consultado el 13-11-2026); Reglamento (CE) n.º 589/2008",
-      "talla": "XL",
-      "estimado": true,
-      "nota": "ESTIMADO, Victor debe confirmarlo. Gramos de un huevo CON cáscara. Clase XL = 73 g o más (nombre legal en la web, sin tope): se usa 76 g. La cáscara (0,88) va en porcion_comestible de `huevo`.",
-      "confirmar": true
+      "ignorar": true,
+      "motivo": "Victor trae huevos caseros; comprarlos es una excepción y no se cuenta (Victor, 13-11-2026). Si los compra, los suma con «Ajustar»."
     },
     "6 huevos grandes-l": {
       "descripcion": "6 HUEVOS GRANDES-L",
-      "food_id": "huevo",
-      "nombre_envase": "paquete 6 huevos",
-      "unidades_por_envase": 6,
-      "gramos_por_unidad": 68,
-      "fuente": "https://tienda.mercadona.es/product/31540/huevos-grandes-l-paquete (consultado el 13-11-2026); Reglamento (CE) n.º 589/2008",
-      "talla": "L",
-      "estimado": true,
-      "nota": "ESTIMADO, Victor debe confirmarlo. Gramos de un huevo CON cáscara. Clase L = 63 g a menos de 73 g (Reglamento 589/2008): punto medio, 68 g. La cáscara (0,88) va en porcion_comestible de `huevo`.",
-      "confirmar": true
+      "ignorar": true,
+      "motivo": "Victor trae huevos caseros; comprarlos es una excepción y no se cuenta (Victor, 13-11-2026). Si los compra, los suma con «Ajustar»."
     },
     "cebolla tubo": {
       "descripcion": "CEBOLLA TUBO",
       "food_id": "cebolla",
-      "nombre_envase": "malla",
+      "nombre_envase": "malla 1 kg",
       "unidades_por_envase": 1,
-      "gramos_por_unidad": null,
+      "gramos_por_unidad": 1000,
       "fuente": "https://tienda.mercadona.es/product/69089/cebollas-malla (consultado el 13-11-2026)",
-      "nota": "Sin tamaño seguro: la web solo trae cebollas en malla de 1 kg (1,50 €) y 2 kg (3,00 €), ninguna a 2,00 € como el ticket ni llamada «tubo». Queda vacío: la línea va a Dudas hasta que Victor diga el peso.",
-      "confirmar": true
+      "nota": "Malla de 1 kg, confirmado por Victor, 13-11-2026."
     },
     "barra 100% integral": {
       "descripcion": "BARRA 100% INTEGRAL",
