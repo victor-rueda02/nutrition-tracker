@@ -1,6 +1,7 @@
 // Servidor local para probar la app en tu PC con datos reales, sin desplegar nada:
 //   node --env-file=.env scripts/dev-server.mjs [--port 8080] [--lan]
 // - Sirve la app como GitHub Pages (la raíz del repo): http://localhost:8080/ -> /frontend/.
+// - Atiende también /tickets* (cola de tickets de Mercadona) con un KV en memoria: sin Cloudflare, sin IA y sin guardar nada en disco.
 // - Atiende /parse, /estimate, /cenas, /usda/search, /usda/foods y /health con el MISMO código del Worker (worker/src/index.js)
 //   y tus GEMINI_API_KEY y USDA_API_KEY de .env. Cada dictado o «Estimar» es una llamada real a Gemini y cada búsqueda
 //   nueva, una a USDA (se cuentan en la consola; USDA se guarda en usda/cache/, como el script).
@@ -49,7 +50,24 @@ const readBody = (req) => new Promise((ok, ko) => {
   req.on('data', (c) => chunks.push(c)).on('end', () => ok(Buffer.concat(chunks))).on('error', ko);
 });
 
-export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/cenas', '/usda/search', '/usda/foods'];
+export const RUTAS_WORKER = ['/parse', '/health', '/estimate', '/cenas', '/usda/search', '/usda/foods', '/tickets', '/tickets/pendientes', '/tickets/recibidos'];
+
+// KV en memoria (get / put / delete / list con prefijo, límite y cursor) para probar la cola de tickets sin Cloudflare: lo que se
+// sube se pierde al parar el servidor. Con el mismo contrato que usa worker/src/tickets.js.
+export function kvEnMemoria() {
+  const m = new Map();
+  return {
+    async get(k) { return m.has(k) ? m.get(k) : null; },
+    async put(k, v) { m.set(k, v); },
+    async delete(k) { m.delete(k); },
+    async list({ prefix = '', limit = 1000, cursor } = {}) {
+      const keys = [...m.keys()].filter((k) => k.startsWith(prefix)).sort();
+      const ini = cursor ? Number(cursor) : 0;
+      const fin = ini + limit;
+      return { keys: keys.slice(ini, fin).map((name) => ({ name })), list_complete: fin >= keys.length, cursor: fin < keys.length ? String(fin) : undefined };
+    },
+  };
+}
 
 export function createDevServer({ env, callModel, usdaClient, base = root }) {
   return createServer(async (req, res) => {
@@ -97,7 +115,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   let llamadasUsda = 0;
   const contar = (url, init) => { llamadasUsda++; console.log(`[usda] llamada n.º ${llamadasUsda}`); return fetch(url, init); };
   const usdaClient = (e) => createUsdaClient({ apiKey: e.USDA_API_KEY, fetchImpl: contar, cacheDir: resolve(root, 'usda', 'cache') });
-  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, GEMINI_MODEL_FALLBACK: fallback, APP_TOKEN: token, USDA_API_KEY: process.env.USDA_API_KEY }, callModel, usdaClient });
+  const server = createDevServer({ env: { GEMINI_API_KEY: process.env.GEMINI_API_KEY, GEMINI_MODEL: model, GEMINI_MODEL_FALLBACK: fallback, APP_TOKEN: token, USDA_API_KEY: process.env.USDA_API_KEY, TICKETS: kvEnMemoria() }, callModel, usdaClient });
   server.listen(port, lan ? '0.0.0.0' : '127.0.0.1', () => {
     console.log(`App: http://localhost:${port}/  (modelo: ${model}${fallback ? `, respaldo: ${fallback}` : ''})`);
     if (lan) {

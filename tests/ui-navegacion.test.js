@@ -91,10 +91,10 @@ test('tres puntos: Informe diario con todos los nutrientes y comidas; "‹" vuel
   assert.equal(t.$('li.nut[data-clave="vitamina_b12_ug"]'), null); // el Diario queda con el resumen
 });
 
-test('Alimentos: catálogo buscable con filtros; Más: lista con sus cinco apartados', { skip }, async () => {
+test('Alimentos: catálogo buscable con filtros; Más: lista con sus siete apartados', { skip }, async () => {
   const t = await setup();
   await t.act(() => t.btn('Alimentos').click());
-  assert.deepEqual(t.$$('.card-link h2').map((x) => x.textContent), ['Mi catálogo', 'Recetas', 'Plantillas']);
+  assert.deepEqual(t.$$('.card-link h2').map((x) => x.textContent), ['Mi catálogo', 'Recetas', 'Plantillas', 'Inventario', 'Lista de la compra']);
   assert.match(t.$$('.card-link').map((x) => x.textContent).join(' '), /\d+ recetas?.*\d+ plantillas?/); // recuentos en las tarjetas
   await t.act(() => t.btn('Ver catálogo').click());
   const total = t.$$('.food-row').length;
@@ -105,7 +105,7 @@ test('Alimentos: catálogo buscable con filtros; Más: lista con sus cinco apart
   await t.act(() => t.btn('Excluidos').click());
   assert.ok(t.$$('.food-row').every((r) => /excluido/.test(r.textContent)));
   await t.act(() => t.btn('Más').click());
-  assert.deepEqual(t.$$('.menu-row').map((b) => b.textContent), ['Objetivos', 'Documento', 'Copia de seguridad', 'Conexión con la IA', 'Pulir el documento']);
+  assert.deepEqual(t.$$('.menu-row').map((b) => b.textContent), ['Objetivos', 'Inventario', 'Lista de la compra', 'Documento', 'Copia de seguridad', 'Conexión con la IA', 'Pulir el documento']);
   await t.act(() => t.btn('Conexión con la IA').click());
   assert.ok(t.$('input[type=url]'));
   await t.act(() => t.btn('‹ Volver').click());

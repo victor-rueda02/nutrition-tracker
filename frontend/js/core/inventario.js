@@ -195,6 +195,13 @@ export function sustituirEvento(inv, evento) {
   return con(inv, { eventos: inv.eventos.map((e) => (e.id === l.id ? l : e)) });
 }
 
+// Borra un evento por id (la ficha del alimento lo ofrece con confirmación). Lanza si no existe. Los tickets ya aplicados siguen
+// registrados, así que una compra borrada no vuelve a sumarse; una copia importada sí puede traerla de vuelta (la fusión nunca borra).
+export function quitarEvento(inv, id) {
+  if (!inv.eventos.some((e) => e.id === id)) throw new Error(`No existe el evento ${id}`);
+  return con(inv, { eventos: inv.eventos.filter((e) => e.id !== id) });
+}
+
 export const ticketAplicado = (inv, hash) => Object.prototype.hasOwnProperty.call(inv.tickets, hash);
 export const registrarTicket = (inv, hash, { fecha, hora, aplicado, origen }) => con(inv, { tickets: { ...inv.tickets, [hash]: { ...(fecha ? { fecha } : {}), ...(hora ? { hora } : {}), ...(aplicado ? { aplicado } : {}), ...(origen ? { origen } : {}) } } });
 export function anadirDuda(inv, duda, { id = newId } = {}) {

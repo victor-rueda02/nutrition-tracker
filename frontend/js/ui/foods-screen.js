@@ -30,6 +30,11 @@ export function alimentosScreen(ui) {
       h('button', { type: 'button', class: 'secondary pill', onclick: ui.openRecetas }, 'Ver recetas'), ui.openRecetas),
     card('list', 'Plantillas', `${ui.nPlantillas} ${ui.nPlantillas === 1 ? 'plantilla' : 'plantillas'}`,
       h('button', { type: 'button', class: 'secondary pill', onclick: ui.openTemplates }, 'Ver plantillas'), ui.openTemplates),
+    // Inventario y Lista de la compra (ui/inventario-screen.js); el aviso de dudas lleva a Dudas.
+    card('box', 'Inventario', ui.nDudas ? [`${ui.nDudas} ${ui.nDudas === 1 ? 'duda' : 'dudas'} de tickets`] : 'Lo que tienes en casa',
+      h('button', { type: 'button', class: 'secondary pill', onclick: ui.openInventario }, 'Ver inventario'), ui.openInventario),
+    card('cart', 'Lista de la compra', 'Lo que falta para los próximos días',
+      h('button', { type: 'button', class: 'secondary pill', onclick: ui.openCompra }, 'Ver la lista'), ui.openCompra),
     ui.pendientes);
 }
 
