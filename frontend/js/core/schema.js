@@ -16,6 +16,7 @@ export const WORK_COLUMNS = [
   'pendiente_revisar', // si = añadido desde la app («Estimar con IA»): ponle alias o fúndelo con tus variantes
   'rol_cena', // papel en una cena para «¿Qué ceno?» (proteina, hidrato, verdura, plato, grasa, salsa, postre_base, postre_extra, fruta u otro)
   'nombre_corto', // nombre breve para los títulos de las propuestas de «¿Qué ceno?»
+  'porcion_comestible', // fracción 0-1 comestible del producto tal como se compra (inventario; no entra en nutrientes)
 ];
 
 export const ESTADOS = ['crudo', 'cocinado', 'procesado', 'tostado'];
