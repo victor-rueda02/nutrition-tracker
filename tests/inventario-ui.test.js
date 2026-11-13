@@ -532,7 +532,7 @@ test('Recuento: el campo es «g comestibles»; en los alimentos con porción com
   await t.abrirInventario();
   await t.act(() => t.btn('Hacer recuento').click());
   assert.ok(t.$('.rec-fila[data-id="nueces"] .rec-campos').textContent.includes('g comestibles'));
-  assert.match(t.$('.rec-fila[data-id="nueces"] .rec-entero').textContent, /se aplica ×0,45/);
+  assert.match(t.$('.rec-fila[data-id="nueces"] .rec-entero').textContent, /con cáscara o piel \(se cuenta ×0,45\)/);
   assert.equal(t.$('.rec-fila[data-id="arroz_blanco_crudo"] .rec-entero'), null, 'sin porción comestible no hay casilla');
   t.type(t.$('.rec-fila[data-id="nueces"] input[aria-label^="Gramos de"]'), '600');
   await t.act(() => t.$('.rec-fila[data-id="nueces"] input[type=checkbox]').click());

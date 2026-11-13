@@ -106,7 +106,7 @@ export function recuentoScreen(ui) {
     return h('li', { class: 'rec-fila', 'data-id': id },
       h('div', { class: 'rec-nombre' }, h('strong', {}, nombre(id)), h('small', { class: 'muted' }, `ahora: ${textoStock(s, env).texto}`)),
       h('div', { class: 'row rec-campos' }, g, h('span', {}, 'g comestibles'), unidades, unidades ? h('span', { class: 'muted small' }, `${env.unidad}s de ${textoCantidad(env.gramos)}`) : null),
-      entero ? h('label', { class: 'rec-entero small' }, entero, h('span', {}, `Lo he pesado entero (sin cáscara/piel; si lo pesas entero, se aplica ×${nf2.format(pc.factor)})`)) : null);
+      entero ? h('label', { class: 'rec-entero small' }, entero, h('span', {}, `Lo he pesado entero, con cáscara o piel (se cuenta ×${nf2.format(pc.factor)})`)) : null);
   };
 
   return h('main', { class: 'inventario recuento' },
@@ -206,7 +206,7 @@ export function dudasScreen(ui) {
   };
 
   return h('main', { class: 'inventario dudas' },
-    ui.header(`Dudas (${inv.data.dudas.length})`, ui.back),
+    ui.header(`Dudas (${inv.data.dudas.length + inv.preguntas.length})`, ui.back), // también los «¿Es el mismo ticket?»
     aviso(ui),
     ...preguntasPanel(ui),
     h('p', { class: 'muted small' }, 'Estas líneas de tickets no suman al inventario hasta que las resuelvas: nunca se adivina.'),
