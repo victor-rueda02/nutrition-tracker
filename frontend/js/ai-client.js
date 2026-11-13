@@ -130,11 +130,11 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       return { fichas: b.fichas, faltan: b.faltan ?? [] };
     },
 
-    // Tickets de Mercadona (Inventario). Sin IA: el Worker solo lee el ticket y guarda fecha, líneas y hash en su cola (KV).
+    // Tickets de Mercadona (Inventario). Sin IA: el Worker solo lee el ticket y guarda fecha, hora, líneas y hash en su cola (KV).
     // Nunca viaja el diario ni el inventario. Un 401 aquí es el token de la app; el del correo es otro y vive en el Apps Script.
-    //   await ai.ticketsPendientes()                          -> { tickets: [{ hash, fecha, lineas, recibido, origen }] }
+    //   await ai.ticketsPendientes()                          -> { tickets: [{ hash, fecha, hora, lineas, recibido, origen }] }
     //   await ai.ticketsRecibidos({ hashes })                 -> { borrados }  (la app ya los aplicó: se quitan de la cola)
-    //   await ai.subirTicket({ pdf_base64 } | { texto })      -> { hash, fecha, lineas, duplicado }  (entra en la cola; luego se recoge)
+    //   await ai.subirTicket({ pdf_base64 } | { texto })      -> { hash, fecha, hora, lineas, duplicado }  (entra en la cola; luego se recoge)
     async ticketsPendientes() {
       const b = await post('/tickets/pendientes', {}, (x) => Array.isArray(x.tickets));
       return { tickets: b.tickets };

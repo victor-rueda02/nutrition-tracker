@@ -3,7 +3,7 @@
  *
  * Cada hora busca los correos de Mercadona con un PDF adjunto que aún no tengan la etiqueta «nt-procesado», manda cada PDF
  * (en base64) a la cola de tickets de TU Worker (POST /tickets) y, si el Worker responde 200, pone la etiqueta al correo.
- * El Worker lee el PDF, se queda solo con la fecha, las líneas de producto y un hash, y lo deja en su cola; la app lo recoge
+ * El Worker lee el PDF, se queda solo con la fecha, la hora, las líneas de producto y un hash, y lo deja en su cola; la app lo recoge
  * con «Sincronizar inventario». Pasos para ponerlo en marcha: docs/inventario/CORREO.md.
  *
  * NO escribas aquí la dirección del Worker ni el token: van en «Propiedades del script» (Configuración del proyecto):
@@ -13,11 +13,12 @@
 
 // ---------- Ajustes (lo único que puedes tocar aquí) ----------
 
-// Qué correos busca. Es una consulta de Gmail normal (pruébala en la caja de búsqueda de Gmail). Si te llegan correos de
-// Mercadona que no son tickets, acótala con la dirección del remitente: from:(la-direccion-que-veas-en-el-correo).
-var CONSULTA = 'from:mercadona has:attachment filename:pdf -label:nt-procesado -label:nt-no-leido newer_than:30d';
+// Qué correos busca. Es una consulta de Gmail normal (pruébala en la caja de búsqueda de Gmail). OBLIGATORIO: cambia
+// PON-AQUI-EL-REMITENTE-EXACTO por la dirección exacta del remitente de tus tickets (la que ves en el correo). Así no se
+// procesa ningún otro correo que diga «Mercadona». Mientras no lo cambies, no encuentra nada.
+var CONSULTA = 'from:(PON-AQUI-EL-REMITENTE-EXACTO) has:attachment filename:pdf -label:nt-procesado -label:nt-no-leido newer_than:30d';
 var ETIQUETA_HECHO = 'nt-procesado';   // el Worker lo recibió (200)
-var ETIQUETA_NO_LEIDO = 'nt-no-leido'; // el Worker contestó 422: ese PDF no se puede leer (no se reintenta cada hora)
+var ETIQUETA_NO_LEIDO = 'nt-no-leido'; // el Worker no puede leer ese PDF (400/413/422): no se reintenta cada hora
 var MAX_HILOS = 10;                    // correos por ejecución (el resto, en la hora siguiente)
 
 // ---------- Programa ----------
@@ -89,9 +90,10 @@ function etiqueta_(nombre) {
   return GmailApp.getUserLabelByName(nombre) || GmailApp.createLabel(nombre);
 }
 
-// Solo se reintenta lo que puede arreglarse solo o con el token: sin respuesta (0), token (401), límite (429) y 5xx.
+// Solo se reintenta lo que puede arreglarse solo, con el token o desplegando: sin respuesta (0), token (401), ruta que aún no
+// existe o WORKER_URL mal escrita (404), límite (429) y 5xx.
 function reintentable_(codigo) {
-  return codigo === 0 || codigo === 401 || codigo === 429 || codigo >= 500;
+  return codigo === 0 || codigo === 401 || codigo === 404 || codigo === 429 || codigo >= 500;
 }
 
 function esPdf_(adjunto) {

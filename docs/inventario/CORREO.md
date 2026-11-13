@@ -91,9 +91,10 @@ con `npm run worker:logs`.
 | `ERROR 401 … token_invalido` | `MAIL_TOKEN` del script ≠ secreto del Worker | Repite A4 y B3 con el mismo valor |
 | `ERROR 500 … tickets_sin_configurar` | Falta el KV `TICKETS` en el Worker | Pasos A1, A2 y A5 |
 | `ERROR 0 …` | Sin respuesta (URL mal escrita o red) | Revisa `WORKER_URL`; vuelve a intentarlo |
+| `ERROR 404 … no_encontrado` | `WORKER_URL` con una ruta de más, o el Worker desplegado no tiene aún `/tickets` | Revisa `WORKER_URL` (sin `/tickets` ni barra final) o despliega el Worker; se reintenta solo cada hora |
 | `ERROR 503 …` o `1102` (CPU superada) | Google/Cloudflare fallan, o el Worker gratuito se queda sin CPU leyendo el PDF | Sube el ticket desde la app («Pegar el texto del ticket») y avisa al coordinador |
 | `PDF no legible … 400/413/422` (PDF de más de 2 MB, base64 raro o que el Worker no entiende) | El Worker no entiende ese PDF (otro formato, un adjunto que no es el ticket) | El hilo recibe `nt-no-leido` y deja de reintentarse. Si era un ticket, **sube el texto desde la app** («Pegar el texto del ticket») y avisa de que cambió el formato. Para que vuelva a intentarse, quita la etiqueta `nt-no-leido` en Gmail |
-| No sale ningún hilo | La consulta no coincide | Prueba `CONSULTA` en la caja de búsqueda de Gmail y ajústala |
+| No sale ningún hilo | La consulta no coincide (o sigue `PON-AQUI-EL-REMITENTE-EXACTO`) | Prueba `CONSULTA` en la caja de búsqueda de Gmail y ajústala |
 
 - **Ver o quitar el disparador**: **Activadores** (el reloj). Para parar el correo, borra el activador; el Worker no hace nada solo.
 - **Reenviar un ticket**: quita la etiqueta `nt-procesado` del correo. Aunque se reenvíe, el Worker y la app lo reconocen por su hash
