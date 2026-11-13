@@ -39,7 +39,7 @@ function procesarTickets() {
   hilos.forEach(function (hilo) {
     var pdfs = 0;
     var errores = 0;     // fallos que se reintentan en la hora siguiente (red, 5xx, token...)
-    var ilegibles = 0;   // el Worker no entiende ese PDF (422): no tiene sentido reintentar
+    var ilegibles = 0;   // el Worker rechaza ese PDF (400, 413, 422…): no tiene sentido reintentar
     hilo.getMessages().forEach(function (mensaje) {
       mensaje.getAttachments().forEach(function (adjunto) {
         if (!esPdf_(adjunto)) return;
@@ -48,9 +48,10 @@ function procesarTickets() {
         if (r.codigo === 200) {
           enviados++;
           Logger.log('Ticket recibido (' + adjunto.getName() + '): ' + r.cuerpo);
-        } else if (r.codigo === 422) {
+        } else if (!reintentable_(r.codigo)) {
+          // 400, 413, 422… (PDF mal formado, demasiado grande o que el Worker no entiende): reintentar no lo arregla
           ilegibles++;
-          Logger.log('PDF no legible, se marca «' + ETIQUETA_NO_LEIDO + '» (' + adjunto.getName() + '): ' + r.cuerpo);
+          Logger.log('PDF no aceptado (' + r.codigo + '), se marca «' + ETIQUETA_NO_LEIDO + '» (' + adjunto.getName() + '): ' + r.cuerpo);
         } else {
           errores++;
           Logger.log('ERROR ' + r.codigo + ' con ' + adjunto.getName() + ': ' + r.cuerpo);
@@ -86,6 +87,11 @@ function comprobarWorker() {
 
 function etiqueta_(nombre) {
   return GmailApp.getUserLabelByName(nombre) || GmailApp.createLabel(nombre);
+}
+
+// Solo se reintenta lo que puede arreglarse solo o con el token: sin respuesta (0), token (401), límite (429) y 5xx.
+function reintentable_(codigo) {
+  return codigo === 0 || codigo === 401 || codigo === 429 || codigo >= 500;
 }
 
 function esPdf_(adjunto) {

@@ -58,19 +58,31 @@ TARJETA BANCARIA: **** **** **** 1234
 AUT: 123456 AID: A0000000031010
 Importe: 3,93 €`;
 
-test('parseTicket: texto con cabecera y pie reales — solo fecha y líneas; nada de tienda, NIF, hora, OP, factura, tarjeta ni IVA', async () => {
+test('parseTicket: texto con cabecera y pie reales — fecha, hora y líneas; nada de tienda, NIF, OP, factura, tarjeta ni IVA', async () => {
   const t = await parseTicket(textoDePdfReal());
   assert.equal(t.fecha, '2026-10-26');
+  assert.equal(t.hora, '20:58');
   assert.deepEqual(t.lineas.map((l) => [l.descripcion, l.cantidad, l.importe, l.peso_kg]), [['BEBIDA AVENA', 2, 1.9, null], ['MANDARINA', 1, 2.03, 0.798]]);
   const json = JSON.stringify(t);
-  for (const dato of ['A-00000000', 'PRUEBA', '900000000', '20:58', 'OP:', '4350', '1234-567-890123', 'FACTURA', 'TARJETA', '****', 'AUT', '10%']) assert.ok(!json.includes(dato), `no debe aparecer ${dato}`);
+  for (const dato of ['A-00000000', 'PRUEBA', '900000000', 'OP:', '4350', '1234-567-890123', 'FACTURA', 'TARJETA', '****', 'AUT', '10%']) assert.ok(!json.includes(dato), `no debe aparecer ${dato}`);
 });
 
-test('parseTicket: el hash es el SHA-256 de «FACTURA SIMPLIFICADA: …» + fecha (no depende de las líneas); sin factura, de la fecha y las líneas', async () => {
+test('parseTicket: la hora de la línea de la fecha (HH:MM válida) se devuelve; sin hora o con una imposible, null', async () => {
+  assert.equal((await parseTicket(textoDePdfReal())).hora, '20:58');
+  assert.equal((await parseTicket(textoDePdfReal().replace('20:58', '9:05'))).hora, '09:05');
+  assert.equal((await parseTicket(textoDePdfReal().replace('20:58', '24:00'))).hora, null);
+  assert.equal((await parseTicket(textoDePdfReal().replace('20:58', '12:75'))).hora, null);
+  assert.equal((await parseTicket(textoDePdfReal().replace(' 20:58 OP: 4350', ''))).hora, null);
+  assert.equal((await parseTicket(fixture('ticket-2026-10-26.txt'))).hora, null);
+});
+
+test('parseTicket: el hash sale de fecha, hora y líneas (nunca del nº de factura): PDF y texto pegado, con o sin la línea de factura, coinciden', async () => {
   const t = await parseTicket(textoDePdfReal('1234-567-890123'));
-  assert.equal(t.hash, createHash('sha256').update('FACTURA SIMPLIFICADA: 1234-567-890123|2026-10-26').digest('hex'));
-  assert.equal((await parseTicket(textoDePdfReal('1234-567-890123').replace('BEBIDA AVENA 0,95 1,90', 'BEBIDA AVENA 0,95 1,90 '))).hash, t.hash, 'espacios sobrantes no cambian el hash');
-  assert.notEqual((await parseTicket(textoDePdfReal('1234-567-890124'))).hash, t.hash);
+  assert.equal(t.hash, createHash('sha256').update('2026-10-26T20:58|2~bebida avena~1.9~|1~mandarina~2.03~0.798').digest('hex'));
+  assert.equal((await parseTicket(textoDePdfReal('9999-999-999999'))).hash, t.hash, 'el nº de factura no interviene');
+  assert.equal((await parseTicket(textoDePdfReal().replace(/FACTURA SIMPLIFICADA: .*\n/, ''))).hash, t.hash, 'sin la línea de factura, el mismo hash');
+  assert.equal((await parseTicket(textoDePdfReal().replace('BEBIDA AVENA 0,95 1,90', 'BEBIDA AVENA 0,95 1,90 '))).hash, t.hash, 'espacios sobrantes no cambian el hash');
+  assert.notEqual((await parseTicket(textoDePdfReal().replace('20:58', '20:59'))).hash, t.hash, 'otra hora, otro ticket');
   const a = await parseTicket(fixture('ticket-2026-10-26.txt'));
   assert.equal(a.hash, (await parseTicket(fixture('ticket-2026-10-26.txt').replace(/\r\n/g, '\n'))).hash, 'mismo texto, mismo hash (CRLF o LF)');
   assert.notEqual(a.hash, (await parseTicket(fixture('ticket-2026-10-26.txt').replace('1 ARROZ LARGO 1,20', '2 ARROZ LARGO 1,20 2,40'))).hash);

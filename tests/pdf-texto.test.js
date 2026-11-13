@@ -71,6 +71,51 @@ test('errores claros: no es un PDF, cifrado, sin ToUnicode (sin texto) y vacío'
   await falla(crearPdf([]), 'sin_texto');
 });
 
+const comoPdf = (cuerpo) => new TextEncoder().encode(`%PDF-1.4\n${cuerpo}\n`);
+const rechaza = (bytes, code) => assert.rejects(textoDePdf(bytes), (e) => e instanceof PdfError && (!code || e.code === code));
+
+test('robustez: miles de «1 0 obj» sin cerrar no hacen cuadrático el índice (y no cuelgan)', async () => {
+  const t0 = performance.now();
+  await rechaza(comoPdf('1 0 obj '.repeat(60_000)), 'pdf_invalido');
+  await rechaza(comoPdf('1 0 obj << /A 1 >> '.repeat(30_000) + 'endobj'), 'pdf_invalido');
+  assert.ok(performance.now() - t0 < 3000, 'tarda mucho menos de 3 s');
+});
+
+test('robustez: un /W con un rango de más de 65 536 códigos se salta sin colgarse', async () => {
+  const pdf = crearPdf([{ x: 10, y: 10, texto: 'hola' }]);
+  const original = Buffer.from(pdf).toString('latin1'); // Buffer: un carácter por byte exacto (TextDecoder('latin1') es windows-1252)
+  const malo = original.replace('/W [ 3 [250]', '/W [ 0 4000000000 500 3 [250]');
+  assert.notEqual(malo, original, 'el PDF de prueba lleva el /W esperado');
+  const t0 = performance.now();
+  assert.equal(await textoDePdf(new Uint8Array(Buffer.from(malo, 'latin1'))), 'hola');
+  assert.ok(performance.now() - t0 < 2000);
+});
+
+test('robustez: una bomba de deflate (más de 20 MB descomprimidos) se corta con pdf_no_soportado', async () => {
+  const { deflateSync } = await import('node:zlib');
+  const bomba = deflateSync(Buffer.alloc(25 * 1024 * 1024));
+  assert.ok(bomba.length < 100_000, 'comprime a muy poco');
+  const cuerpo = Buffer.concat([
+    Buffer.from('%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n3 0 obj\n<< /Type /Page /Parent 2 0 R /Contents 4 0 R /Resources << >> >>\nendobj\n4 0 obj\n'),
+    Buffer.from(`<< /Length ${bomba.length} /Filter /FlateDecode >>\nstream\n`), bomba, Buffer.from('\nendstream\nendobj\ntrailer << /Root 1 0 R >>\n'),
+  ]);
+  await rechaza(new Uint8Array(cuerpo), 'pdf_no_soportado');
+});
+
+test('robustez: arrays y diccionarios anidados sin fin dan pdf_invalido (no se desborda la pila)', async () => {
+  await rechaza(comoPdf(`1 0 obj ${'['.repeat(20_000)} endobj\ntrailer << /Root 1 0 R >>`), 'pdf_invalido');
+  await rechaza(comoPdf(`1 0 obj ${'<< /A '.repeat(20_000)} endobj\ntrailer << /Root 1 0 R >>`), 'pdf_invalido');
+});
+
+test('robustez: cualquier otro fallo interno sale como PdfError pdf_invalido (el Worker contesta 422, no 500)', async () => {
+  // un objeto cuyo flujo no es zlib válido
+  const roto = comoPdf('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n2 0 obj\n<< /Type /Pages /Kids [3 0 R] >>\nendobj\n3 0 obj\n<< /Type /Page /Contents 4 0 R >>\nendobj\n4 0 obj\n<< /Length 4 /Filter /FlateDecode >>\nstream\nabcd\nendstream\nendobj\ntrailer << /Root 1 0 R >>');
+  await rechaza(roto, 'pdf_invalido');
+  // y un argumento que ni siquiera son bytes
+  await rechaza(null, 'pdf_invalido');
+  await rechaza({}, 'pdf_invalido');
+});
+
 test('leerToUnicode: bfchar, bfrange con destino y con lista, varias letras (ligadura) y ancho de código', () => {
   const t = leerToUnicode(`/CIDInit /ProcSet findresource begin
 1 begincodespacerange <0000> <FFFF> endcodespacerange

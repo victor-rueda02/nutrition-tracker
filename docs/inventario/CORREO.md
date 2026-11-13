@@ -2,7 +2,7 @@
 
 Qué hace (decisión D1 a de `ESPEC.md`): un script de Google Apps Script en tu cuenta de Gmail busca **cada hora** los correos de
 Mercadona con el ticket digital (PDF) que aún no tengan la etiqueta `nt-procesado`, manda cada PDF a tu Worker y pone la etiqueta.
-El Worker lee el PDF, se queda **solo con la fecha, las líneas de producto y un hash** (nunca el PDF, la tienda, el NIF, la hora,
+El Worker lee el PDF, se queda **solo con la fecha, la hora, las líneas de producto y un hash** (nunca el PDF, la tienda, el NIF, el OP,
 el nº de factura ni la tarjeta) y lo deja en una cola de 30 días. La app lo recoge cuando abres el inventario o pulsas
 «Sincronizar inventario»; las dudas se resuelven en la app (D2 a). **Nada de esto va a Gemini ni a USDA.**
 
@@ -60,18 +60,24 @@ recursos de Cloudflare, pone un secreto y publica el Worker: por eso se hace cua
 
 ## Parte C · Probar de punta a punta
 
-1. En Gmail, busca `from:mercadona has:attachment filename:pdf` y comprueba que sale tu ticket (si no, ajusta `CONSULTA`).
+1. **Paso obligatorio**: abre un correo con tu ticket de Mercadona, mira la **dirección exacta del remitente** y pon esa dirección en
+   `CONSULTA` del script (`from:(esa-direccion) has:attachment filename:pdf -label:nt-procesado -label:nt-no-leido newer_than:30d`).
+   No dejes `from:mercadona` a secas: coge cualquier correo de la marca (publicidad, facturas…). Comprueba en la caja de búsqueda de
+   Gmail que sale tu ticket.
 2. Ejecuta `procesarTickets` (B6). Si salió `Ticket recibido`, el ticket está en la cola del Worker.
 3. En la app: Alimentos → Inventario → **Sincronizar inventario** (pantalla de la fase F4). Las líneas de la dieta suman, las de
    fuera se ignoran y las dudosas van a **Dudas**.
 4. **Sin esperar a la app**, puedes ver la cola con PowerShell (usa tu token de la app, no el del correo):
    ```powershell
-   Invoke-RestMethod -Method Post -Uri https://<tu-worker>.workers.dev/tickets/pendientes -Headers @{ 'X-App-Token' = '<tu-token-de-la-app>' }
+   $t = Read-Host 'Token'
+   Invoke-RestMethod -Method Post -Uri https://<tu-worker>.workers.dev/tickets/pendientes -Headers @{ 'X-App-Token' = $t }
    ```
 5. También puedes probar el Worker con el texto de un ticket (sin Gmail):
    ```powershell
-   $cuerpo = @{ texto = (Get-Content tests\fixtures\tickets\ticket-2026-10-26.txt -Raw) } | ConvertTo-Json
-   Invoke-RestMethod -Method Post -Uri https://<tu-worker>.workers.dev/tickets -Headers @{ 'X-Mail-Token' = '<token-del-correo>' } -ContentType 'application/json; charset=utf-8' -Body $cuerpo
+   $t = Read-Host 'Token del correo'
+   $texto = [IO.File]::ReadAllText((Resolve-Path tests\fixtures\tickets\ticket-2026-10-26.txt), [Text.Encoding]::UTF8)
+   $cuerpo = @{ texto = $texto } | ConvertTo-Json
+   Invoke-RestMethod -Method Post -Uri https://<tu-worker>.workers.dev/tickets -Headers @{ 'X-Mail-Token' = $t } -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($cuerpo))
    ```
    (Esos tickets de prueba llevan fechas pasadas: no sumarán nada a un inventario cuyo recuento sea posterior.)
 
@@ -85,8 +91,8 @@ con `npm run worker:logs`.
 | `ERROR 401 … token_invalido` | `MAIL_TOKEN` del script ≠ secreto del Worker | Repite A4 y B3 con el mismo valor |
 | `ERROR 500 … tickets_sin_configurar` | Falta el KV `TICKETS` en el Worker | Pasos A1, A2 y A5 |
 | `ERROR 0 …` | Sin respuesta (URL mal escrita o red) | Revisa `WORKER_URL`; vuelve a intentarlo |
-| `ERROR 413 …` | PDF de más de 2 MB | Es raro: avisa para ver ese PDF |
-| `PDF no legible … 422` | El Worker no entiende ese PDF (otro formato, un adjunto que no es el ticket) | El hilo recibe `nt-no-leido` y deja de reintentarse. Si era un ticket, **sube el texto desde la app** («Pegar el texto del ticket») y avisa de que cambió el formato. Para que vuelva a intentarse, quita la etiqueta `nt-no-leido` en Gmail |
+| `ERROR 503 …` o `1102` (CPU superada) | Google/Cloudflare fallan, o el Worker gratuito se queda sin CPU leyendo el PDF | Sube el ticket desde la app («Pegar el texto del ticket») y avisa al coordinador |
+| `PDF no legible … 400/413/422` (PDF de más de 2 MB, base64 raro o que el Worker no entiende) | El Worker no entiende ese PDF (otro formato, un adjunto que no es el ticket) | El hilo recibe `nt-no-leido` y deja de reintentarse. Si era un ticket, **sube el texto desde la app** («Pegar el texto del ticket») y avisa de que cambió el formato. Para que vuelva a intentarse, quita la etiqueta `nt-no-leido` en Gmail |
 | No sale ningún hilo | La consulta no coincide | Prueba `CONSULTA` en la caja de búsqueda de Gmail y ajústala |
 
 - **Ver o quitar el disparador**: **Activadores** (el reloj). Para parar el correo, borra el activador; el Worker no hace nada solo.
@@ -94,5 +100,5 @@ con `npm run worker:logs`.
   y no lo suman dos veces («Ticket ya aplicado»).
 - **Cuota**: Apps Script gratuito permite este uso de sobra (una ejecución por hora y unos pocos PDF). Cloudflare KV gratuito
   también (unas pocas escrituras al día).
-- **Privacidad**: en la cola del Worker solo hay fecha, líneas de producto (cantidad, descripción, precios, peso) y el hash; caduca a
+- **Privacidad**: en la cola del Worker solo hay fecha, hora, líneas de producto (cantidad, descripción, precios, peso) y el hash; caduca a
   los 30 días y la app la borra al recogerla. El PDF no se guarda en ningún sitio.

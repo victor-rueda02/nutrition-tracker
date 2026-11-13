@@ -3,14 +3,14 @@
 //
 // Formato (el texto sale de core/pdf-texto.js o de lo que Victor pega):
 //   <cabecera: empresa, NIF, tienda, teléfono>      -> se ignora
-//   DD/MM/AAAA HH:MM  OP: …                          -> solo la fecha
-//   FACTURA SIMPLIFICADA: NNNN-NNN-NNNNNN            -> solo su SHA-256, para no aplicar dos veces el mismo ticket
+//   DD/MM/AAAA HH:MM  OP: …                          -> la fecha y la hora (el OP no)
+//   FACTURA SIMPLIFICADA: NNNN-NNN-NNNNNN            -> no se lee ni se guarda; el hash sale de fecha, hora y líneas
 //   Cnt. Descripción P. Unit Importe                 -> empieza el detalle
 //   3 ATÚN CLARO OLIVA PK6 4,90 14,70                -> cantidad, descripción, p. unitario (si cnt > 1), importe
 //   1 PATATA                                          -> línea a peso: la siguiente trae kg, €/kg e importe
 //   0,870 kg 1,90 €/kg 1,65
 //   TOTAL (€) …                                       -> acaba el detalle (IVA, tarjeta… no se leen)
-// Nunca devuelve ni guarda tienda, NIF, hora, OP, nº de factura, tarjeta ni IVA.
+// Nunca devuelve ni guarda tienda, NIF, OP, nº de factura, tarjeta ni IVA. La hora sí (fecha + hora = momento de la compra).
 import { normalizeText } from './text.js';
 
 export class TicketError extends Error {
@@ -86,7 +86,7 @@ const PESO = /^(\d+[.,]\d+)\s*kg\s+(\d+[.,]\d+)\s*€?\s*\/\s*kg\s+(\d+[.,]\d+)$
 const CABECERA = /^cnt\.? descripcion p\.? ?unit\.? importe/;
 const TOTAL = /^total\b/;
 const FECHA = /(?:^|[^\d])(\d{1,2})\/(\d{1,2})\/(\d{4})(?!\d)/;
-const FACTURA = /FACTURA\s+SIMPLIFICADA\s*:?\s*([0-9A-Za-z][0-9A-Za-z\-/]*)/i;
+const HORA = /^\s+(\d{1,2}):(\d{2})(?!\d)/; // justo después de la fecha
 
 function fechaIso(d, m, a) {
   const f = new Date(Date.UTC(a, m - 1, d));
@@ -124,9 +124,17 @@ export async function parseTicket(texto) {
   if (fin < 0) fin = lineas.length; // texto cortado antes del TOTAL: vale lo que haya
   // Fecha: la primera del texto (en el ticket va en la cabecera, antes del detalle).
   let fecha = null;
+  let hora = null; // 'HH:MM' de la misma línea de la fecha, si viene
   for (const l of lineas) {
     const f = FECHA.exec(l);
-    if (f) { fecha = fechaIso(parseInt(f[1], 10), parseInt(f[2], 10), parseInt(f[3], 10)); if (fecha) break; }
+    if (f) {
+      fecha = fechaIso(parseInt(f[1], 10), parseInt(f[2], 10), parseInt(f[3], 10));
+      if (fecha) {
+        const h = HORA.exec(l.slice(f.index + f[0].length));
+        if (h && parseInt(h[1], 10) <= 23 && parseInt(h[2], 10) <= 59) hora = `${h[1].padStart(2, '0')}:${h[2]}`;
+        break;
+      }
+    }
   }
   if (!fecha) throw new TicketError('sin_fecha', 'No encuentro la fecha del ticket (DD/MM/AAAA).');
 
@@ -151,10 +159,8 @@ export async function parseTicket(texto) {
     return o;
   });
 
-  // Clave de «ya aplicado»: la factura (solo su hash) y la fecha; sin factura (texto pegado a medias), la fecha y las líneas.
-  const fa = lineas.map((l) => FACTURA.exec(l)).find(Boolean);
-  const base = fa
-    ? `FACTURA SIMPLIFICADA: ${fa[1].toUpperCase()}|${fecha}`
-    : `${fecha}|${resultado.map((l) => [l.cantidad, normalizarDescripcion(l.descripcion), l.importe, l.peso_kg].join('~')).join('|')}`;
-  return { fecha, hash: await sha256Hex(base), lineas: resultado };
+  // Clave de «ya aplicado»: fecha, hora y líneas normalizadas. Así el PDF y el mismo texto pegado (con o sin la línea de factura)
+  // dan el mismo hash y no se guarda nada derivado del nº de factura.
+  const base = `${fecha}T${hora ?? ''}|${resultado.map((l) => [l.cantidad, normalizarDescripcion(l.descripcion), l.importe, l.peso_kg].join('~')).join('|')}`;
+  return { fecha, hora, hash: await sha256Hex(base), lineas: resultado };
 }

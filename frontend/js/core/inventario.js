@@ -196,7 +196,7 @@ export function sustituirEvento(inv, evento) {
 }
 
 export const ticketAplicado = (inv, hash) => Object.prototype.hasOwnProperty.call(inv.tickets, hash);
-export const registrarTicket = (inv, hash, { fecha, aplicado, origen }) => con(inv, { tickets: { ...inv.tickets, [hash]: { ...(fecha ? { fecha } : {}), ...(aplicado ? { aplicado } : {}), ...(origen ? { origen } : {}) } } });
+export const registrarTicket = (inv, hash, { fecha, hora, aplicado, origen }) => con(inv, { tickets: { ...inv.tickets, [hash]: { ...(fecha ? { fecha } : {}), ...(hora ? { hora } : {}), ...(aplicado ? { aplicado } : {}), ...(origen ? { origen } : {}) } } });
 export function anadirDuda(inv, duda, { id = newId } = {}) {
   const l = esObjeto(duda) ? limpiarDuda({ ...duda, id: duda.id ?? id() }) : null;
   if (!l) throw new Error(`Duda de inventario no válida: ${JSON.stringify(duda)}`);

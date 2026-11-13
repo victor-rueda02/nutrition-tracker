@@ -1,11 +1,11 @@
 // Cola de tickets de Mercadona (especificación en docs/inventario/ESPEC.md §4, pasos en docs/inventario/CORREO.md):
 //   POST /tickets { pdf_base64 } | { texto }     -> lee el ticket (core/pdf-texto.js + core/ticket-parse.js) y lo deja en la cola
-//   POST /tickets/pendientes                      -> { tickets: [{ hash, fecha, lineas, recibido, origen }] }
+//   POST /tickets/pendientes                      -> { tickets: [{ hash, fecha, hora, lineas, recibido, origen }] }
 //   POST /tickets/recibidos { hashes }            -> los borra de la cola (la app ya los ha recogido)
 // Autenticación: /tickets acepta X-Mail-Token (secreto MAIL_TOKEN; lo usa el Apps Script del correo; sin CORS; solo vale para
 // esta ruta) o X-App-Token (la app, con CORS); las otras dos rutas, solo X-App-Token (si se filtrara el del correo, nadie leería
-// la cola). Lo único que se guarda en KV es { hash, fecha, lineas, recibido, origen }: nunca el PDF ni el texto original, ni
-// tienda, NIF, hora, nº de factura, tarjeta o IVA. Nada de esto va a Gemini ni a USDA (regla 6). Clave por hash (un ticket que
+// la cola). Lo único que se guarda en KV es { hash, fecha, hora, lineas, recibido, origen }: nunca el PDF ni el texto original, ni
+// tienda, NIF, OP, nº de factura, tarjeta o IVA (la hora sí: con la fecha es el momento de la compra). Nada de esto va a Gemini ni a USDA (regla 6). Clave por hash (un ticket que
 // ya está no se duplica) y caducidad de 30 días por si la app no llega a recogerlo.
 import { textoDePdf, PdfError } from '../../frontend/js/core/pdf-texto.js';
 import { parseTicket, TicketError } from '../../frontend/js/core/ticket-parse.js';
@@ -34,6 +34,8 @@ function deBase64(b64) {
 }
 
 async function leerCuerpo(request, json, cors) {
+  const declarado = Number(request.headers.get('content-length'));
+  if (Number.isFinite(declarado) && declarado > MAX_BODY_TICKETS) return { error: json(413, { error: 'cuerpo_demasiado_grande' }, cors) }; // sin leerlo
   const raw = await request.text();
   if (raw.length > MAX_BODY_TICKETS) return { error: json(413, { error: 'cuerpo_demasiado_grande' }, cors) };
   try { return { body: JSON.parse(raw) }; } catch { return { error: json(400, { error: 'json_invalido' }, cors) }; }
@@ -73,7 +75,7 @@ async function recibir(request, env, { json, cors, origen }) {
   }
   const k = clave(t.hash);
   if (await env.TICKETS.get(k)) return json(200, { ok: true, hash: t.hash, fecha: t.fecha, lineas: t.lineas.length, duplicado: true }, cors);
-  const registro = { hash: t.hash, fecha: t.fecha, lineas: t.lineas, recibido: new Date().toISOString(), origen };
+  const registro = { hash: t.hash, fecha: t.fecha, hora: t.hora, lineas: t.lineas, recibido: new Date().toISOString(), origen };
   await env.TICKETS.put(k, JSON.stringify(registro), { expirationTtl: TTL_TICKETS });
   return json(200, { ok: true, hash: t.hash, fecha: t.fecha, lineas: t.lineas.length, duplicado: false }, cors);
 }

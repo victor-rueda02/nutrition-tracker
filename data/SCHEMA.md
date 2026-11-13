@@ -299,4 +299,7 @@ otra receta se sustituye por sus ingredientes. Hoy: 36 alimentos.
 - Una duda lleva además `fecha` (del ticket), `gramos_sugeridos` (brutos, o `null`) y `food_id` (el seguro, si lo hay). `motivo`:
   `parecido`, `preguntar_gramos`, `sin_peso`, `sin_tamano_envase` o `ilegible`.
 - `aprendido[descripcion normalizada]` = `food_id`, `food_id:gramos_por_unidad` (repite la cantidad: cantidad × gramos) o `ignorar`.
-- Las compras de un ticket llevan `momento` = `<fecha del ticket>T00:00`. `resolverDuda` recibe los gramos BRUTOS y aplica la porción comestible.
+- Las compras de un ticket llevan `momento` = `<fecha>T<hora>` del ticket (`T00:00` si el ticket no trae hora); las dudas guardan
+  `hora` y `momento` y `resolverDuda` los usa; `tickets[hash]` guarda también `hora`. El hash de un ticket es el SHA-256 de
+  fecha, hora y líneas normalizadas (no del nº de factura). `aplicarTicket` avisa `posible_duplicado` si ya hay otro ticket con la
+  misma fecha y hora. `resolverDuda` recibe los gramos BRUTOS y aplica la porción comestible.

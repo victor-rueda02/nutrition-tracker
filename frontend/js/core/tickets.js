@@ -156,9 +156,9 @@ export function clasificarLinea(linea, ctx = {}) {
 
 // ---------- aplicar un ticket ----------
 
-// Momento de las compras de un ticket: el principio de su día. Un recuento hecho ese mismo día ya cuenta lo comprado
-// (el stock solo suma lo posterior al recuento), y uno de un día anterior sí lo suma. Se puede forzar con ctx.momento.
-const momentoDeTicket = (fecha) => `${fecha}T00:00`;
+// Momento de las compras de un ticket: su fecha y hora (el stock solo suma lo posterior al recuento: un recuento hecho antes
+// de comprar suma la compra y uno hecho después ya la cuenta). Sin hora en el ticket, el principio del día. Se puede forzar con ctx.momento.
+const momentoDeTicket = (fecha, hora) => `${fecha}T${hora && /^\d{2}:\d{2}$/.test(hora) ? hora : '00:00'}`;
 
 // Aplica un ticket parseado al inventario. ctx: { tabla, conjunto, foodsById, origen ('correo'|'app'), ahora (Date), momento, id }.
 // -> { inventario, compras: [{ food_id, gramos, linea, descripcion, ... }], dudas: [duda creada], descartadas: [{ linea, descripcion,
@@ -166,13 +166,17 @@ const momentoDeTicket = (fecha) => `${fecha}T00:00`;
 // (anadirCompra es idempotente por ticket + línea + alimento). Las descartadas no se guardan en ningún sitio.
 export function aplicarTicket(inv, ticket, ctx = {}) {
   const vacio = { compras: [], dudas: [], descartadas: [], avisos: [] };
-  if (ticketAplicado(inv, ticket.hash)) return { inventario: inv, ...vacio, yaAplicado: true };
+  if (ticketAplicado(inv, ticket.hash)) return { inventario: inv, ...vacio, posible_duplicado: null, yaAplicado: true };
   const { tabla, conjunto, foodsById, origen = 'app', ahora = new Date(), id } = ctx;
   const indice = ctx.indice ?? indiceParecido(conjunto, foodsById);
-  const momento = ctx.momento ?? momentoDeTicket(ticket.fecha);
+  const momento = ctx.momento ?? momentoDeTicket(ticket.fecha, ticket.hora);
   const opciones = id ? { id } : undefined;
   let cur = inv;
   const { compras, dudas, descartadas, avisos } = vacio;
+  // Otro ticket ya aplicado con la misma fecha y hora (p. ej. PDF y texto con alguna línea distinta): quizá es el mismo.
+  const parecido = ticket.hora ? Object.entries(inv.tickets).find(([h, t]) => h !== ticket.hash && t.fecha === ticket.fecha && t.hora === ticket.hora) : null;
+  const posible_duplicado = parecido ? parecido[0] : null;
+  if (posible_duplicado) avisos.push(`posible_duplicado: ya hay otro ticket del ${ticket.fecha} a las ${ticket.hora}; comprueba que no es el mismo.`);
   for (const l of ticket.lineas) {
     const c = clasificarLinea(l, { tabla, aprendido: inv.aprendido, conjunto, foodsById, indice });
     if (c.tipo === 'compra') {
@@ -182,7 +186,7 @@ export function aplicarTicket(inv, ticket, ctx = {}) {
       if (c.confirmar) avisos.push(`«${l.descripcion}»: el tamaño del envase está pendiente de confirmar.`);
     } else if (c.tipo === 'duda') {
       const d = {
-        ticket: ticket.hash, linea: l.n, fecha: ticket.fecha, descripcion: l.descripcion, cantidad: l.cantidad, peso_kg: l.peso_kg,
+        ticket: ticket.hash, linea: l.n, fecha: ticket.fecha, hora: ticket.hora ?? null, momento, descripcion: l.descripcion, cantidad: l.cantidad, peso_kg: l.peso_kg,
         candidatos: c.candidatos, motivo: c.motivo, gramos_sugeridos: c.gramos_sugeridos,
       };
       if (c.food_id) d.food_id = c.food_id;
@@ -192,8 +196,8 @@ export function aplicarTicket(inv, ticket, ctx = {}) {
       descartadas.push({ linea: l.n, descripcion: l.descripcion, motivo: c.motivo, detalle: c.detalle });
     }
   }
-  cur = registrarTicket(cur, ticket.hash, { fecha: ticket.fecha, aplicado: momentoLocal(ahora), origen });
-  return { inventario: cur, compras, dudas, descartadas, avisos, yaAplicado: false };
+  cur = registrarTicket(cur, ticket.hash, { fecha: ticket.fecha, hora: ticket.hora, aplicado: momentoLocal(ahora), origen });
+  return { inventario: cur, compras, dudas, descartadas, avisos, posible_duplicado, yaAplicado: false };
 }
 
 // ---------- resolver una duda ----------
@@ -219,7 +223,7 @@ export function resolverDuda(inv, dudaId, { food_id, ignorar, gramos, recordar }
   if (ctx.conjunto && !conjuntoDe(ctx.conjunto).has(food_id)) throw new Error(`${food_id} no está en la dieta.`);
   if (!esNum(gramos) || !(gramos > 0)) throw new Error('Pon los gramos comprados (más de 0).');
   const c = gramosComestibles(gramos, alimento(ctx.foodsById, food_id));
-  const momento = ctx.momento ?? momentoDeTicket(d.fecha ?? momentoLocal().slice(0, 10));
+  const momento = ctx.momento ?? (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(d.momento ?? '') ? d.momento : momentoDeTicket(d.fecha ?? momentoLocal().slice(0, 10), d.hora));
   let n = anadirCompra(inv, { food_id, gramos: c.gramos, momento, ticket: d.ticket, linea: d.linea }, ctx.id ? { id: ctx.id } : undefined);
   n = quitarDuda(n, dudaId);
   if (recordar) {

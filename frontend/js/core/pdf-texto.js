@@ -106,7 +106,10 @@ function token(s, i) {
 // ---------- objetos ----------
 // Valores: número, true/false/null, nombre = { nom }, cadena = { str }, referencia = { ref }, array, diccionario (objeto plano).
 
-function valor(s, tk) {
+const MAX_PROFUNDIDAD = 50; // arrays y diccionarios anidados: un PDF hostil no debe agotar la pila
+
+function valor(s, tk, prof = 0) {
+  if (prof > MAX_PROFUNDIDAD) throw fallo('pdf_invalido', 'El PDF tiene estructuras anidadas en exceso.');
   switch (tk.t) {
     case 'num': {
       // ¿«N G R»?
@@ -127,7 +130,7 @@ function valor(s, tk) {
       for (;;) {
         const t = token(s, i);
         if (t.t === ']' || t.t === 'fin') return [arr, t.i];
-        const [v, j] = valor(s, t);
+        const [v, j] = valor(s, t, prof + 1);
         arr.push(v);
         i = j;
       }
@@ -139,7 +142,7 @@ function valor(s, tk) {
         const k = token(s, i);
         if (k.t === '>>' || k.t === 'fin') return [d, k.i];
         if (k.t !== 'nom') { i = k.i; continue; } // basura: se salta
-        const [v, j] = valor(s, token(s, k.i));
+        const [v, j] = valor(s, token(s, k.i), prof + 1);
         d[k.v] = v;
         i = j;
       }
@@ -156,6 +159,7 @@ function indexarObjetos(s) {
   const objs = new Map();
   const cab = /(\d+)\s+\d+\s+$/; // «N G » justo antes de la palabra obj
   const fin = /endobj|stream\r?\n/g; // lo primero que aparece tras el valor: el final del objeto o el inicio de su flujo
+  let ultimo = null;
   // Se busca la palabra «obj» con indexOf (nativo) y se mira atrás: un regex «\d+\s+\d+\s+obj» tropieza con la tabla xref.
   for (let k = s.indexOf('obj'); k >= 0; k = s.indexOf('obj', k + 3)) {
     if (s.startsWith('end', k - 3) || /[A-Za-z0-9]/.test(s[k + 3] ?? '')) continue; // «endobj» o una palabra más larga
@@ -164,10 +168,18 @@ function indexarObjetos(s) {
     const num = parseInt(m[1], 10);
     const pos = k + 3;
     const o = { pos, ini: -1, fin: -1, v: undefined };
-    fin.lastIndex = pos;
-    const h = fin.exec(s);
-    if (h && h[0] !== 'endobj') {
-      const ini = fin.lastIndex;
+    // El primer «endobj/stream» desde `pos` es el mismo que ya se encontró si éste está más adelante: no se vuelve a buscar
+    // (con muchos «1 0 obj» sin cerrar, buscar cada vez hasta el final del fichero sería cuadrático).
+    let h;
+    if (ultimo && ultimo.index >= pos) h = ultimo;
+    else {
+      fin.lastIndex = pos;
+      h = fin.exec(s);
+      if (!h) break; // ya no hay más finales de objeto ni flujos: lo que queda no es un objeto cerrado
+      ultimo = h;
+    }
+    if (h[0] !== 'endobj') {
+      const ini = h.index + h[0].length;
       let f = -1;
       const lm = /\/Length\s+(\d+)(\s+\d+\s+R)?/.exec(s.slice(pos, h.index));
       if (lm && !lm[2]) { // longitud directa (si es una referencia se busca endstream)
@@ -190,14 +202,33 @@ function indexarObjetos(s) {
   return objs;
 }
 
+export const MAX_INFLADO = 20 * 1024 * 1024; // un flujo de un ticket descomprime a menos de 1 MB; más es una bomba de deflate
+
 async function inflar(bytes) {
   if (typeof DecompressionStream === 'undefined') throw fallo('sin_descompresion', 'Este navegador no puede descomprimir PDF (hace falta iOS 16.4 o posterior): pega el texto del ticket.');
   const ds = new DecompressionStream('deflate');
+  const lector = new Blob([bytes]).stream().pipeThrough(ds).getReader();
+  const trozos = [];
+  let total = 0;
   try {
-    return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer());
+    for (;;) {
+      const { done, value } = await lector.read();
+      if (done) break;
+      total += value.length;
+      if (total > MAX_INFLADO) {
+        lector.cancel().catch(() => {});
+        throw fallo('pdf_no_soportado', 'Un flujo del PDF descomprime a un tamaño desmedido.');
+      }
+      trozos.push(value);
+    }
   } catch (e) {
+    if (e instanceof PdfError) throw e;
     throw fallo('pdf_invalido', `No se pudo descomprimir un flujo del PDF (${e?.message ?? e}).`);
   }
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const t of trozos) { out.set(t, off); off += t.length; }
+  return out;
 }
 
 class Documento {
@@ -326,7 +357,7 @@ function anchosCid(doc, arr) {
     const c = l[i];
     const sig = doc.resolver(l[i + 1]);
     if (Array.isArray(sig)) { sig.forEach((w, k) => { const n = doc.resolver(w); if (esNum(n)) m.set(c + k, n); }); i += 2; }
-    else { const w = doc.resolver(l[i + 2]); if (esNum(sig) && esNum(w)) for (let k = c; k <= sig; k++) m.set(k, w); i += 3; }
+    else { const w = doc.resolver(l[i + 2]); if (esNum(sig) && esNum(w) && sig >= c && sig - c <= 0xffff) for (let k = c; k <= sig; k++) m.set(k, w); i += 3; } // un rango de más de 65 536 códigos no es de este mundo: se salta
   }
   return m;
 }
@@ -484,6 +515,15 @@ export function lineasDePiezas(piezas) {
 
 // Texto de un PDF, una línea por renglón (las páginas, una tras otra). `bytes`: Uint8Array (o ArrayBuffer).
 export async function textoDePdf(bytes) {
+  try {
+    return await leerPdf(bytes);
+  } catch (e) {
+    if (e instanceof PdfError) throw e;
+    throw fallo('pdf_invalido', `No se pudo leer el PDF (${String(e?.message ?? e).slice(0, 120)}).`); // nunca un error suelto: el Worker contesta 422, no 500
+  }
+}
+
+async function leerPdf(bytes) {
   const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   if (b.length < 20 || aLatin1(b.subarray(0, 1024)).indexOf('%PDF-') < 0) throw fallo('pdf_invalido', 'El fichero no es un PDF.');
   const doc = new Documento(b);

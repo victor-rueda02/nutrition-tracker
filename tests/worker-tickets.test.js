@@ -74,14 +74,15 @@ test('POST /tickets con el token del correo: lee el PDF, guarda solo {hash, fech
   assert.equal(kv.ttl.get(clave), TTL_TICKETS);
   assert.equal(TTL_TICKETS, 30 * 24 * 3600);
   const reg = JSON.parse(valor);
-  assert.deepEqual(Object.keys(reg).sort(), ['fecha', 'hash', 'lineas', 'origen', 'recibido']);
+  assert.deepEqual(Object.keys(reg).sort(), ['fecha', 'hash', 'hora', 'lineas', 'origen', 'recibido']);
+  assert.equal(reg.hora, '20:58');
   assert.equal(reg.origen, 'correo');
   assert.match(reg.recibido, /^\d{4}-\d{2}-\d{2}T/);
   assert.deepEqual(reg.lineas, [
     { n: 1, cantidad: 3, descripcion: 'BEBIDA AVENA', precio_unitario: 0.95, importe: 2.85, peso_kg: null },
     { n: 2, cantidad: 1, descripcion: 'MANDARINA', precio_unitario: 2.55, importe: 2.03, peso_kg: 0.798 },
   ]);
-  for (const dato of ['A-00000000', 'PRUEBA', '900000000', '20:58', 'OP:', '4350', '1234-567-890123', 'TARJETA', '****', 'AUT', 'MERCADONA']) assert.ok(!valor.includes(dato), `no debe guardarse ${dato}`);
+  for (const dato of ['A-00000000', 'PRUEBA', '900000000', 'OP:', '4350', '1234-567-890123', 'TARJETA', '****', 'AUT', 'MERCADONA']) assert.ok(!valor.includes(dato), `no debe guardarse ${dato}`);
   assert.ok(!JSON.stringify(b).includes('1234-567-890123'), 'la respuesta tampoco lleva el nº de factura');
 });
 
@@ -193,7 +194,7 @@ test('POST /tickets/pendientes: la cola ordenada por fecha; /tickets/recibidos l
   assert.equal(res.headers.get('Access-Control-Allow-Origin'), ORIGIN);
   const { tickets } = await res.json();
   assert.deepEqual(tickets.map((t) => [t.hash, t.fecha, t.lineas.length, t.origen]), [[h1, '2026-09-09', 67, 'app'], [h2, '2026-10-26', 22, 'app']]);
-  for (const t of tickets) assert.deepEqual(Object.keys(t).sort(), ['fecha', 'hash', 'lineas', 'origen', 'recibido']);
+  for (const t of tickets) assert.deepEqual(Object.keys(t).filter((k) => t[k] !== null).sort(), ['fecha', 'hash', 'lineas', 'origen', 'recibido']); // hora: null en estos fixtures (JSON la guarda como null)
   // recibidos: borra uno
   const rec = await llama(post('/tickets/recibidos', { hashes: [h1] }), env);
   assert.equal(rec.status, 200);
@@ -233,6 +234,19 @@ test('un fallo del KV no tira el Worker: 500 error_worker sin el contenido del t
     assert.equal((await res.json()).error, 'error_worker');
   } finally { console.error = log; }
   assert.ok(salida.every((l) => !l.includes('ARROZ')), 'el registro de errores no lleva el ticket');
+});
+
+test('un Content-Length mayor que el máximo se rechaza (413) sin leer el cuerpo; un PDF roto o con bomba de deflate da 422, no 500', async () => {
+  const env = { ...baseEnv, TICKETS: kvFalso() };
+  const req = post('/tickets', { texto: 'x' });
+  Object.defineProperty(req.headers, 'get', { value: (k) => (k.toLowerCase() === 'content-length' ? String(MAX_BODY_TICKETS + 1) : Headers.prototype.get.call(req.headers, k)) });
+  req.text = async () => { throw new Error('no debe leerse el cuerpo'); };
+  assert.equal((await llama(req, env)).status, 413);
+  // un PDF con cabecera válida pero estructura rota: PdfError -> 422 (nunca 500)
+  const roto = Buffer.from('%PDF-1.4\n1 0 obj\n<< /Length 99999 /Filter /FlateDecode >>\nstream\nxxxx\nendstream\nendobj\ntrailer << /Root 1 0 R >>\n');
+  const r = await llama(post('/tickets', { pdf_base64: roto.toString('base64') }), env);
+  assert.equal(r.status, 422);
+  assert.ok(['pdf_invalido', 'sin_texto'].includes((await r.json()).error));
 });
 
 test('/health: dice si hay KV y token del correo, sin revelar valores', async () => {
