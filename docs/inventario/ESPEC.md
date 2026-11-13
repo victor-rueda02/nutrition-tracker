@@ -204,7 +204,8 @@ App al abrirse / «Sincronizar» ──POST /tickets/pendientes──► lista
 ```
 necesidad(f) = Σ gramos del menú de f en cada día de hoy … hoy+N−1   (elegirMenu con el plan; recetas como en §2)
              + margen: 2 días más de menú (D5 b; `margen_dias` de data/inventario.json)
-faltan(f)    = max(0, necesidad(f) − stock(f) + registrado_hoy(f))
+faltan(f)    = max(0, necesidad(f) − max(0, stock(f)))   (el stock no resta hoy y la necesidad ya incluye el menú de hoy: sin doble conteo;
+               si el recuento es de hoy, la necesidad de f resta lo registrado hoy, sin bajar de 0)
 comprar(f)   = faltan(f) en envases enteros del producto habitual (el primero de la tabla) y en gramos
 ```
 
