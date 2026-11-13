@@ -120,8 +120,8 @@ BEDCA o USDA *refuse*, fuente en `fuente_usda`; vacío = 1 sin dato, con aviso) 
 porque un alimento tiene varios productos (huevos de 6 y de 12, tres tomates fritos).
 
 Gramos de una línea = `cantidad × unidades_por_envase × gramos_por_unidad × porcion_comestible`, o
-cuenta con el recuento o «Ajustar»).
-huevo de la talla (Reglamento (CE) 589/2008) × 0,88 de cáscara (ya en `notas` de `huevo`).
+`peso_kg × 1000 × porcion_comestible` a peso. Huevos del súper: se ignoran (Victor trae huevos caseros; los cuenta con
+el recuento o «Ajustar»).
 
 Clasificación de cada línea, en este orden:
 1. Descripción en `aprendido` del dispositivo o en la tabla → su alimento (o ignorar).
