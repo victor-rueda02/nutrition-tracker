@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "recetas_no_seguidas": ["lentejas_caseras"],
+  "horizonte_dias": 7,
+  "margen_dias": 2
+}

@@ -126,7 +126,7 @@ export function elegirMenu(dieta, fecha, plan) {
 // La versión de un periodo. Editar en Objetivos «desde hoy» parte el periodo y el tramo nuevo se llama `<id>_AAAAMMDD`
 // (y `_2`... si se repite; editPeriod en core/targets-plan.js): ese tramo usa la versión del periodo del que sale, quitando
 // sufijos uno a uno (también tras varias ediciones seguidas).
-function versionDelPeriodo(versiones, id) {
+export function versionDelPeriodo(versiones, id) {
   for (let actual = id; actual;) {
     const v = versiones.find((x) => x.periodo === actual);
     if (v) return v;

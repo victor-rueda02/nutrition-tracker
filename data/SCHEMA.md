@@ -80,6 +80,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - `recetas.json`: recetas del catálogo (ver abajo). Las filas de receta de `foods.csv` se calculan desde aquí.
 - `retirados.json`: alimentos que se quitan del documento «como si no hubiesen estado nunca» (ver abajo).
 - `dieta.json`: la dieta predefinida por día de la semana, para «Copiar dieta del día» del Diario (ver abajo).
+- `inventario.json`: configuración del inventario y de la lista de la compra (ver «Inventario» al final).
 
 ## Alimentos retirados (`data/retirados.json`)
 ```json
@@ -223,3 +224,51 @@ dispositivo (va en la copia del diario). La lista muestra las de `data/recetas.j
 gana la tuya); «Exportar recetas.json» da el fichero completo para copiarlo en `data/`, y «Recalcular todas» vuelve a
 calcular las filas con los nutrientes actuales. Una receta estimada con IA usa los gramos del plato terminado (en
 proporción, sin `peso_final_g`).
+
+## Inventario (`data/inventario.json` y el ajuste `inventario`)
+
+Lógica en `frontend/js/core/inventario.js` (especificación en `docs/inventario/ESPEC.md`). Todo se calcula por código y el
+stock no se guarda: se deriva de los eventos y del Diario.
+
+### `data/inventario.json` (configuración, en el repositorio)
+```json
+{ "version": 1, "recetas_no_seguidas": ["lentejas_caseras"], "horizonte_dias": 7, "margen_dias": 2 }
+```
+- `recetas_no_seguidas`: ids de recetas cuyos ingredientes no se compran para ellas. Ni la receta ni sus ingredientes entran
+  en el conjunto por ella, y comerla no resta nada.
+- `horizonte_dias` (7): días de la lista de la compra desde hoy. `margen_dias` (2): días de colchón extra; se miran
+  de hoy a hoy + horizonte − 1 + margen. Las funciones los toman como parámetros.
+
+### Alimentos que sigue el inventario (`alimentosDeLaDieta`)
+Calculados, nunca a mano: los de las líneas de `data/dieta.json` (menú normal y `tipos`) de las versiones cuyo periodo del
+plan no ha terminado en `hoy` (un tramo `<id>_AAAAMMDD` cuenta para la versión del periodo del que sale; sin plan, todas).
+Una receta con `etiqueta` (producto envasado) entra como sí misma; una receta no seguida, ni ella ni sus ingredientes; cualquier
+otra receta se sustituye por sus ingredientes. Hoy: 36 alimentos.
+
+### Ajuste `inventario` (IndexedDB; va en la copia de seguridad del diario)
+```json
+{
+  "version": 1,
+  "eventos": [
+    { "id": "…", "tipo": "recuento", "momento": "2026-11-14T10:00", "food_id": "arroz_blanco_crudo", "gramos": 1000 },
+    { "id": "…", "tipo": "compra", "momento": "2026-11-16T19:00", "food_id": "huevo", "gramos": 720, "ticket": "<hash>", "linea": 7 },
+    { "id": "…", "tipo": "ajuste", "momento": "2026-11-17T09:00", "food_id": "huevo", "gramos": -60, "motivo": "caducado" }
+  ],
+  "tickets": { "<hash>": { "fecha": "2026-10-26", "aplicado": "2026-10-26T21:03", "origen": "correo" } },
+  "dudas": [ { "id": "…", "ticket": "<hash>", "linea": 7, "descripcion": "…", "cantidad": 1, "peso_kg": null, "candidatos": ["food_id"], "motivo": "…" } ],
+  "aprendido": { "griego ligero p-6": "yogur_griego_ligero", "tom. receta artesana": "ignorar" }
+}
+```
+- `id`: de `core/ids.js`. `momento`: hora local `YYYY-MM-DDTHH:MM`, comparada como texto. `gramos`: `recuento` es un valor
+  absoluto (≥ 0; un 0 es un 0 real), `compra` > 0 y `ajuste` un delta con signo distinto de 0. Los eventos solo se añaden
+  (editar = sustituir por id); nada borra el diario.
+- **Stock** (`calcularStock`): `R` = último recuento del alimento; stock = `R.gramos` + Σ compras y ajustes con `momento` >
+  `R.momento` − Σ consumo de los días cerrados `d` con día(`R`) < `d` < hoy. Sin recuento, `gramos` es `null` («sin contar»,
+  nunca 0) y se informa de lo comprado. Lo registrado hoy (`registradoHoy`) aún no se resta (se resta a las 00:00); los días
+  futuros nunca restan. Un stock negativo se marca (`negativo`, `faltanRevisar`) y no se recorta.
+- **Consumo de un día**: líneas del Diario con alimento del conjunto, con las recetas expandidas (`gramos_línea ×
+  gramos_ingrediente / peso_final_g`, o / suma de ingredientes sin peso final). Fuera del conjunto o borrado del documento: nada.
+- **Importar una copia** (`fusionarInventario`): une por id de evento (gana lo local), tickets y `aprendido` (gana lo local) y
+  dudas; no vuelve una duda cuya línea ya tiene su compra. Nunca borra.
+- **Porción comestible**: columna de trabajo opcional `porcion_comestible` de `foods.csv` (fracción en (0, 1]; vacía o
+  inválida = 1 y `sinDato` para avisar), leída por `gramosComestibles(gramosBrutos, food)`.
