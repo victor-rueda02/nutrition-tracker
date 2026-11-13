@@ -28,9 +28,30 @@ están en `data/nutrients.json` (61 columnas: energía, macros, grasas, vitamina
 Para añadir un nutriente, añade una entrada a ese fichero.
 
 ## Columnas de trabajo y desconocidas
-`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron), `pendiente_revisar`, `rol_cena` y `nombre_corto` se conservan al
+`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron), `pendiente_revisar`, `rol_cena`, `nombre_corto` y `porcion_comestible` se conservan al
 importar y exportar y no intervienen en ningún cálculo. Cualquier otra cabecera desconocida también se conserva,
 con un aviso (si parece un nutriente con la unidad cambiada, el aviso sugiere la correcta).
+
+### Columna `porcion_comestible` (inventario; opcional, solo los alimentos de la dieta)
+Fracción comestible (0-1] del producto **tal como se compra**, respecto a lo que describe la fila: `0,88` en el huevo
+(cáscara), `0,45` en `nueces` (el ticket es nuez CON cáscara y la fila es sin cáscara), `0,72` en la mandarina… Vale `1`
+cuando la fila ya es el producto comprado (paquetes, latas escurridas, filetes, patata con piel). Vacía = sin dato de
+fuente (el inventario cuenta 1 y avisa). La fuente va en `fuente_usda` («porcion_comestible = 0,88: BEDCA 2091…»). No
+interviene en ningún cálculo de nutrientes. Gramos de una línea de ticket = cantidad × unidades × gramos por unidad ×
+`porcion_comestible`.
+
+### `data/tickets-mercadona.json` (tickets de Mercadona → alimentos de la dieta)
+`{ "version": 1, "productos": { "<descripción normalizada>": { … } } }`. La clave es la descripción del ticket sin
+acentos, en minúsculas y con espacios simples (`"atun claro oliva pk6"`). Cada entrada lleva `descripcion` (tal cual en el
+ticket) y **una** de estas formas:
+- `ignorar: true` + `motivo`: se parece a la dieta pero no lo es; se descarta.
+- `food_id` (existe en `foods.csv`) y exactamente una forma de cantidad:
+  - **envase**: `nombre_envase` («pack 6 latas»), `unidades_por_envase` y `gramos_por_unidad` (peso neto por unidad;
+    en latas, el escurrido; `null` = tamaño desconocido, la línea va a Dudas), más `fuente` (URL y fecha de consulta);
+  - `a_peso: true`: el ticket trae los kg en la línea siguiente (patata, mandarina);
+  - `preguntar_gramos: true`: el ticket no trae peso (pechuga, salmón); se pregunta.
+- Opcionales: `nota`, `confirmar: true` (valor pendiente de que Victor lo confirme), y en los huevos `talla` y
+  `estimado: true` (los gramos por huevo son CON cáscara; la cáscara va en `porcion_comestible`).
 
 ### Columnas de «¿Qué ceno?»: `rol_cena` y `nombre_corto` (opcionales)
 Viven aquí, en tu documento, para que al añadir un alimento (a mano o con «Estimar con IA») todo quede en un solo sitio.
