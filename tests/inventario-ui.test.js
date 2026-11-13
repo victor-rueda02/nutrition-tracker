@@ -44,11 +44,10 @@ function aiSimulado({ cola = [], falla = null, falloSubida = null } = {}) {
   return ai;
 }
 
-async function setup({ ai = aiSimulado(), conn = { endpoint: 'https://w', token: 't' }, meals = [], inventario = null, plan = PLAN, fetchDieta = async () => DIETA, saveFile = async () => 'compartido', readFile: leer = (f) => f.text() } = {}) {
+async function setup({ store = createMemoryStore(), ai = aiSimulado(), conn = { endpoint: 'https://w', token: 't' }, meals = [], inventario = null, plan = PLAN, fetchDieta = async () => DIETA, saveFile = async () => 'compartido', readFile: leer = (f) => f.text() } = {}) {
   const dom = new jsdom.JSDOM('<!doctype html><div id="app"></div>', { url: 'http://localhost/' });
   const { document, Event } = dom.window;
   const root = document.getElementById('app');
-  const store = createMemoryStore();
   for (const m of meals) await store.addMeal(m);
   if (plan) await store.setSetting('plan_objetivos', plan);
   if (inventario) await store.setSetting('inventario', inventario);
@@ -96,7 +95,7 @@ test('al abrir la app sincroniza solo: 2 tickets nuevos (uno con duda) y uno ya 
 test('al abrir la app sin Worker, sin KV (tickets_sin_configurar) o sin red no molesta; con otro fallo, sí', { skip }, async () => {
   const sin = await setup({ conn: {} });
   sinAlerta(sin);
-  for (const code of ['tickets_sin_configurar', 'sin_conexion']) {
+  for (const code of ['tickets_sin_configurar', 'sin_conexion', 'red']) {
     const t = await setup({ ai: aiSimulado({ falla: new AiClientError(code, 'mensaje claro del fallo') }) });
     sinAlerta(t);
     assert.equal(t.$('.aviso-dudas'), null);
@@ -381,7 +380,7 @@ test('Lista de la compra: faltan en envases enteros, sin contar aparte, días si
   assert.ok(arroz.faltan > 0 && arroz.envase.cantidad >= 1);
   const li = t.$('.compra-item[data-id="arroz_blanco_crudo"]');
   assert.equal(li.querySelector('.compra-linea').textContent, descripcionCompra(arroz));
-  assert.match(li.textContent, /Faltan [\d.,]+ (g|kg) → \d+ paquetes? \(1 kg( cada uno)?\)/);
+  assert.match(li.textContent, /Faltan [\d.,]+ (g|kg) → \d+ paquetes? \(1 kg( cada envase)?\)/);
   // los sin contar, aparte y con su motivo
   assert.match(t.$('.sin-contar h2').textContent, /Stock desconocido/);
   assert.ok(t.$$('.sin-contar .compra-item').length >= 30);
@@ -448,6 +447,99 @@ test('copia de seguridad: lleva el inventario, y al importar en otro dispositivo
   await otro.elegirArchivo(otro.$('input[type=file][aria-label="Elegir copia del diario"]'), { name: 'copia.json', contenido: texto });
   assert.match(otro.$('section.report').textContent, /Inventario: ya estaba todo/);
   assert.equal(otro.btn('Importar el inventario'), undefined);
+});
+
+test('si el inventario guardado no se puede leer, no se guarda nada (no se pisa) y el error se ve arriba', { skip }, async () => {
+  const store = createMemoryStore();
+  const previo = hoyInv(['arroz_blanco_crudo', 1000, '2026-11-14T10:00']);
+  await store.setSetting('inventario', previo);
+  const leer = store.getSetting.bind(store);
+  store.getSetting = async (k) => { if (k === 'inventario') throw new Error('base de datos cerrada'); return leer(k); };
+  const t = await setup({ store, conn: {} });
+  await t.act(() => t.btn('Alimentos').click());
+  await t.act(() => t.btn('Ver inventario').click());
+  assert.match(t.$('.alert-fail').textContent, /No se pudo leer el inventario guardado.*no se guarda nada para no pisarlo/);
+  assert.deepEqual(await leer('inventario'), previo, 'lo guardado sigue intacto');
+});
+
+test('«Subir ticket» mientras hay una sincronización en curso: espera, vuelve a sincronizar y el ticket subido se aplica', { skip }, async () => {
+  const ai = aiSimulado();
+  const normal = ai.ticketsPendientes;
+  let suelta;
+  const puerta = new Promise((ok) => { suelta = ok; });
+  const t = await setup({ ai });
+  ai.ticketsPendientes = async () => { await puerta; return { tickets: [] }; }; // la primera sincronización queda en curso
+  await t.abrirInventario();
+  t.btn('Sincronizar inventario').click(); // en curso, sin esperar
+  await new Promise((ok) => setTimeout(ok, 20));
+  ai.ticketsPendientes = normal; // las siguientes ven la cola de verdad
+  t.btn('Subir ticket').click();
+  t.type(t.$('textarea.ticket-texto'), textoTicket('26/10/2026', '20:58', '1 ARROZ LARGO 1,20'));
+  t.btn('Aplicar el texto').click();
+  await new Promise((ok) => setTimeout(ok, 20));
+  suelta();
+  await t.app.whenIdle();
+  assert.deepEqual((await t.inventarioGuardado()).eventos.map((e) => [e.food_id, e.gramos]), [['arroz_blanco_crudo', 1000]]);
+  assert.match(t.$('[role=status]').textContent, /1 ticket nuevo \(1 compra\)/);
+  sinAlerta(t);
+});
+
+test('tickets por confirmar: la tira del Diario los cuenta, Dudas los enseña y, sin Worker, la pregunta se hace en el momento y sobrevive a cerrar la app', { skip }, async () => {
+  const X = await ticket('2026-10-26', '20:58', '1 ARROZ LARGO 1,20');
+  const previo = { ...inventarioVacio(), tickets: { [X.hash]: { fecha: '2026-10-26', hora: '20:58', aplicado: '2026-10-26T21:00', origen: 'correo' } } };
+  const store = createMemoryStore();
+  const t = await setup({ store, conn: {}, inventario: previo });
+  await t.abrirInventario();
+  await t.act(() => t.btn('Subir ticket').click());
+  t.type(t.$('textarea.ticket-texto'), textoTicket('26/10/2026', '20:58', '1 MACARRON 1,15'));
+  await t.act(() => t.btn('Aplicar el texto').click());
+  assert.match(t.$('.pregunta-ticket').textContent, /¿Es el mismo ticket que el del 26\/10 20:58\?/);
+  assert.equal((await t.inventarioGuardado()).eventos.length, 0, 'no se aplica hasta contestar');
+  assert.equal((await store.getSetting('inventario_preguntas')).length, 1, 'la pregunta se guarda');
+  await t.act(() => t.btn('Diario').click());
+  assert.match(t.$('.aviso-dudas').textContent, /1 duda de tickets/);
+  await t.act(() => t.$('.aviso-dudas button').click());
+  assert.ok(t.$('.dudas .pregunta-ticket'), 'Dudas enseña la pregunta');
+  // cerrar y volver a abrir la app: la pregunta sigue ahí
+  const otra = await setup({ store, conn: {} });
+  assert.match(otra.$('.aviso-dudas').textContent, /1 duda de tickets/);
+  await otra.abrirInventario();
+  await otra.act(() => otra.btn('No, aplicarlo').click());
+  assert.equal((await otra.inventarioGuardado()).eventos.length, 1);
+  assert.deepEqual(await store.getSetting('inventario_preguntas'), []);
+  assert.equal(otra.$('.aviso-dudas'), null);
+});
+
+test('importar una copia vuelve a leer y fusionar justo antes de guardar: un cambio posterior a la vista previa no se pierde', { skip }, async () => {
+  const origen = await setup({ inventario: hoyInv(['arroz_blanco_crudo', 1000, '2026-11-14T10:00']), conn: {} });
+  let texto = null;
+  const exp = await setup({ inventario: await origen.inventarioGuardado(), conn: {}, saveFile: async ({ text }) => { texto = text; return 'compartido'; } });
+  await exp.act(() => exp.btn('Más').click());
+  await exp.act(() => exp.btn('Copia de seguridad').click());
+  await exp.act(() => exp.btn('Exportar diario').click());
+  const otro = await setup({ conn: {}, readFile: async (f) => f.contenido });
+  await otro.act(() => otro.btn('Más').click());
+  await otro.act(() => otro.btn('Copia de seguridad').click());
+  await otro.elegirArchivo(otro.$('input[type=file][aria-label="Elegir copia del diario"]'), { name: 'copia.json', contenido: texto });
+  // entre la vista previa y «Importar» entra una compra (un sync)
+  await otro.store.setSetting('inventario', hoyInv(['avena_copos', 500, '2026-11-15T10:00']));
+  await otro.act(() => otro.btn('Importar el inventario').click());
+  assert.deepEqual((await otro.inventarioGuardado()).eventos.map((e) => e.food_id).sort(), ['arroz_blanco_crudo', 'avena_copos']);
+});
+
+test('Recuento: el campo es «g comestibles»; en los alimentos con porción comestible, «Lo he pesado entero» la aplica (nueces 600 g → 270 g)', { skip }, async () => {
+  const t = await setup({ conn: {} });
+  await t.abrirInventario();
+  await t.act(() => t.btn('Hacer recuento').click());
+  assert.ok(t.$('.rec-fila[data-id="nueces"] .rec-campos').textContent.includes('g comestibles'));
+  assert.match(t.$('.rec-fila[data-id="nueces"] .rec-entero').textContent, /se aplica ×0,45/);
+  assert.equal(t.$('.rec-fila[data-id="arroz_blanco_crudo"] .rec-entero'), null, 'sin porción comestible no hay casilla');
+  t.type(t.$('.rec-fila[data-id="nueces"] input[aria-label^="Gramos de"]'), '600');
+  await t.act(() => t.$('.rec-fila[data-id="nueces"] input[type=checkbox]').click());
+  t.type(t.$('.rec-fila[data-id="arroz_blanco_crudo"] input[aria-label^="Gramos de"]'), '600'); // sin casilla: tal cual
+  await t.act(() => t.btn('Guardar recuento').click());
+  const g = Object.fromEntries((await t.inventarioGuardado()).eventos.map((e) => [e.food_id, e.gramos]));
+  assert.deepEqual(g, { nueces: 270, arroz_blanco_crudo: 600 });
 });
 
 test('ninguna pantalla del inventario lleva colores sueltos y el CSS está enlazado y en la caché del service worker', () => {

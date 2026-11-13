@@ -87,7 +87,10 @@ test('quitarEvento: borra por id, no toca lo demás y lanza si no existe; el tic
 test('descripcionCompra y textoListaCompra: «Faltan 300 g → 1 paquete (1 kg)», sin contar aparte y días sin menú', () => {
   const env = (g, cantidad) => ({ nombre: 'paquete 1 kg', gramos: g, cantidad });
   assert.equal(descripcionCompra({ faltan: 300, stockDesconocido: false, envase: env(1000, 1) }), 'Faltan 300 g → 1 paquete (1 kg)');
-  assert.equal(descripcionCompra({ faltan: 2300, stockDesconocido: false, envase: env(1000, 3) }), 'Faltan 2,3 kg → 3 paquetes (1 kg cada uno)');
+  assert.equal(descripcionCompra({ faltan: 2300, stockDesconocido: false, envase: env(1000, 3) }), 'Faltan 2,3 kg → 3 paquetes (1 kg cada envase)');
+  assert.equal(textoCantidad(0.4), '< 1 g', 'por debajo de 1 g nunca «0 g»');
+  assert.equal(textoCantidad(0), '0 g');
+  assert.equal(descripcionCompra({ faltan: 0.3, stockDesconocido: false, envase: null }), 'Faltan < 1 g');
   assert.equal(descripcionCompra({ faltan: 300, stockDesconocido: true, envase: null }), 'Necesito 300 g');
   const lista = {
     desde: '2026-11-16', hasta: '2026-11-24', sinMenu: [{ fecha: '2026-11-21' }, { fecha: '2026-11-22' }],

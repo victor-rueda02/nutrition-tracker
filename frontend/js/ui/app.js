@@ -466,7 +466,10 @@ export function mountApp(root, deps) {
       if (b.plantillas.nuevas.length) await deps.store.setSetting('plantillas', b.plantillas.list);
       if (b.registro.nuevas.length) await deps.store.setSetting('registro_frases', b.registro.list);
       if (b.recetas.nuevas.length) await deps.store.setSetting('recetas', b.recetas.list);
-      if (hayNuevoInventario(b)) await inv.importar(b.inventario.inventario);
+      if (hayNuevoInventario(b)) { // se vuelve a leer y fusionar justo antes de guardar: lo que haya cambiado desde la vista previa (un sync) no se pierde
+        b.inventario = fusionarInventario(await inv.cargar(), b.parsed.inventario);
+        await inv.importar(b.inventario.inventario);
+      }
       state.backupImport = null;
       const partes = [`${b.plan.nuevas.length} nuevas`, `${b.plan.actualizadas.length} actualizadas`];
       if (b.plantillas.nuevas.length) partes.push(`${b.plantillas.nuevas.length} ${b.plantillas.nuevas.length === 1 ? 'plantilla' : 'plantillas'}`);
@@ -1038,9 +1041,9 @@ export function mountApp(root, deps) {
           h('button', { class: 'link', onclick: () => postponeCatalogUpdate() }, 'Ahora no'))) : null,
       state.foods.length === 0 ? h('p', { class: 'warn' }, 'No hay documento de alimentos. Impórtalo en Documento.') : null,
       // Líneas de tickets sin resolver (no suman al inventario hasta que las resuelves): tira que lleva a Dudas, como la del UL.
-      state.inv.data.dudas.length ? h('section', { class: 'alert-ul alert-strip aviso-dudas', role: 'status' },
+      inv.pendientes() ? h('section', { class: 'alert-ul alert-strip aviso-dudas', role: 'status' },
         h('button', { type: 'button', class: 'strip-btn', onclick: () => inv.abrirDudas('diary') },
-          h('span', {}, plural(state.inv.data.dudas.length, 'duda de tickets', 'dudas de tickets')), icon(doc, 'chevron'))) : null,
+          h('span', {}, plural(inv.pendientes(), 'duda de tickets', 'dudas de tickets')), icon(doc, 'chevron'))) : null,
       state.dayMeals.length === 0 ? h('p', { class: 'muted' }, 'Sin registros este día.') : [
         rep.avisosUl.length ? h('section', { class: 'alert-ul alert-strip', role: 'alert' },
           h('button', { type: 'button', class: 'strip-btn', onclick: () => { state.screen = 'informe'; render(); } },
@@ -1208,7 +1211,7 @@ export function mountApp(root, deps) {
     const openRecetas = () => { state.recetasBack = 'alimentos'; return rec.open(); };
     const alimentos = () => alimentosScreen({
       h, doc, state, incompleteInfo, openCatalog: openCatalogList, openRecetas, openTemplates: () => openTemplates('', 'alimentos'),
-      nRecetas: state.recetas.length, nPlantillas: state.plantillas.length, nDudas: state.inv.data.dudas.length,
+      nRecetas: state.recetas.length, nPlantillas: state.plantillas.length, nDudas: inv.pendientes(),
       openInventario: () => inv.abrir('alimentos'), openCompra: () => inv.abrirCompra('alimentos'), openDudas: () => inv.abrirDudas('inventario'),
       openIncompletos: () => { state.catFilter = 'incompletos'; openCatalogList(); },
       reviewUpdate: () => { state.catBack = 'alimentos'; state.screen = 'catalogo'; render(); }, postponeUpdate: () => postponeCatalogUpdate(),
@@ -1222,7 +1225,7 @@ export function mountApp(root, deps) {
       h, doc, state, incompletos: state.foods.filter(incompleteInfo).length,
       items: [
         { icon: 'target', label: 'Objetivos', onclick: () => { state.screen = 'objetivos'; render(); } },
-        { icon: 'box', label: 'Inventario', hint: state.inv.data.dudas.length ? plural(state.inv.data.dudas.length, 'duda de tickets', 'dudas de tickets') : '', onclick: () => inv.abrir('mas') },
+        { icon: 'box', label: 'Inventario', hint: inv.pendientes() ? plural(inv.pendientes(), 'duda de tickets', 'dudas de tickets') : '', onclick: () => inv.abrir('mas') },
         { icon: 'cart', label: 'Lista de la compra', onclick: () => inv.abrirCompra('mas') },
         { icon: 'file', label: 'Documento', onclick: abrirSeccion('documento') },
         { icon: 'shield', label: 'Copia de seguridad', onclick: abrirSeccion('copia') },

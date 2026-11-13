@@ -5,12 +5,25 @@ import { MOTIVOS_DUDA } from '../core/tickets.js';
 import { agruparAlimentos, textoStock, textoCantidad, descripcionCompra, textoListaCompra, listaDias, historialDe, fechaCorta } from '../core/inventario-vista.js';
 import { icon } from './nav.js';
 
+import { porcionComestible } from '../core/inventario.js';
 const nf1 = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
+const nf2 = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
 const nombreDe = (ui) => (id) => ui.byId().get(id)?.nombre ?? id;
 const masGrupo = (ui, ids) => agruparAlimentos(ids, ui.state.inv.vista.grupos, nombreDe(ui));
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
 const aviso = (ui) => (ui.state.inv.msg ? ui.h('p', { class: 'ok', role: 'status' }, ui.state.inv.msg) : null);
 const copiaDieta = (ui) => (ui.state.inv.dietaCopia ? ui.h('p', { class: 'muted small' }, 'Sin conexión: se usa la última dieta descargada; puede no ser la más reciente.') : null);
+
+// «¿Es el mismo ticket?»: tickets con la misma fecha y hora que otro ya aplicado, sin contestar (Inventario y Dudas).
+function preguntasPanel(ui) {
+  const { h, state, a } = ui;
+  return state.inv.preguntas.map((p) => h('section', { class: 'panel pregunta-ticket', role: 'alert' },
+    h('p', {}, h('strong', {}, `¿Es el mismo ticket que el del ${fechaCorta(`${p.ticket.fecha}${p.ticket.hora ? `T${p.ticket.hora}` : ''}`)}?`)),
+    h('p', { class: 'muted small' }, `Tiene la misma fecha y hora que uno ya aplicado (${plural(p.ticket.lineas.length, 'línea', 'líneas')}). Si es el mismo, no se suma otra vez.`),
+    h('div', { class: 'row' },
+      h('button', { type: 'button', class: 'primary', onclick: () => a.responderDuplicado(p.ticket.hash, true) }, 'Sí, es el mismo'),
+      h('button', { type: 'button', class: 'secondary', onclick: () => a.responderDuplicado(p.ticket.hash, false) }, 'No, aplicarlo'))));
+}
 
 // ---------- Inventario ----------
 export function inventarioScreen(ui) {
@@ -33,12 +46,7 @@ export function inventarioScreen(ui) {
       h('div', { class: 'row' }, h('button', { type: 'button', class: 'primary', onclick: a.subirTexto }, 'Aplicar el texto'), h('button', { type: 'button', class: 'link', onclick: a.cerrarSubir }, 'Cerrar')));
   };
 
-  const preguntas = inv.preguntas.map((p) => h('section', { class: 'panel pregunta-ticket', role: 'alert' },
-    h('p', {}, h('strong', {}, `¿Es el mismo ticket que el del ${fechaCorta(`${p.ticket.fecha}${p.ticket.hora ? `T${p.ticket.hora}` : ''}`)}?`)),
-    h('p', { class: 'muted small' }, `Tiene la misma fecha y hora que uno ya aplicado (${plural(p.ticket.lineas.length, 'línea', 'líneas')}). Si es el mismo, no se suma otra vez.`),
-    h('div', { class: 'row' },
-      h('button', { type: 'button', class: 'primary', onclick: () => a.responderDuplicado(p.ticket.hash, true) }, 'Sí, es el mismo'),
-      h('button', { type: 'button', class: 'secondary', onclick: () => a.responderDuplicado(p.ticket.hash, false) }, 'No, aplicarlo'))));
+  const preguntas = preguntasPanel(ui);
 
   const fila = (id) => {
     const s = v.stock[id];
@@ -88,11 +96,17 @@ export function recuentoScreen(ui) {
         a.setValor(id, 'env', e.target.value);
         const n = Number(String(e.target.value).replace(',', '.'));
         if (e.target.value.trim() !== '' && Number.isFinite(n) && n >= 0) { const gr = Math.round(n * env.gramos * 1000) / 1000; g.value = String(gr).replace('.', ','); a.setValor(id, 'g', g.value); }
+        // con envases los gramos ya son comestibles: «pesado entero» no aplica
+        if (entero) { entero.disabled = e.target.value.trim() !== ''; if (entero.disabled) { entero.checked = false; a.setValor(id, 'entero', false); } }
       } }) : null;
+    // El stock va en gramos comestibles (sin cáscara, piel ni hueso). Si pesas la pieza entera, se aplica la porción comestible.
+    const pc = porcionComestible(ui.byId().get(id));
+    const entero = !pc.sinDato && pc.factor < 1 ? h('input', { type: 'checkbox', checked: Boolean(val.entero), 'aria-label': `Lo he pesado entero: ${nombre(id)}`, onchange: (e) => a.setValor(id, 'entero', e.target.checked) }) : null;
     const s = v.stock[id];
     return h('li', { class: 'rec-fila', 'data-id': id },
       h('div', { class: 'rec-nombre' }, h('strong', {}, nombre(id)), h('small', { class: 'muted' }, `ahora: ${textoStock(s, env).texto}`)),
-      h('div', { class: 'row rec-campos' }, g, h('span', {}, 'g'), unidades, unidades ? h('span', { class: 'muted small' }, `${env.unidad}s de ${textoCantidad(env.gramos)}`) : null));
+      h('div', { class: 'row rec-campos' }, g, h('span', {}, 'g comestibles'), unidades, unidades ? h('span', { class: 'muted small' }, `${env.unidad}s de ${textoCantidad(env.gramos)}`) : null),
+      entero ? h('label', { class: 'rec-entero small' }, entero, h('span', {}, `Lo he pesado entero (sin cáscara/piel; si lo pesas entero, se aplica ×${nf2.format(pc.factor)})`)) : null);
   };
 
   return h('main', { class: 'inventario recuento' },
@@ -122,7 +136,7 @@ export function fichaScreen(ui) {
     h('li', {}, `Último recuento: ${textoCantidad(s.recuento.gramos)} (${fechaCorta(s.recuento.momento)})`),
     s.comprado ? h('li', {}, `Comprado desde entonces: +${textoCantidad(s.comprado)}`) : null,
     s.ajustado ? h('li', {}, `Ajustes desde entonces: ${s.ajustado < 0 ? '−' : '+'}${textoCantidad(Math.abs(s.ajustado))}`) : null,
-    h('li', {}, `Restado hasta ayer: −${textoCantidad(s.consumido)}`),
+    h('li', {}, `Restado hasta ayer: ${s.consumido > 0 ? '−' : ''}${textoCantidad(s.consumido)}`),
     h('li', {}, `Registrado hoy (se resta a las 00:00): ${textoCantidad(s.registradoHoy)}`)) : h('p', { class: 'muted small' }, 'Aún no hay recuento de este alimento: cuéntalo para que se calcule.');
 
   const formAjuste = () => {
@@ -194,8 +208,9 @@ export function dudasScreen(ui) {
   return h('main', { class: 'inventario dudas' },
     ui.header(`Dudas (${inv.data.dudas.length})`, ui.back),
     aviso(ui),
+    ...preguntasPanel(ui),
     h('p', { class: 'muted small' }, 'Estas líneas de tickets no suman al inventario hasta que las resuelvas: nunca se adivina.'),
-    inv.data.dudas.length ? h('ul', { class: 'cards' }, inv.data.dudas.map(tarjeta)) : h('p', { class: 'muted' }, 'No hay dudas pendientes.'));
+    inv.data.dudas.length ? h('ul', { class: 'cards' }, inv.data.dudas.map(tarjeta)) : inv.preguntas.length ? null : h('p', { class: 'muted' }, 'No hay dudas pendientes.'));
 }
 
 // ---------- Lista de la compra ----------

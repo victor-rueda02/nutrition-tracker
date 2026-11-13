@@ -2,7 +2,7 @@
 // Las pantallas (inventario-screen.js) solo pintan; aquí se decide cada acción y se guarda en el ajuste `inventario`. Toda la
 // cuenta está en core/inventario.js y core/tickets.js; esto solo las une con el Worker, el almacén y la dieta. Sin IA: ni el ticket
 // ni el inventario ni el Diario viajan a Gemini ni a USDA (regla 6); al Worker solo va el texto del ticket (o sus hashes).
-import { inventarioVacio, limpiarInventario, limpiarConfig, alimentosDeLaDieta, calcularStock, listaCompra, anadirRecuentos, anadirAjuste, quitarEvento, ticketAplicado, registrarTicket, momentoLocal } from '../core/inventario.js';
+import { inventarioVacio, limpiarInventario, limpiarConfig, alimentosDeLaDieta, calcularStock, listaCompra, anadirRecuentos, anadirAjuste, quitarEvento, gramosComestibles, ticketAplicado, registrarTicket, momentoLocal } from '../core/inventario.js';
 import { aplicarTicket, resolverDuda, parseTicket, indiceParecido, TicketError } from '../core/tickets.js';
 import { envasesDeTabla, leerGrupos } from '../core/inventario-vista.js';
 import { textoDePdf } from '../core/pdf-texto.js';
@@ -33,17 +33,27 @@ export function inventarioActions(ctx) {
   // Tareas en segundo plano (al abrir la app): solo repintan donde no hay nada a medias (un borrador, un formulario).
   const repintar = () => { if (['diary', 'alimentos', 'mas', 'inventario', 'dudas', 'compra'].includes(state.screen)) render(); };
 
+  // La carga inicial se hace una vez y todo lo que lee o guarda el inventario la espera. Si falló, NADA se guarda (se pisaría el
+  // inventario que sí está guardado con uno vacío) y el error se ve arriba.
+  let inicial = null;
+  const esperarCarga = () => { inicial ??= cargar(); return inicial.then(() => undefined, (e) => { throw new Error(`No se pudo leer el inventario guardado (${e?.message ?? e}); no se guarda nada para no pisarlo. Cierra y vuelve a abrir la app.`); }); };
+
   async function guardar(nuevo) {
+    await esperarCarga();
     await deps.store.setSetting('inventario', nuevo);
     inv.data = nuevo;
   }
+  const guardarPreguntas = () => deps.store.setSetting('inventario_preguntas', inv.preguntas.map(({ ticket, otro, enCola }) => ({ ticket, otro, enCola })));
 
-  // Al arrancar y al abrir Documento: lo guardado (limpiarInventario nunca lanza) y el horizonte elegido.
+  // Al arrancar y al importar una copia: lo guardado (limpiarInventario nunca lanza), el horizonte elegido y las preguntas
+  // «¿Es el mismo ticket?» que quedaron sin contestar.
   async function cargar() {
     const { inventario, avisos } = limpiarInventario(await deps.store.getSetting('inventario'));
     inv.data = inventario;
     const h = await deps.store.getSetting('inventario_horizonte');
     if (Number.isInteger(h) && h >= 1 && h <= 60) inv.horizonte = h;
+    const pend = await deps.store.getSetting('inventario_preguntas');
+    inv.preguntas = (Array.isArray(pend) ? pend : []).filter((p) => p?.ticket?.hash && Array.isArray(p.ticket.lineas) && !ticketAplicado(inventario, p.ticket.hash));
     if (avisos.length) inv.msg = avisos.join(' ');
     return inventario;
   }
@@ -65,6 +75,7 @@ export function inventarioActions(ctx) {
   }
 
   async function refrescar(opciones) {
+    await esperarCarga();
     const c = await contexto(opciones);
     const registros = await deps.store.allMeals();
     const stock = calcularStock(inv.data, registros, { conjunto: c.conjunto, recetas: c.recetas, noSeguidas: c.noSeguidas, hoy: c.hoy });
@@ -88,6 +99,7 @@ export function inventarioActions(ctx) {
   // Guarda ANTES de acusar: si el aviso falla, nada se pierde y el siguiente «Sincronizar» lo acusa como «ya aplicado».
   // Un posible duplicado (misma fecha y hora que otro ya aplicado) no se aplica ni se acusa hasta que respondas.
   async function aplicarTickets(tickets, { enCola, ai }) {
+    await esperarCarga();
     const c = await contexto();
     const indice = indiceParecido(c.conjunto, byId());
     let cur = inv.data;
@@ -97,12 +109,13 @@ export function inventarioActions(ctx) {
       if (!t?.hash || inv.preguntas.some((p) => p.ticket.hash === t.hash)) continue;
       const res = aplicarTicket(cur, t, { ...ctxTicket(c, t.origen === 'correo' ? 'correo' : 'app'), indice });
       if (res.yaAplicado) { r.yaAplicados++; acusar.push(t.hash); continue; }
-      if (res.posible_duplicado) { inv.preguntas.push({ ticket: t, otro: res.posible_duplicado, otraFecha: cur.tickets[res.posible_duplicado], enCola }); r.preguntas++; continue; }
+      if (res.posible_duplicado) { inv.preguntas.push({ ticket: t, otro: res.posible_duplicado, enCola }); r.preguntas++; continue; }
       cur = res.inventario;
       r.aplicados++; r.compras += res.compras.length; r.dudas += res.dudas.length;
       acusar.push(t.hash);
     }
     if (cur !== inv.data) await guardar(cur);
+    if (r.preguntas) await guardarPreguntas(); // la pregunta no se pierde al cerrar la app
     if (enCola && acusar.length) { try { await ai.ticketsRecibidos({ hashes: acusar }); } catch (e) { throw new Error(`Los tickets se han aplicado, pero no se pudo avisar al Worker (${traducir(e).message}); se avisará la próxima vez.`); } }
     return r;
   }
@@ -117,8 +130,16 @@ export function inventarioActions(ctx) {
 
   // «Sincronizar inventario»: recoge la cola del Worker y aplica cada ticket. auto = al abrir la app: sin Worker configurado, sin
   // red o sin cola de tickets (el Worker responde `tickets_sin_configurar`) no dice nada.
+  // Si ya hay una en curso: la automática no hace nada; la manual (o la que sigue a «Subir ticket») espera a que acabe y vuelve a
+  // sincronizar, para que lo recién subido se recoja y se diga.
+  let enCurso = null;
   async function sincronizar({ auto = false } = {}) {
-    if (inv.sincronizando) return;
+    if (enCurso) { if (auto) return; await enCurso.catch(() => {}); }
+    enCurso = sincronizarUna({ auto });
+    try { await enCurso; } finally { enCurso = null; }
+  }
+  async function sincronizarUna({ auto }) {
+    await esperarCarga();
     if (!state.conn?.endpoint || !state.conn?.token) {
       if (auto) return;
       throw new Error('Falta configurar la conexión con el Worker (Más → Conexión con la IA).');
@@ -129,7 +150,7 @@ export function inventarioActions(ctx) {
       const ai = deps.createAiClient(state.conn);
       if (typeof ai?.ticketsPendientes !== 'function') { if (auto) return; throw new Error('Esta conexión no tiene la cola de tickets.'); } // cliente sin cola de tickets
       let cola;
-      try { cola = (await ai.ticketsPendientes()).tickets; } catch (e) { if (auto && SILENCIOSOS.includes(e.code)) return; throw traducir(e); }
+      try { cola = (await ai.ticketsPendientes()).tickets; } catch (e) { if (auto && (SILENCIOSOS.includes(e.code) || e.code === 'red')) return; throw traducir(e); } // al abrir la app, un fallo de red no molesta (con el botón, sí se ve)
       const r = cola.length ? await aplicarTickets(cola, { enCola: true, ai }) : { aplicados: 0, yaAplicados: 0, compras: 0, dudas: 0, preguntas: 0 };
       if (!auto || cola.length) inv.msg = resumen(r);
       if (state.screen === 'inventario') await refrescar();
@@ -137,13 +158,15 @@ export function inventarioActions(ctx) {
   }
   const sincronizarTrack = () => track(sincronizar(), 'No se pudo sincronizar');
   // Al abrir la app (sin bloquear el arranque ni molestar).
-  const arrancar = async () => { await cargar(); await sincronizar({ auto: true }); repintar(); };
+  const arrancar = async () => { await esperarCarga(); await sincronizar({ auto: true }); repintar(); };
 
   // ¿Es el mismo ticket? Sí: no se aplica y se marca como recibido. No: se aplica.
   const responderDuplicado = (hash, esElMismo) => track((async () => {
     const p = inv.preguntas.find((x) => x.ticket.hash === hash);
     if (!p) return;
+    await esperarCarga();
     inv.preguntas = inv.preguntas.filter((x) => x !== p);
+    await guardarPreguntas();
     const c = await contexto();
     let cur = inv.data;
     if (esElMismo) cur = registrarTicket(cur, hash, { fecha: p.ticket.fecha, hora: p.ticket.hora, aplicado: momentoLocal(now()), origen: p.ticket.origen === 'correo' ? 'correo' : 'app' });
@@ -157,6 +180,7 @@ export function inventarioActions(ctx) {
   // Texto de un ticket (de un PDF o pegado): lo valida, y si hay Worker lo sube a su cola y sincroniza (así hay un único camino);
   // sin Worker o sin red se aplica aquí mismo y se avisa.
   async function procesarTexto(texto) {
+    await esperarCarga();
     let t;
     try { t = await parseTicket(texto); } catch (e) {
       if (!(e instanceof TicketError)) throw e;
@@ -208,7 +232,10 @@ export function inventarioActions(ctx) {
       if (txt === '') continue;
       const g = numero(txt);
       if (g === null || g < 0) { r.error = `Los gramos de «${byId().get(id)?.nombre ?? id}» no son un número válido.`; render(); return; }
-      items.push({ food_id: id, gramos: g });
+      // «Lo he pesado entero»: el stock va en gramos comestibles, así que se aplica la porción comestible (los envases ya lo son).
+      const v = r.valores[id];
+      const entero = v?.entero && String(v.env ?? '').trim() === '';
+      items.push({ food_id: id, gramos: entero ? gramosComestibles(g, byId().get(id)).gramos : g });
     }
     if (!items.length) { r.error = 'No has puesto ninguna cantidad: un campo vacío no se cuenta.'; render(); return; }
     await guardar(anadirRecuentos(inv.data, items, momentoAhora(), deps.idGen ? { id: deps.idGen } : undefined));
@@ -292,5 +319,6 @@ export function inventarioActions(ctx) {
   const hayInventario = () => inv.data.eventos.length || inv.data.dudas.length || Object.keys(inv.data.tickets).length || Object.keys(inv.data.aprendido).length;
   const importar = async (nuevo) => { await guardar(nuevo); };
 
-  return { cargar, arrancar, abrir, abrirDudas, abrirCompra, abrirRecuento, abrirFicha, cerrar, refrescar, sincronizar: sincronizarTrack, responderDuplicado, abrirSubir, cerrarSubir, setTextoSubir, subirPdf, subirTexto, setValor, guardarRecuento, setFicha, ajustar, pedirBorrar, borrarEvento, formDeDuda, setDuda, resolver, setHorizonte, calcularCompra, copiarLista, compartirLista, hayInventario, importar };
+  const pendientes = () => inv.data.dudas.length + inv.preguntas.length; // dudas de líneas + tickets por confirmar
+  return { pendientes, cargar, arrancar, abrir, abrirDudas, abrirCompra, abrirRecuento, abrirFicha, cerrar, refrescar, sincronizar: sincronizarTrack, responderDuplicado, abrirSubir, cerrarSubir, setTextoSubir, subirPdf, subirTexto, setValor, guardarRecuento, setFicha, ajustar, pedirBorrar, borrarEvento, formDeDuda, setDuda, resolver, setHorizonte, calcularCompra, copiarLista, compartirLista, hayInventario, importar };
 }

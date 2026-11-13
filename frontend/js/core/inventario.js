@@ -202,7 +202,7 @@ export function quitarEvento(inv, id) {
   return con(inv, { eventos: inv.eventos.filter((e) => e.id !== id) });
 }
 
-export const ticketAplicado =(inv, hash) => Object.prototype.hasOwnProperty.call(inv.tickets, hash);
+export const ticketAplicado = (inv, hash) => Object.prototype.hasOwnProperty.call(inv.tickets, hash);
 export const registrarTicket = (inv, hash, { fecha, hora, aplicado, origen }) => con(inv, { tickets: { ...inv.tickets, [hash]: { ...(fecha ? { fecha } : {}), ...(hora ? { hora } : {}), ...(aplicado ? { aplicado } : {}), ...(origen ? { origen } : {}) } } });
 export function anadirDuda(inv, duda, { id = newId } = {}) {
   const l = esObjeto(duda) ? limpiarDuda({ ...duda, id: duda.id ?? id() }) : null;

@@ -53,4 +53,7 @@
 .compra-item { display:flex; flex-direction:column; gap:2px; padding:10px 0; border-bottom:1px solid var(--line); }
 .compra-item:last-child { border-bottom:none; }
 .compra-item.revisar strong::after { content:" · revisa"; color:var(--bar-over); font-weight:700; }
+.compra > .row.wrap > button { flex:1 1 auto; white-space:nowrap; min-height:44px; }
+.compra > .row.wrap > button.primary { flex-basis:100%; }
+.rec-entero { display:flex; align-items:center; gap:8px; min-height:44px; margin:2px 0 0; }
 .inventario .sin-contar h2 { color:var(--warn); }

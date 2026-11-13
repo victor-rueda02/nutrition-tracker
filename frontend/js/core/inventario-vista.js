@@ -61,6 +61,7 @@ export function envasesDeTabla(tabla, foodsById) {
 // 350 g · 1,2 kg
 export function textoCantidad(gramos) {
   const g = Math.abs(gramos);
+  if (g > 0 && g < 1) return `${gramos < 0 ? '−' : ''}< 1 g`; // nunca «0 g» si hay algo
   return g >= 1000 ? `${nf2.format(gramos / 1000)} kg` : `${nf0.format(gramos)} g`;
 }
 
@@ -116,7 +117,7 @@ export function descripcionCompra(it) {
   const falta = it.stockDesconocido ? `Necesito ${textoCantidad(it.faltan)}` : `Faltan ${textoCantidad(it.faltan)}`;
   const e = it.envase;
   const comprar = e && e.cantidad > 0
-    ? ` → ${e.cantidad} ${plural(e.nombre ? e.nombre.split(/\s+/)[0].toLowerCase() : 'envase', e.cantidad)} (${textoCantidad(e.gramos)}${e.cantidad > 1 ? ' cada uno' : ''})`
+    ? ` → ${e.cantidad} ${plural(e.nombre ? e.nombre.split(/\s+/)[0].toLowerCase() : 'envase', e.cantidad)} (${textoCantidad(e.gramos)}${e.cantidad > 1 ? ' cada envase' : ''})`
     : '';
   return `${falta}${comprar}`;
 }
