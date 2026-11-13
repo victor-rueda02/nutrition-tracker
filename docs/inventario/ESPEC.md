@@ -1,7 +1,7 @@
 # Inventario y lista de la compra — especificación (F0)
 
-Estado: **aprobado por Victor el 13-11-2026** salvo D4/D5 (horizonte y margen de la lista: en F1 son parámetros) y la
-línea del tomate frito. Decisiones: D1 a (Gmail + Apps Script, cada hora), D2 a (solo en la app), D3 a (sin Gemini),
+Estado: **aprobado por Victor el 13-11-2026**. Lista: 7 días desde hoy (D4 a) + 2 días de margen, en envases enteros (D5 b).
+Decisiones: D1 a (Gmail + Apps Script, cada hora), D2 a (solo en la app), D3 a (sin Gemini),
 D6 a (productos como bolsa; `lentejas_caseras` no se sigue), D7 a (lector de PDF propio), D8 ok (fixtures).
 
 ## 1. Qué hace
@@ -158,6 +158,7 @@ Cantidad no clara → **Duda** aunque el alimento sea seguro: carne y pescado en
 | SARDINILLA RE. SAL O | sardina_lata_reducida_sal | pack de 2 latas × 65 g escurridos |
 | 12 HUEVOS SUPER GRAN, 6 HUEVOS GRANDES-L | huevo | nº × g de la talla × 0,88 |
 | CEBOLLA TUBO | cebolla | malla × porción comestible |
+| TOM.FRITO EST.CASERO | salsa_tomate_frito | bote |
 | BARRA 100% INTEGRAL | pan_integral | g por barra (puede comprar otro tipo: lo nuevo irá a Dudas) |
 | SALTEADO VERD. ASADA | verduras_asadas_hacendado | bolsa 450 g |
 | SALTEADO DE VERDURAS | salteado_verduras_hacendado | bolsa 600 g |
@@ -167,7 +168,7 @@ entero), TOM. RECETA ARTESANA, TOMATE FRITO BRICK, T.CHERRY PERA NEGRO, PARRILLA
 PATATA PREFREG. FINA, SALMÓN CON VERDURAS, LECHE SEMI, LECHE ETERA GAZA PA.
 
 **Sin línea conocida** (la primera vez irán a Dudas y la respuesta se recuerda): yogur_griego_ligero, tomate (natural),
-salsa_tomate_frito (pendiente: ¿es TOM.FRITO EST.CASERO?), aceite_oliva, anacardos, cacao_polvo, crema_cacahuete,
+aceite_oliva, anacardos, cacao_polvo, crema_cacahuete,
 kiwi_verde, platano, pimiento_rojo, zanahoria, sal.
 
 ### Flujo de punta a punta
@@ -203,14 +204,14 @@ App al abrirse / «Sincronizar» ──POST /tickets/pendientes──► lista
 
 ```
 necesidad(f) = Σ gramos del menú de f en cada día de hoy … hoy+N−1   (elegirMenu con el plan; recetas como en §2)
-             + margen (parámetro; D5 pendiente)
+             + margen: 2 días más de menú (D5 b; `margen_dias` de data/inventario.json)
 faltan(f)    = max(0, necesidad(f) − stock(f) + registrado_hoy(f))
 comprar(f)   = faltan(f) en envases enteros del producto habitual (el primero de la tabla) y en gramos
 ```
 
 - Días sin menú (fines de semana, vacaciones, Navidad) suman 0 y se dicen («sáb y dom sin menú: no cuentan»).
 - Alimento sin contar: sale con la necesidad entera y «stock desconocido».
-- Horizonte N: parámetro (D4 pendiente). Agrupada como el inventario; compartir/copiar como texto.
+- Horizonte N = 7 días desde hoy (D4 a; `horizonte_dias`, ajustable en la pantalla). Agrupada como el inventario; compartir/copiar como texto.
 
 ## 7. Fases
 
