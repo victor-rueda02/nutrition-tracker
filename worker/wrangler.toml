@@ -18,6 +18,6 @@ ALLOWED_ORIGIN = "https://victor-rueda02.github.io"
 #   2. quita el # de las tres líneas de abajo y pega ese id
 #   3. npm run worker:secret:mail                    (el token que usará el Apps Script del correo; npm run token te da uno)
 #   4. npm run worker:deploy
-# [[kv_namespaces]]
-# binding = "TICKETS"
-# id = "PEGA-AQUI-EL-ID-DEL-NAMESPACE"
+[[kv_namespaces]]
+binding = "TICKETS"
+id = "569694b4d2c64903b122001dace0902b" # creado el 13-11-2026 (no es un secreto)
