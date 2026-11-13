@@ -253,3 +253,12 @@ Los tests de totales parciales usan ahora `foodsPastaSinColina` (helpers.js) com
 
 ## Rama `flus` (12-11-2026): porción «flus» del aceite
 - `aceite_oliva` · porción `flus:0.3` (pulverizador). Provisional: Victor dijo «15 flus son unos 5 ml»; 5 ml × 0,91 g/ml = 4,55 g ÷ 15 = 0,30 g. Se cambia cuando dé la relación exacta (un número en `porciones`).
+
+## AQ-F2: tickets de Mercadona y `porcion_comestible` (13-11-2026, rama `cat/aq-f2-tickets-envases`)
+
+- `data/tickets-mercadona.json` (40 entradas: 28 que suman, 12 «ignorar»; formato en `data/SCHEMA.md`). Tamaños de envase de la web de Mercadona (`tienda.mercadona.es/api`, consultada el 13-11-2026; URL de cada producto en `fuente`). Latas: peso escurrido de la web (atún pack 6 = 360 g → 60 g/lata; sardinillas pack 2 = 130 g → 65 g/lata), coherente con las filas. Bebida de avena: brik 1 L × 1,03.
+- Pendiente de que Victor confirme (`confirmar: true` en la tabla): talla de huevo (XL 76 g y L 68 g con cáscara, estimados: el Reglamento (CE) 589/2008 da L 63-73 g y la web «XL, 73 g o más», sin tope); macarrón (1 kg o 500 g: el ticket, 1,15 €, encaja con 1 kg a 1,20 € hoy); peso de las bolsas de manzana (1,5 kg dulces y 1,62 kg acidulces según la web, pero los precios del ticket, 2,88 y 3,10 €, ya no coinciden con los actuales, 2,70 y 3,40 €); cebolla («tubo» no existe en la web: solo mallas de 1 y 2 kg; `gramos_por_unidad: null` → Dudas).
+- Columna `porcion_comestible` (36 alimentos de la dieta; 35 con valor). Fuente: BEDCA (campo `edible_portion` de `procquery.php`); el *refuse* de USDA no lo publica la API. Valores no triviales: huevo 0,88 (BEDCA 2091/1685, igual que el 12 % de cáscara de USDA), nueces 0,45 (BEDCA 2202 «Nuez, cruda, con cáscara»; la entrada antigua 1352 da 0,50: se usa la nueva), manzana 0,84 (2231), mandarina 0,72 (1705), plátano 0,66 (2245), kiwi 0,85 (1689), tomate 0,95 (2421), pimiento rojo 0,83 (1894), zanahoria 1,00 (1892). El resto es 1 «producto tal cual».
+- **Cebolla vacía**: BEDCA 1773 trae 0,0088 (error evidente) y 2381 trae 1,00 (sin aclarar si va pelada); sin dato fiable, queda vacía (el inventario contará 1 y avisará).
+- La columna se registra en `WORK_COLUMNS` (`frontend/js/core/schema.js`) para que no salga aviso de cabecera desconocida.
+- El test «export real de Victor» de `catalog-update.test.js` pedía > 20 alimentos sin cambios entre el export del iPhone y lo publicado; ahora 35 filas publicadas cambian (`fuente_usda`), así que pide > 0.

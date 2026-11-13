@@ -242,7 +242,7 @@ test('export real de Victor (22-10-2026): al actualizar desaparecen los 11 retir
     for (const id of ['salchichon_2', 'bebida_de_avena_2', 'cafe_solo_expreso']) assert.deepEqual(porId.get(id), de(exportado, id), `${nombre}: ${id}`);
     // y los alimentos que no cambian entre el dispositivo y lo publicado quedan exactamente igual
     const sinCambios = restantes.filter((f) => !p.actualizados.some((a) => a.id === f.id) && de(publicado, f.id));
-    assert.ok(sinCambios.length > 20, nombre);
+    assert.ok(sinCambios.length >= 15, `${nombre}: ${sinCambios.length}`); // hoy 18: AQ-F2 pasa 8 de 26 a actualizados (fuente_usda/porcion_comestible)
     for (const f of sinCambios) assert.deepEqual(porId.get(f.id), f, `${nombre}: ${f.id}`);
   }
 });

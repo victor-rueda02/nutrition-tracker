@@ -1,0 +1,296 @@
+{
+  "version": 1,
+  "productos": {
+    "arroz largo": {
+      "descripcion": "ARROZ LARGO",
+      "food_id": "arroz_blanco_crudo",
+      "nombre_envase": "paquete 1 kg",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1000,
+      "fuente": "https://tienda.mercadona.es/product/5063/arroz-largo-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "avena molida": {
+      "descripcion": "AVENA MOLIDA",
+      "food_id": "avena_copos",
+      "nombre_envase": "paquete 500 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 500,
+      "fuente": "https://tienda.mercadona.es/product/16807/avena-molida-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "macarron": {
+      "descripcion": "MACARRON",
+      "food_id": "pasta_seca",
+      "nombre_envase": "paquete 1 kg",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1000,
+      "fuente": "https://tienda.mercadona.es/product/6250/macarron-hacendado-paquete (consultado el 13-11-2026)",
+      "nota": "Hoy hay dos Macarrón Hacendado en la web: 1 kg (1,20 €, id 6250) y 500 g (0,85 €, id 6326). El ticket (1,15 €) encaja con el de 1 kg; Victor debe confirmarlo.",
+      "confirmar": true
+    },
+    "lenteja pardina": {
+      "descripcion": "LENTEJA PARDINA",
+      "food_id": "lentejas_secas",
+      "nombre_envase": "paquete 1 kg",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1000,
+      "fuente": "https://tienda.mercadona.es/product/5330/lenteja-pardina-hacendado-categoria-extra-paquete (consultado el 13-11-2026)"
+    },
+    "copos de maiz 0%": {
+      "descripcion": "COPOS DE MAIZ 0%",
+      "food_id": "corn_flakes",
+      "nombre_envase": "caja 500 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 500,
+      "fuente": "https://tienda.mercadona.es/product/22966/cereales-copos-maiz-corn-flakes-hacendado-0-azucares-anadidos-caja (consultado el 13-11-2026)"
+    },
+    "muesli crunchy 0%": {
+      "descripcion": "MUESLI CRUNCHY 0%",
+      "food_id": "muesli",
+      "nombre_envase": "paquete 500 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 500,
+      "fuente": "https://tienda.mercadona.es/product/35892/muesli-crunchy-hacendado-0-azucares-anadidos-0-edulcorantes-paquete (consultado el 13-11-2026)"
+    },
+    "bebida avena": {
+      "descripcion": "BEBIDA AVENA",
+      "food_id": "bebida_de_avena",
+      "nombre_envase": "brik 1 L",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1030,
+      "fuente": "https://tienda.mercadona.es/product/23912/bebida-avena-alitey-brick (consultado el 13-11-2026)",
+      "nota": "1 L × 1,03 g/ml (densidad_g_ml de bebida_de_avena en el catálogo). El ticket (0,95 €) coincide con Bebida de avena Alitey, brik de 1 L."
+    },
+    "porciones 85% cacao": {
+      "descripcion": "PORCIONES 85% CACAO",
+      "food_id": "chocolate_negro_85",
+      "nombre_envase": "paquete 200 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 200,
+      "fuente": "https://tienda.mercadona.es/product/12493/porciones-chocolate-negro-85-cacao-extrafino-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "chia": {
+      "descripcion": "CHÍA",
+      "food_id": "semillas_chia",
+      "nombre_envase": "paquete 250 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 250,
+      "fuente": "https://tienda.mercadona.es/product/24561/semillas-chia-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "almendra natural": {
+      "descripcion": "ALMENDRA NATURAL",
+      "food_id": "almendras_crudas",
+      "nombre_envase": "paquete 200 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 200,
+      "fuente": "https://tienda.mercadona.es/product/34865/almendra-natural-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "nuez cascara natural": {
+      "descripcion": "NUEZ CASCARA NATURAL",
+      "food_id": "nueces",
+      "nombre_envase": "paquete 600 g con cáscara",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 600,
+      "fuente": "https://tienda.mercadona.es/product/34606/nuez-natural-hacendado-paquete (consultado el 13-11-2026)",
+      "nota": "Peso CON cáscara; la porcion_comestible de `nueces` (0,45) lo convierte a nuez pelada. El ticket (3,70 €) coincide con este producto."
+    },
+    "datil sin hueso": {
+      "descripcion": "DÁTIL SIN HUESO",
+      "food_id": "datiles_deglet_noor",
+      "nombre_envase": "paquete 250 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 250,
+      "fuente": "https://tienda.mercadona.es/product/15301/datiles-desecados-sin-hueso-hacendado-paquete (consultado el 13-11-2026)"
+    },
+    "roja dulce bolsa": {
+      "descripcion": "ROJA DULCE BOLSA",
+      "food_id": "manzana_con_piel",
+      "nombre_envase": "bolsa 1,5 kg",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1500,
+      "fuente": "https://tienda.mercadona.es/product/8280/manzanas-rojas-dulces-bolsa (consultado el 13-11-2026)",
+      "nota": "Peso de la bolsa de la web (1,5 kg); si cambia el tamaño de la bolsa, el ticket (2,88 €) ya no coincide con el precio actual (2,70 €): confirmar.",
+      "confirmar": true
+    },
+    "roja acidulce bolsa": {
+      "descripcion": "ROJA ACIDULCE BOLSA",
+      "food_id": "manzana_con_piel",
+      "nombre_envase": "bolsa 1,62 kg",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 1620,
+      "fuente": "https://tienda.mercadona.es/product/8268/manzanas-rojas-acidulces-bolsa (consultado el 13-11-2026)",
+      "nota": "Peso de la bolsa de la web (1,62 kg); el ticket (3,10 €) no coincide con el precio actual (3,40 €): confirmar.",
+      "confirmar": true
+    },
+    "mandarina": {
+      "descripcion": "MANDARINA",
+      "food_id": "mandarina",
+      "a_peso": true
+    },
+    "patata": {
+      "descripcion": "PATATA",
+      "food_id": "patata_cruda",
+      "a_peso": true
+    },
+    "filete pechuga fino": {
+      "descripcion": "FILETE PECHUGA FINO",
+      "food_id": "pechuga_pollo_cruda",
+      "preguntar_gramos": true
+    },
+    "pechuga familiar": {
+      "descripcion": "PECHUGA FAMILIAR",
+      "food_id": "pechuga_pollo_cruda",
+      "preguntar_gramos": true
+    },
+    "filete salmon": {
+      "descripcion": "FILETE SALMÓN",
+      "food_id": "salmon_atlantico",
+      "preguntar_gramos": true
+    },
+    "atun claro oliva pk6": {
+      "descripcion": "ATÚN CLARO OLIVA PK6",
+      "food_id": "atun_lata_aceite",
+      "nombre_envase": "pack 6 latas",
+      "unidades_por_envase": 6,
+      "gramos_por_unidad": 60,
+      "fuente": "https://tienda.mercadona.es/product/18002/atun-claro-aceite-oliva-hacendado-pack-6 (consultado el 13-11-2026)",
+      "nota": "Escurrido: 6 × 60 g = 360 g (peso escurrido de la web); coherente con la nota de la fila (60 g escurridos por lata)."
+    },
+    "sardinilla re. sal o": {
+      "descripcion": "SARDINILLA RE. SAL O",
+      "food_id": "sardina_lata_reducida_sal",
+      "nombre_envase": "pack 2 latas",
+      "unidades_por_envase": 2,
+      "gramos_por_unidad": 65,
+      "fuente": "https://tienda.mercadona.es/product/18214/sardinillas-reducidas-sal-aceite-oliva-hacendado-6-12-ud-pack-2 (consultado el 13-11-2026)",
+      "nota": "Escurrido: 2 × 65 g = 130 g (peso escurrido de la web); coherente con la porción lata:65 de la fila."
+    },
+    "12 huevos super gran": {
+      "descripcion": "12 HUEVOS SUPER GRAN",
+      "food_id": "huevo",
+      "nombre_envase": "paquete 12 huevos",
+      "unidades_por_envase": 12,
+      "gramos_por_unidad": 76,
+      "fuente": "https://tienda.mercadona.es/product/31592/huevos-super-grandes-xl-paquete (consultado el 13-11-2026); Reglamento (CE) n.º 589/2008",
+      "talla": "XL",
+      "estimado": true,
+      "nota": "ESTIMADO, Victor debe confirmarlo. Gramos de un huevo CON cáscara. Clase XL = 73 g o más (nombre legal en la web, sin tope): se usa 76 g. La cáscara (0,88) va en porcion_comestible de `huevo`.",
+      "confirmar": true
+    },
+    "6 huevos grandes-l": {
+      "descripcion": "6 HUEVOS GRANDES-L",
+      "food_id": "huevo",
+      "nombre_envase": "paquete 6 huevos",
+      "unidades_por_envase": 6,
+      "gramos_por_unidad": 68,
+      "fuente": "https://tienda.mercadona.es/product/31540/huevos-grandes-l-paquete (consultado el 13-11-2026); Reglamento (CE) n.º 589/2008",
+      "talla": "L",
+      "estimado": true,
+      "nota": "ESTIMADO, Victor debe confirmarlo. Gramos de un huevo CON cáscara. Clase L = 63 g a menos de 73 g (Reglamento 589/2008): punto medio, 68 g. La cáscara (0,88) va en porcion_comestible de `huevo`.",
+      "confirmar": true
+    },
+    "cebolla tubo": {
+      "descripcion": "CEBOLLA TUBO",
+      "food_id": "cebolla",
+      "nombre_envase": "malla",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": null,
+      "fuente": "https://tienda.mercadona.es/product/69089/cebollas-malla (consultado el 13-11-2026)",
+      "nota": "Sin tamaño seguro: la web solo trae cebollas en malla de 1 kg (1,50 €) y 2 kg (3,00 €), ninguna a 2,00 € como el ticket ni llamada «tubo». Queda vacío: la línea va a Dudas hasta que Victor diga el peso.",
+      "confirmar": true
+    },
+    "barra 100% integral": {
+      "descripcion": "BARRA 100% INTEGRAL",
+      "food_id": "pan_integral",
+      "nombre_envase": "barra 230 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 230,
+      "fuente": "https://tienda.mercadona.es/product/17912.1/barra-pan-integral-100 (consultado el 13-11-2026)",
+      "nota": "Peso de la barra de la web; si compra otro tipo de pan, irá a Dudas."
+    },
+    "salteado verd. asada": {
+      "descripcion": "SALTEADO VERD. ASADA",
+      "food_id": "verduras_asadas_hacendado",
+      "nombre_envase": "bolsa 450 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 450,
+      "fuente": "https://tienda.mercadona.es/product/16334/salteado-verduras-asadas-hacendado-ultracongeladas-paquete (consultado el 13-11-2026)"
+    },
+    "salteado de verduras": {
+      "descripcion": "SALTEADO DE VERDURAS",
+      "food_id": "salteado_verduras_hacendado",
+      "nombre_envase": "bolsa 600 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 600,
+      "fuente": "https://tienda.mercadona.es/product/61065/salteado-verduras-hacendado-ultracongelado-paquete (consultado el 13-11-2026)"
+    },
+    "tom.frito est.casero": {
+      "descripcion": "TOM.FRITO EST.CASERO",
+      "food_id": "salsa_tomate_frito",
+      "nombre_envase": "brik 380 g",
+      "unidades_por_envase": 1,
+      "gramos_por_unidad": 380,
+      "fuente": "https://tienda.mercadona.es/product/17153/tomate-frito-estilo-casero-hacendado-con-aceite-oliva-brick (consultado el 13-11-2026)",
+      "nota": "Confirmado por Victor (13-11-2026): esta línea es el tomate frito de la dieta."
+    },
+    "lenteja cocida": {
+      "descripcion": "LENTEJA COCIDA",
+      "ignorar": true,
+      "motivo": "bote cocido; la dieta usa lentejas secas"
+    },
+    "muesli con frutas": {
+      "descripcion": "MUESLI CON FRUTAS",
+      "ignorar": true,
+      "motivo": "es otro muesli; el de la dieta es el crunchy 0 %"
+    },
+    "griego natural p-6": {
+      "descripcion": "GRIEGO NATURAL P-6",
+      "ignorar": true,
+      "motivo": "yogur griego natural entero; la dieta usa el ligero"
+    },
+    "tom. receta artesana": {
+      "descripcion": "TOM. RECETA ARTESANA",
+      "ignorar": true,
+      "motivo": "no es el tomate frito de la dieta (estilo casero)"
+    },
+    "tomate frito brick": {
+      "descripcion": "TOMATE FRITO BRICK",
+      "ignorar": true,
+      "motivo": "no es el tomate frito de la dieta (estilo casero)"
+    },
+    "t.cherry pera negro": {
+      "descripcion": "T.CHERRY PERA NEGRO",
+      "ignorar": true,
+      "motivo": "tomate cherry; la dieta usa tomate natural"
+    },
+    "parrillada verdura a": {
+      "descripcion": "PARRILLADA VERDURA A",
+      "ignorar": true,
+      "motivo": "parrillada de verduras; no es de la dieta"
+    },
+    "pim piq tradicional": {
+      "descripcion": "PIM PIQ TRADICIONAL",
+      "ignorar": true,
+      "motivo": "pimiento del piquillo en conserva; la dieta usa pimiento rojo fresco"
+    },
+    "patata prefreg. fina": {
+      "descripcion": "PATATA PREFREG. FINA",
+      "ignorar": true,
+      "motivo": "patata prefrita; la dieta usa patata cruda"
+    },
+    "salmon con verduras": {
+      "descripcion": "SALMÓN CON VERDURAS",
+      "ignorar": true,
+      "motivo": "plato preparado; la dieta usa salmón crudo"
+    },
+    "leche semi": {
+      "descripcion": "LECHE SEMI",
+      "ignorar": true,
+      "motivo": "leche semidesnatada; no es de la dieta"
+    },
+    "leche etera gaza pa": {
+      "descripcion": "LECHE ETERA GAZA PA",
+      "ignorar": true,
+      "motivo": "leche; no es de la dieta"
+    }
+  }
+}
