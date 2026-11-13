@@ -149,22 +149,21 @@ Cantidad no clara → **Duda** aunque el alimento sea seguro: carne y pescado en
 | ALMENDRA NATURAL | almendras_crudas | bolsa |
 | NUEZ CASCARA NATURAL | nueces | bolsa × porción comestible |
 | DÁTIL SIN HUESO | datiles_deglet_noor | envase |
-| ROJA DULCE BOLSA, ROJA ACIDULCE BOLSA | manzana_con_piel | bolsa (peso de la web) × porción comestible |
+| ROJA DULCE BOLSA, ROJA ACIDULCE BOLSA | manzana_con_piel | peso variable: siempre pregunta los gramos × porción comestible |
 | MANDARINA (a peso) | mandarina | kg × porción comestible |
 | PATATA (a peso) | patata_cruda | kg |
 | FILETE PECHUGA FINO, PECHUGA FAMILIAR | pechuga_pollo_cruda | siempre pregunta los gramos |
 | FILETE SALMÓN | salmon_atlantico | siempre pregunta los gramos |
 | ATÚN CLARO OLIVA PK6 | atun_lata_aceite | 6 latas × g escurridos |
 | SARDINILLA RE. SAL O | sardina_lata_reducida_sal | pack de 2 latas × 65 g escurridos |
-| 12 HUEVOS SUPER GRAN, 6 HUEVOS GRANDES-L | huevo | nº × g de la talla × 0,88 |
-| CEBOLLA TUBO | cebolla | malla × porción comestible |
+| CEBOLLA TUBO | cebolla | malla de 1 kg × porción comestible |
 | TOM.FRITO EST.CASERO | salsa_tomate_frito | bote |
 | BARRA 100% INTEGRAL | pan_integral | g por barra (puede comprar otro tipo: lo nuevo irá a Dudas) |
 | SALTEADO VERD. ASADA | verduras_asadas_hacendado | bolsa 450 g |
 | SALTEADO DE VERDURAS | salteado_verduras_hacendado | bolsa 600 g |
 
 **Ignorar** (se parecen a la dieta pero no lo son): LENTEJA COCIDA, MUESLI CON FRUTAS, GRIEGO NATURAL P-6 (yogur
-entero), TOM. RECETA ARTESANA, TOMATE FRITO BRICK, T.CHERRY PERA NEGRO, PARRILLADA VERDURA A, PIM PIQ TRADICIONAL,
+entero), 12 HUEVOS SUPER GRAN y 6 HUEVOS GRANDES-L (Victor trae huevos caseros; si compra, «Ajustar»), TOM. RECETA ARTESANA, TOMATE FRITO BRICK, T.CHERRY PERA NEGRO, PARRILLADA VERDURA A, PIM PIQ TRADICIONAL,
 PATATA PREFREG. FINA, SALMÓN CON VERDURAS, LECHE SEMI, LECHE ETERA GAZA PA.
 
 **Sin línea conocida** (la primera vez irán a Dudas y la respuesta se recuerda): yogur_griego_ligero, tomate (natural),
