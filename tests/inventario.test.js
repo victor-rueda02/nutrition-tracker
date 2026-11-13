@@ -359,9 +359,13 @@ test('lista de la compra: necesidad de hoy a hoy+horizonte−1+margen, faltan, s
   assert.deepEqual([l.desde, l.hasta, l.dias.length], ['2026-11-16', '2026-11-24', 9]);
   // menús: lunes 16 y 23, martes 17 y 24. Arroz: 100 + 80 + 100 + 80 = 360; huevo: 108 × 2 = 216; las lentejas caseras no suman
   const arroz = l.items.find((i) => i.food_id === 'arroz_blanco_crudo');
-  // faltan = 360 − (300 − 50 registrado hoy) = 110 → 2 paquetes de 100 g
-  assert.deepEqual([arroz.necesidad, arroz.stock, arroz.registradoHoy, arroz.faltan, arroz.stockDesconocido], [360, 300, 50, 110, false]);
-  assert.deepEqual(arroz.envase, { nombre: 'paquete de 1 kg', gramos: 100, cantidad: 2 });
+  // faltan = 360 − 300 = 60 → 1 paquete de 100 g. Lo registrado hoy (50 g) NO cambia faltan: la necesidad ya incluye el menú de hoy y el stock no resta hoy
+  assert.deepEqual([arroz.necesidad, arroz.stock, arroz.registradoHoy, arroz.faltan, arroz.stockDesconocido], [360, 300, 50, 60, false]);
+  assert.deepEqual(arroz.envase, { nombre: 'paquete de 1 kg', gramos: 100, cantidad: 1 });
+  const sinRegistroHoy = calcularStock(inv, [], { conjunto, recetas: recetasPrueba, noSeguidas: ['lentejas_caseras'], hoy });
+  assert.equal(sinRegistroHoy.arroz_blanco_crudo.registradoHoy, 0);
+  const l0 = listaCompra({ dieta: DIETA_LISTA, recetas: recetasPrueba, plan: PLAN_LISTA, hoy, noSeguidas: ['lentejas_caseras'], conjunto, stock: sinRegistroHoy, horizonte: 7, margen: 2 });
+  assert.equal(l0.items.find((i) => i.food_id === 'arroz_blanco_crudo').faltan, 60); // igual con o sin lo registrado hoy
   // huevo sin contar: necesidad entera y «stock desconocido»
   const huevo = l.items.find((i) => i.food_id === 'huevo');
   assert.deepEqual([huevo.necesidad, huevo.stock, huevo.faltan, huevo.stockDesconocido], [216, null, 216, true]);

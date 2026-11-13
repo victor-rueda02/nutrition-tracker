@@ -318,7 +318,7 @@ export function gramosComestibles(gramosBrutos, food) {
 //   horizonte (días desde hoy) y margen (días extra de colchón): se miran hoy … hoy + horizonte − 1 + margen,
 //   envases: { food_id: { gramos, nombre } } opcional (gramos comestibles de un envase del producto habitual).
 // necesidad = Σ gramos del menú de cada día (elegirMenu con el plan; recetas como en alimentosDeLaDieta);
-// faltan = max(0, necesidad − (stock − registradoHoy)); sin contar: faltan = necesidad y stockDesconocido.
+// faltan = max(0, necesidad − stock) (el stock no resta hoy y la necesidad ya incluye el menú de hoy: nada se cuenta dos veces); sin contar: faltan = necesidad y stockDesconocido.
 // Los días sin menú suman 0 y se devuelven aparte (sinMenu) para avisar.
 export function listaCompra({ dieta, recetas = [], plan = null, hoy, noSeguidas = [], conjunto, stock = {}, horizonte, margen = 0, envases = {} }) {
   const dentro = conjuntoDe(conjunto);
@@ -340,7 +340,7 @@ export function listaCompra({ dieta, recetas = [], plan = null, hoy, noSeguidas 
     const s = stock[id];
     const contado = Boolean(s?.contado);
     const registradoHoy = s?.registradoHoy ?? 0;
-    const faltan = r3(contado ? Math.max(0, nec - (s.gramos - registradoHoy)) : nec);
+    const faltan = r3(contado ? Math.max(0, nec - s.gramos) : nec);
     const env = envases[id];
     const envase = esNum(env?.gramos) && env.gramos > 0 ? { nombre: env.nombre ?? null, gramos: env.gramos, cantidad: faltan > 0 ? Math.ceil(faltan / env.gramos - 1e-9) : 0 } : null;
     return { food_id: id, necesidad: r3(nec), stock: contado ? s.gramos : null, registradoHoy, faltan, stockDesconocido: !contado, negativo: Boolean(s?.negativo), envase };
