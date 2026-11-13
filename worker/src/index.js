@@ -3,6 +3,8 @@
 //   POST /estimate { texto, alimentos } -> { plato, gramos, total_estimado, ingredientes, warnings }   («Estimar con IA»)
 //   POST /cenas { alimentos, deficits } -> { cenas, warnings }   (¿Qué ceno? «Más ideas»: ids del catálogo y gramos típicos)
 //   POST /usda/search { terminos } -> { resultados }        POST /usda/foods { fdcIds } -> { fichas }
+//   POST /tickets { pdf_base64 | texto }, POST /tickets/pendientes, POST /tickets/recibidos { hashes }   (cola de tickets de Mercadona
+//     en KV, ver tickets.js: sin IA; solo se guardan fecha, líneas y hash)
 //   GET /health
 // A Gemini solo viajan la frase dictada (o, en /cenas, los NOMBRES de los nutrientes con déficit) y la lista compacta
 // (id, nombre, alias, porciones, variante); a USDA, solo
@@ -14,6 +16,7 @@ import { checkCenasStructure, normalizeCenas, checkDeficits, ROLES_CENA } from '
 import { findCandidates, fichaUsda, fortificacion, UsdaError } from '../../frontend/js/core/usda-core.js';
 import { callGemini, ProviderError } from './providers/gemini.js';
 import { createUsda } from './providers/usda.js';
+import { handleTickets } from './tickets.js';
 import usdaMap from '../../data/usda-map.json' with { type: 'json' };
 import settingsData from '../../data/settings.json' with { type: 'json' };
 
@@ -245,8 +248,10 @@ export async function handleRequest(request, env, { callModel = defaultCallModel
   if (url.pathname === '/health' && request.method === 'GET') {
     const t = request.headers.get('X-App-Token');
     const token = t === null ? 'sin_token' : env.APP_TOKEN && safeEqual(t, env.APP_TOKEN) ? 'ok' : 'incorrecto';
-    return json(200, { ok: true, configurado: Boolean(env.GEMINI_MODEL && env.GEMINI_API_KEY && env.APP_TOKEN), token }, cors);
+    // tickets / mail: ¿hay KV `TICKETS` y secreto MAIL_TOKEN? (solo sí o no; para saber qué falta en la cola de tickets)
+    return json(200, { ok: true, configurado: Boolean(env.GEMINI_MODEL && env.GEMINI_API_KEY && env.APP_TOKEN), token, tickets: Boolean(env.TICKETS), mail: Boolean(env.MAIL_TOKEN) }, cors);
   }
+  if (url.pathname === '/tickets' || url.pathname.startsWith('/tickets/')) return handleTickets(request, env, url, { json, safeEqual, cors, origin });
   if (!RUTAS.includes(url.pathname) || request.method !== 'POST') return json(404, { error: 'no_encontrado' }, cors);
 
   if (origin && !cors['Access-Control-Allow-Origin']) return json(403, { error: 'origen_no_permitido' });

@@ -60,7 +60,7 @@ test('/health ("Probar"): secretos configurados y token correcto, sin revelar va
   };
   const [status, body] = await health({ Origin: ORIGIN, 'X-App-Token': 'tok-123' });
   assert.equal(status, 200);
-  assert.deepEqual(JSON.parse(body), { ok: true, configurado: true, token: 'ok' });
+  assert.deepEqual(JSON.parse(body), { ok: true, configurado: true, token: 'ok', tickets: false, mail: false }); // la cola de tickets no está configurada en este entorno
   assert.ok(!body.includes('CLAVE-SECRETA-XYZ') && !body.includes('tok-123'));
   assert.equal(JSON.parse((await health({ 'X-App-Token': 'otro' }))[1]).token, 'incorrecto');
   assert.equal(JSON.parse((await health({}))[1]).token, 'sin_token');

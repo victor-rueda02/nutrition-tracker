@@ -1,5 +1,5 @@
 # Cloudflare Worker (plan gratuito).
-# Secrets (NO van aquí):  npm run worker:secret:gemini, npm run worker:secret:token
+# Secrets (NO van aquí):  npm run worker:secret:gemini, npm run worker:secret:token, npm run worker:secret:mail (tickets por correo)
 #   y npm run worker:secret:usda («Estimar con IA»: la clave de api.data.gov, solo los 40 caracteres)
 name = "nutrition-tracker-ai"
 main = "src/index.js"
@@ -11,3 +11,13 @@ GEMINI_MODEL = "gemini-3.1-flash-lite"
 GEMINI_MODEL_FALLBACK = "gemini-3.5-flash-lite" # respaldo si Google devuelve 5xx dos veces (regla 10 de CLAUDE.md)
 # Solo el ORIGEN (sin ruta ni barra final) de tu GitHub Pages, p. ej. https://tuusuario.github.io
 ALLOWED_ORIGIN = "https://victor-rueda02.github.io"
+
+# Cola de tickets de Mercadona («Inventario», docs/inventario/CORREO.md). Sin esto, /tickets responde 500 «tickets_sin_configurar»
+# y el resto del Worker sigue igual. Pasos (los haces tú, una sola vez):
+#   1. npx wrangler kv namespace create TICKETS      (imprime un `id`; es gratis)
+#   2. quita el # de las tres líneas de abajo y pega ese id
+#   3. npm run worker:secret:mail                    (el token que usará el Apps Script del correo; npm run token te da uno)
+#   4. npm run worker:deploy
+# [[kv_namespaces]]
+# binding = "TICKETS"
+# id = "PEGA-AQUI-EL-ID-DEL-NAMESPACE"

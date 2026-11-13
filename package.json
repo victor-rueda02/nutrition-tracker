@@ -14,6 +14,7 @@
     "worker:secret:gemini": "wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml",
     "worker:secret:usda": "wrangler secret put USDA_API_KEY --config worker/wrangler.toml",
     "worker:secret:token": "wrangler secret put APP_TOKEN --config worker/wrangler.toml",
+    "worker:secret:mail": "wrangler secret put MAIL_TOKEN --config worker/wrangler.toml",
     "worker:logs": "wrangler tail --config worker/wrangler.toml",
     "build:templates": "node scripts/build-templates.mjs"
   },
