@@ -85,8 +85,8 @@ stock = R.gramos
 
 ```
 <cabecera: empresa, NIF, tienda, teléfono>          → se ignora
-DD/MM/AAAA HH:MM  OP: …                              → fecha (la hora y OP no se guardan)
-FACTURA SIMPLIFICADA: NNNN-NNN-NNNNNN                → solo su SHA-256 (clave para no aplicar dos veces)
+DD/MM/AAAA HH:MM  OP: …                              → fecha y hora (el OP no se guarda)
+FACTURA SIMPLIFICADA: NNNN-NNN-NNNNNN                → no se lee ni se guarda; el hash (SHA-256) sale de fecha + hora + líneas
 Cnt. Descripción P. Unit Importe                     → empieza el detalle
 3 ATÚN CLARO OLIVA PK6 4,90 14,70                    → cantidad, descripción (≤ 20 car.), p. unitario (si cnt > 1), importe
 1 MACARRON 1,15
@@ -175,8 +175,8 @@ kiwi_verde, platano, pimiento_rojo, zanahoria, sal.
 ```
 Correo (Gmail, PDF adjunto) ─Apps Script cada hora─► Worker POST /tickets (MAIL_TOKEN) ─┐
                                                                               ├─► KV «TICKETS»: cola de tickets parseados
-App «Subir ticket» (PDF o texto) ──────────► Worker POST /tickets (APP_TOKEN)─┘    (líneas + fecha + hash; sin tienda,
-                                                                                    hora, tarjeta ni nº de factura)
+App «Subir ticket» (PDF o texto) ──────────► Worker POST /tickets (APP_TOKEN)─┘    (líneas + fecha + hora + hash; sin tienda,
+                                                                                    OP, tarjeta ni nº de factura)
 App al abrirse / «Sincronizar» ──POST /tickets/pendientes──► lista
    └─ clasifica en el iPhone (tabla + aprendido + conjunto de la dieta) → compras | Dudas | descartadas
    └─ POST /tickets/recibidos {hashes} → el Worker los borra de KV (y TTL de 30 días por si acaso)

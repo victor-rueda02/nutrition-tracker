@@ -89,7 +89,8 @@ Worker.
    La de USDA solo hace falta para «Estimar con IA» (platos que no están en tu documento); sin ella, dictar funciona igual.
 
 7. Comprueba en el navegador: `https://nutrition-tracker-ai.TU-SUBDOMINIO.workers.dev/health` debe responder
-   `{"ok":true,"configurado":true,"token":"sin_token"}`.
+   `{"ok":true,"configurado":true,"token":"sin_token","tickets":false,"mail":false}` (`tickets` y `mail` pasan a `true` cuando
+   configuras la cola de tickets del inventario: `docs/inventario/CORREO.md`).
 
 ### 3. El iPhone
 
