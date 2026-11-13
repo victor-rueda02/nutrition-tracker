@@ -177,6 +177,9 @@ test('fusionarInventario: por id sin duplicar, gana lo local, tickets y aprendid
   assert.deepEqual(otra.nuevos, { eventos: 0, tickets: 0, dudas: 0, aprendido: 0 });
   assert.equal(local.eventos.length, 2);
   assert.equal(fusionarInventario(undefined, copia).inventario.eventos.length, 3);
+  // regresión (revisor AQ-F1 ronda 2): dos compras de la misma línea de ticket con distinto id DENTRO de la copia entran una vez
+  const repetida = { ...copia, eventos: [ev('p', 40, { ticket: 'h9', linea: 3 }), ev('q', 40, { ticket: 'h9', linea: 3 })] };
+  assert.deepEqual(fusionarInventario(local, repetida).inventario.eventos.map((e) => e.id), ['a', 'b', 'p']);
 });
 
 // ---------- consumo y stock derivados ----------

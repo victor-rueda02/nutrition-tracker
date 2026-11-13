@@ -217,7 +217,13 @@ export function fusionarInventario(local, entrante) {
   // la misma línea de ticket (ticket, línea, alimento) con otro id en la copia no se suma otra vez
   const claveCompra = (e) => (e.tipo === 'compra' && e.ticket && Number.isInteger(e.linea) ? `${e.ticket}|${e.linea}|${e.food_id}` : null);
   const claves = new Set(a.eventos.map(claveCompra).filter(Boolean));
-  const eventosNuevos = b.eventos.filter((e) => !ids.has(e.id) && !claves.has(claveCompra(e)));
+  const eventosNuevos = b.eventos.filter((e) => {
+    const k = claveCompra(e);
+    if (ids.has(e.id) || (k && claves.has(k))) return false;
+    ids.add(e.id);
+    if (k) claves.add(k); // tampoco dos veces la misma línea dentro de la propia copia
+    return true;
+  });
   const eventos = [...a.eventos, ...eventosNuevos];
   const tickets = { ...b.tickets, ...a.tickets };
   const ticketsNuevos = Object.keys(b.tickets).filter((h) => !(h in a.tickets));
