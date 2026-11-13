@@ -5,6 +5,7 @@
 import { newId } from './ids.js';
 import { shiftDate } from './diary.js';
 import { elegirMenu, versionDelPeriodo, diaDeSemana } from './dieta.js';
+import { periodoVigente, isDate } from './targets-plan.js';
 
 export const INVENTARIO_VERSION = 1;
 export const TIPOS_EVENTO = ['recuento', 'compra', 'ajuste'];
@@ -64,19 +65,27 @@ export function expandirLinea(foodId, gramos, { recetas = [], noSeguidas = [] } 
   return r.ingredientes.filter((i) => !no.has(i.food_id)).map((i) => ({ food_id: i.food_id, gramos: (gramos * i.gramos) / pesoFinal }));
 }
 
-// Las versiones de la dieta (versión 2) cuyo periodo del plan está vigente o es futuro en `hoy` (el periodo no ha terminado:
-// sin `fin` o fin >= hoy). Un tramo `<id>_AAAAMMDD` cuenta para la versión de su periodo de origen. Sin plan: todas.
+// Las versiones de la dieta (versión 2) cuyo periodo del plan rige hoy o regirá algún día futuro (no basta con que no haya
+// terminado: uno sin `fin` tapado por otro posterior nunca vuelve a regir). Un tramo `<id>_AAAAMMDD` cuenta para la versión de su periodo de origen. Sin plan: todas.
 // Con plan, una versión sin ningún periodo vigente o futuro no cuenta. Dieta de versión 1: [] (usa `dias`, ver lineasDeDieta).
 export function versionesVigentes(dieta, plan, hoy) {
   if (!Array.isArray(dieta?.versiones)) return [];
   if (!plan) return dieta.versiones;
+  const periodos = (plan.periodos ?? []).filter((p) => p?.id && isDate(p.inicio));
   const vivas = new Set();
-  for (const p of plan.periodos ?? []) {
-    if (!p?.id || (p.fin && p.fin < hoy)) continue;
+  for (const p of periodos) {
+    if (!periodoRigeDesde(plan, periodos, p, hoy)) continue;
     const v = versionDelPeriodo(dieta.versiones, p.id);
     if (v) vivas.add(v);
   }
   return dieta.versiones.filter((v) => vivas.has(v));
+}
+
+// ¿Hay algún día d >= hoy en que el periodo vigente (periodoVigente: manda el que empezó más tarde) es `p`? Un periodo solo
+// pasa a regir el día que empieza o el día siguiente al fin de otro, así que basta probar esos candidatos.
+function periodoRigeDesde(plan, periodos, p, hoy) {
+  const candidatos = [p.inicio > hoy ? p.inicio : hoy, ...periodos.filter((q) => q !== p && isDate(q.fin)).map((q) => shiftDate(q.fin, 1))];
+  return candidatos.some((d) => d >= hoy && d >= p.inicio && (!p.fin || d <= p.fin) && periodoVigente(plan, d) === p);
 }
 
 const lineasDeDias = (dias) => Object.values(dias ?? {}).flatMap((comidas) => Object.values(comidas ?? {}).flat());
@@ -188,7 +197,12 @@ export function sustituirEvento(inv, evento) {
 
 export const ticketAplicado = (inv, hash) => Object.prototype.hasOwnProperty.call(inv.tickets, hash);
 export const registrarTicket = (inv, hash, { fecha, aplicado, origen }) => con(inv, { tickets: { ...inv.tickets, [hash]: { ...(fecha ? { fecha } : {}), ...(aplicado ? { aplicado } : {}), ...(origen ? { origen } : {}) } } });
-export const anadirDuda = (inv, duda, { id = newId } = {}) => con(inv, { dudas: [...inv.dudas, limpiarDuda({ ...duda, id: duda.id ?? id() })] });
+export function anadirDuda(inv, duda, { id = newId } = {}) {
+  const l = esObjeto(duda) ? limpiarDuda({ ...duda, id: duda.id ?? id() }) : null;
+  if (!l) throw new Error(`Duda de inventario no válida: ${JSON.stringify(duda)}`);
+  if (inv.dudas.some((d) => d.id === l.id)) throw new Error(`Duda de inventario repetida: ${l.id}`);
+  return con(inv, { dudas: [...inv.dudas, l] });
+}
 export const quitarDuda = (inv, idDuda) => con(inv, { dudas: inv.dudas.filter((d) => d.id !== idDuda) });
 // Respuesta a una duda para la próxima vez: descripción normalizada -> food_id o 'ignorar'.
 export const aprender = (inv, descripcion, destino) => con(inv, { aprendido: { ...inv.aprendido, [cadena(descripcion)]: cadena(destino) } });
@@ -200,7 +214,10 @@ export function fusionarInventario(local, entrante) {
   const a = limpiarInventario(local).inventario;
   const { inventario: b, avisos } = limpiarInventario(entrante);
   const ids = new Set(a.eventos.map((e) => e.id));
-  const eventosNuevos = b.eventos.filter((e) => !ids.has(e.id));
+  // la misma línea de ticket (ticket, línea, alimento) con otro id en la copia no se suma otra vez
+  const claveCompra = (e) => (e.tipo === 'compra' && e.ticket && Number.isInteger(e.linea) ? `${e.ticket}|${e.linea}|${e.food_id}` : null);
+  const claves = new Set(a.eventos.map(claveCompra).filter(Boolean));
+  const eventosNuevos = b.eventos.filter((e) => !ids.has(e.id) && !claves.has(claveCompra(e)));
   const eventos = [...a.eventos, ...eventosNuevos];
   const tickets = { ...b.tickets, ...a.tickets };
   const ticketsNuevos = Object.keys(b.tickets).filter((h) => !(h in a.tickets));
@@ -225,7 +242,7 @@ export function consumoPorDia(registros, { conjunto, recetas = [], noSeguidas = 
   const dias = new Map();
   for (const m of registros ?? []) {
     if (!FECHA_RE.test(String(m?.date))) continue;
-    for (const l of m.lines ?? []) {
+    for (const l of Array.isArray(m?.lines) ? m.lines : []) {
       if (!esNum(l?.grams) || l.grams <= 0) continue;
       for (const e of expandirLinea(l.food_id, l.grams, { recetas, noSeguidas })) {
         if (!dentro.has(e.food_id)) continue;
@@ -318,9 +335,12 @@ export function gramosComestibles(gramosBrutos, food) {
 //   horizonte (días desde hoy) y margen (días extra de colchón): se miran hoy … hoy + horizonte − 1 + margen,
 //   envases: { food_id: { gramos, nombre } } opcional (gramos comestibles de un envase del producto habitual).
 // necesidad = Σ gramos del menú de cada día (elegirMenu con el plan; recetas como en alimentosDeLaDieta);
-// faltan = max(0, necesidad − stock) (el stock no resta hoy y la necesidad ya incluye el menú de hoy: nada se cuenta dos veces); sin contar: faltan = necesidad y stockDesconocido.
+// faltan = max(0, pendiente − max(0, stock)) (el stock no resta hoy y la necesidad ya incluye el menú de hoy: nada se cuenta dos
+// veces; con stock negativo se compra solo lo que pide el menú y `negativo` queda para el aviso). Si el recuento es de hoy,
+// lo registrado hoy ya no está en la despensa: pendiente = max(0, necesidad − registradoHoy); si no, pendiente = necesidad.
+// Sin contar: faltan = necesidad y stockDesconocido. Sin horizonte ni margen: los de CONFIG_DEFECTO.
 // Los días sin menú suman 0 y se devuelven aparte (sinMenu) para avisar.
-export function listaCompra({ dieta, recetas = [], plan = null, hoy, noSeguidas = [], conjunto, stock = {}, horizonte, margen = 0, envases = {} }) {
+export function listaCompra({ dieta, recetas = [], plan = null, hoy, noSeguidas = [], conjunto, stock = {}, horizonte = CONFIG_DEFECTO.horizonte_dias, margen = CONFIG_DEFECTO.margen_dias, envases = {} }) {
   const dentro = conjuntoDe(conjunto);
   const total = Math.max(1, horizonte) + Math.max(0, margen);
   const necesidad = new Map();
@@ -340,10 +360,12 @@ export function listaCompra({ dieta, recetas = [], plan = null, hoy, noSeguidas 
     const s = stock[id];
     const contado = Boolean(s?.contado);
     const registradoHoy = s?.registradoHoy ?? 0;
-    const faltan = r3(contado ? Math.max(0, nec - s.gramos) : nec);
+    const recuentoHoy = contado && diaDe(s.recuento?.momento ?? '') === hoy;
+    const pendiente = recuentoHoy ? Math.max(0, nec - registradoHoy) : nec;
+    const faltan = r3(contado ? Math.max(0, pendiente - Math.max(0, s.gramos)) : nec);
     const env = envases[id];
     const envase = esNum(env?.gramos) && env.gramos > 0 ? { nombre: env.nombre ?? null, gramos: env.gramos, cantidad: faltan > 0 ? Math.ceil(faltan / env.gramos - 1e-9) : 0 } : null;
-    return { food_id: id, necesidad: r3(nec), stock: contado ? s.gramos : null, registradoHoy, faltan, stockDesconocido: !contado, negativo: Boolean(s?.negativo), envase };
+    return { food_id: id, necesidad: r3(nec), pendiente: r3(pendiente), recuentoHoy, stock: contado ? s.gramos : null, registradoHoy, faltan, stockDesconocido: !contado, negativo: Boolean(s?.negativo), envase };
   });
   return { desde: hoy, hasta: shiftDate(hoy, total - 1), horizonte: Math.max(1, horizonte), margen: Math.max(0, margen), dias, sinMenu, items };
 }

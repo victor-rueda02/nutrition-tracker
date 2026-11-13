@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import {
   limpiarConfig, expandirLinea, versionesVigentes, alimentosDeLaDieta, inventarioVacio, limpiarInventario, anadirRecuentos, anadirRecuento,
   anadirAjuste, anadirCompra, sustituirEvento, ticketAplicado, registrarTicket, anadirDuda, quitarDuda, aprender, fusionarInventario,
-  consumoPorDia, consumoDelDia, calcularStock, gramosComestibles, porcionComestible, listaCompra, hoyLocal, momentoLocal, diaDe,
+  consumoPorDia, consumoDelDia, calcularStock, gramosComestibles, porcionComestible, listaCompra, hoyLocal, momentoLocal, diaDe, CONFIG_DEFECTO,
 } from '../frontend/js/core/inventario.js';
 import { mergeRecetas } from '../frontend/js/core/recetas.js';
 import { validarDieta } from '../frontend/js/core/dieta.js';
@@ -408,4 +408,87 @@ test('lista de la compra con la dieta real y un plan que cubre sus periodos: los
   assert.ok(l.items.length > 0 && l.items.every((i) => i.stockDesconocido));
   // los ingredientes que solo estaban en las lentejas caseras no entran en la lista
   assert.equal(l.items.some((i) => ['chorizo', 'morro_cerdo'].includes(i.food_id)), false);
+});
+
+// ---------- ronda 2 ----------
+
+test('versionesVigentes: un periodo sin fin tapado por otro posterior (el que empezó más tarde manda) nunca vuelve a regir y no cuenta', () => {
+  const v = (periodo) => ({ periodo, dias: { lunes: { cena: [L(`a_${periodo}`, 10)] } } });
+  const dieta = validarDieta({ versiones: ['p19', 'p18', 'p17', 'p16'].map(v) }).dieta;
+  const plan = { periodos: [
+    { id: 'p19', inicio: '2026-11-23' }, // sin fin, tapado por p18 desde el 12-01-2027
+    { id: 'p18', inicio: '2027-01-12' }, // tapado por p17
+    { id: 'p17', inicio: '2027-02-23' }, // tapado por p16
+    { id: 'p16', inicio: '2027-03-30' },
+  ] };
+  assert.deepEqual(versionesVigentes(dieta, plan, '2027-04-01').map((x) => x.periodo), ['p16']);
+  assert.deepEqual(versionesVigentes(dieta, plan, '2027-03-01').map((x) => x.periodo), ['p17', 'p16']);
+  assert.deepEqual(versionesVigentes(dieta, plan, '2026-11-13').map((x) => x.periodo), ['p19', 'p18', 'p17', 'p16']); // todos futuros
+  assert.deepEqual(versionesVigentes(dieta, plan, '2027-01-20').map((x) => x.periodo), ['p18', 'p17', 'p16']);
+  // un periodo con fin que deja un hueco en el que vuelve a regir el anterior: el anterior cuenta
+  const hueco = { periodos: [{ id: 'p19', inicio: '2026-11-01' }, { id: 'p18', inicio: '2026-12-01', fin: '2026-12-10' }] };
+  assert.deepEqual(versionesVigentes(dieta, hueco, '2026-12-05').map((x) => x.periodo), ['p19', 'p18']); // p19 vuelve el 11-12
+  assert.deepEqual(versionesVigentes(dieta, hueco, '2026-12-11').map((x) => x.periodo), ['p19']);
+});
+
+test('lista de la compra: stock negativo no aumenta lo que falta (solo se avisa con negativo)', () => {
+  const hoy = '2026-11-16';
+  const conjunto = ['arroz_blanco_crudo'];
+  const inv = anadirRecuento(inventarioVacio(), { food_id: 'arroz_blanco_crudo', gramos: 100, momento: '2026-11-10T10:00' });
+  const stock = calcularStock(inv, [reg('2026-11-12', ['arroz_blanco_crudo', 250])], { conjunto, recetas: [], hoy });
+  assert.equal(stock.arroz_blanco_crudo.gramos, -150);
+  const l = listaCompra({ dieta: DIETA_LISTA, recetas: [], plan: PLAN_LISTA, hoy, conjunto, stock, horizonte: 7, margen: 2 });
+  assert.deepEqual([l.items[0].necesidad, l.items[0].faltan, l.items[0].negativo, l.items[0].stock], [360, 360, true, -150]); // no 510
+});
+
+test('lista de la compra: sin horizonte ni margen usa los de CONFIG_DEFECTO (7 + 2 días)', () => {
+  const l = listaCompra({ dieta: DIETA_LISTA, recetas: [], plan: PLAN_LISTA, hoy: '2026-11-16', conjunto: ['arroz_blanco_crudo'], stock: {} });
+  assert.deepEqual([l.horizonte, l.margen, l.dias.length, l.hasta], [CONFIG_DEFECTO.horizonte_dias, CONFIG_DEFECTO.margen_dias, 9, '2026-11-24']);
+});
+
+test('lista de la compra: con el recuento hecho hoy, lo registrado hoy ya no está en la despensa y baja la necesidad de ese alimento (sin bajar de 0)', () => {
+  const hoy = '2026-11-16'; // lunes: arroz 100, huevo 108
+  const conjunto = ['arroz_blanco_crudo', 'huevo'];
+  const registros = [reg('2026-11-16', ['arroz_blanco_crudo', 60], ['huevo', 500])];
+  // recuento hoy a las 20:00 (lo que queda, con lo de hoy ya comido): arroz 300, huevo 0
+  const inv = anadirRecuentos(inventarioVacio(), [L('arroz_blanco_crudo', 300), L('huevo', 0)], '2026-11-16T20:00', { id: seq('h') });
+  const stock = calcularStock(inv, registros, { conjunto, recetas: [], hoy });
+  const l = listaCompra({ dieta: DIETA_LISTA, recetas: [], plan: PLAN_LISTA, hoy, conjunto, stock, horizonte: 1, margen: 0 });
+  const arroz = l.items.find((i) => i.food_id === 'arroz_blanco_crudo');
+  // necesidad de hoy 100; ya comidos 60 → pendiente 40; 40 − 300 → nada que comprar
+  assert.deepEqual([arroz.necesidad, arroz.pendiente, arroz.recuentoHoy, arroz.faltan], [100, 40, true, 0]);
+  // con la despensa justa (30 g): faltan 40 − 30 = 10
+  const justo = anadirRecuentos(inventarioVacio(), [L('arroz_blanco_crudo', 30), L('huevo', 0)], '2026-11-16T20:00', { id: seq('j') });
+  const lj = listaCompra({ dieta: DIETA_LISTA, recetas: [], plan: PLAN_LISTA, hoy, conjunto, stock: calcularStock(justo, registros, { conjunto, recetas: [], hoy }), horizonte: 1, margen: 0 });
+  assert.equal(lj.items.find((i) => i.food_id === 'arroz_blanco_crudo').faltan, 10);
+  // huevo: necesidad 108, registrados 500 → pendiente 0 (nunca negativo), faltan 0
+  const huevo = lj.items.find((i) => i.food_id === 'huevo');
+  assert.deepEqual([huevo.necesidad, huevo.pendiente, huevo.faltan], [108, 0, 0]);
+  // con el recuento de otro día no se descuenta (lo de hoy aún está en el stock)
+  const ayer = anadirRecuentos(inventarioVacio(), [L('arroz_blanco_crudo', 300)], '2026-11-15T20:00', { id: seq('y') });
+  const la = listaCompra({ dieta: DIETA_LISTA, recetas: [], plan: PLAN_LISTA, hoy, conjunto: ['arroz_blanco_crudo'], stock: calcularStock(ayer, registros, { conjunto: ['arroz_blanco_crudo'], recetas: [], hoy }), horizonte: 1, margen: 0 });
+  assert.deepEqual([la.items[0].pendiente, la.items[0].recuentoHoy], [100, false]);
+});
+
+test('anadirDuda: duda null, no objeto o con id vacío lanza un error claro y nunca mete null en dudas; id repetido también', () => {
+  const inv = inventarioVacio();
+  for (const mala of [null, undefined, 5, 'x', [], { id: '', ticket: 'h' }]) assert.throws(() => anadirDuda(inv, mala, { id: () => '' }), /Duda de inventario no válida/);
+  const ok = anadirDuda(inv, { ticket: 'h', linea: 1 }, { id: () => 'd1' });
+  assert.deepEqual(ok.dudas.map((d) => d.id), ['d1']);
+  assert.throws(() => anadirDuda(ok, { ticket: 'h', linea: 2 }, { id: () => 'd1' }), /repetida/);
+  assert.equal(inv.dudas.length, 0);
+});
+
+test('fusionarInventario: una compra de la copia con la misma clave (ticket, línea, alimento) y otro id no se suma otra vez', () => {
+  const compra = (id, gramos, extra = {}) => ({ id, tipo: 'compra', momento: '2026-11-16T19:00', food_id: 'huevo', gramos, ticket: 'h1', linea: 2, ...extra });
+  const local = { version: 1, eventos: [compra('a', 720)], tickets: {}, dudas: [], aprendido: {} };
+  const copia = { version: 1, eventos: [compra('otro-id', 720), compra('c', 100, { linea: 3 }), compra('d', 50, { food_id: 'arroz_blanco_crudo' })], tickets: {}, dudas: [], aprendido: {} };
+  const { inventario, nuevos } = fusionarInventario(local, copia);
+  assert.deepEqual(inventario.eventos.map((e) => e.id), ['a', 'c', 'd']); // 'otro-id' descartado; otra línea u otro alimento sí entran
+  assert.equal(nuevos.eventos, 2);
+});
+
+test('consumoPorDia: un registro sin lines, con lines no lista o nulo no lanza', () => {
+  const regs = [{ date: '2026-11-15' }, { date: '2026-11-15', lines: null }, { date: '2026-11-15', lines: 'x' }, null, reg('2026-11-15', ['huevo', 100])];
+  assert.deepEqual([...consumoDelDia(regs, '2026-11-15', ctxBase)], [['huevo', 100]]);
 });

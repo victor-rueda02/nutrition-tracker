@@ -262,7 +262,8 @@ stock no se guarda: se deriva de los eventos y del Diario.
 
 ### Alimentos que sigue el inventario (`alimentosDeLaDieta`)
 Calculados, nunca a mano: los de las líneas de `data/dieta.json` (menú normal y `tipos`) de las versiones cuyo periodo del
-plan no ha terminado en `hoy` (un tramo `<id>_AAAAMMDD` cuenta para la versión del periodo del que sale; sin plan, todas).
+plan rige hoy o regirá algún día futuro (con la misma lógica de `periodoVigente`: manda el que empezó más tarde, así que un
+periodo sin `fin` tapado por otro posterior ya no cuenta) (un tramo `<id>_AAAAMMDD` cuenta para la versión del periodo del que sale; sin plan, todas).
 Una receta con `etiqueta` (producto envasado) entra como sí misma; una receta no seguida, ni ella ni sus ingredientes; cualquier
 otra receta se sustituye por sus ingredientes. Hoy: 36 alimentos.
 
