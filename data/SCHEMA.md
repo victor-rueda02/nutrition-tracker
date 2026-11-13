@@ -28,9 +28,30 @@ están en `data/nutrients.json` (61 columnas: energía, macros, grasas, vitamina
 Para añadir un nutriente, añade una entrada a ese fichero.
 
 ## Columnas de trabajo y desconocidas
-`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron), `pendiente_revisar`, `rol_cena` y `nombre_corto` se conservan al
+`termino_busqueda_usda`, `tipo`, `incluir`, `notas`, `cantidad_habitual_g`, `dias_de_uso_en_8`, `fdc_id`, `fuente_usda` (estas dos las rellenan `scripts/usda.mjs` y «Estimar con IA»: de qué alimento de USDA salen los nutrientes y qué alternativas se usaron), `pendiente_revisar`, `rol_cena`, `nombre_corto` y `porcion_comestible` se conservan al
 importar y exportar y no intervienen en ningún cálculo. Cualquier otra cabecera desconocida también se conserva,
 con un aviso (si parece un nutriente con la unidad cambiada, el aviso sugiere la correcta).
+
+### Columna `porcion_comestible` (inventario; opcional, solo los alimentos de la dieta)
+Fracción comestible (0-1] del producto **tal como se compra**, respecto a lo que describe la fila: `0,88` en el huevo
+(cáscara), `0,45` en `nueces` (el ticket es nuez CON cáscara y la fila es sin cáscara), `0,72` en la mandarina… Vale `1`
+cuando la fila ya es el producto comprado (paquetes, latas escurridas, filetes, patata con piel). Vacía = sin dato de
+fuente (el inventario cuenta 1 y avisa). La fuente va en `fuente_usda` («porcion_comestible = 0,88: BEDCA 2091…»). No
+interviene en ningún cálculo de nutrientes. Gramos de una línea de ticket = cantidad × unidades × gramos por unidad ×
+`porcion_comestible`.
+
+### `data/tickets-mercadona.json` (tickets de Mercadona → alimentos de la dieta)
+`{ "version": 1, "productos": { "<descripción normalizada>": { … } } }`. La clave es la descripción del ticket sin
+acentos, en minúsculas y con espacios simples (`"atun claro oliva pk6"`). Cada entrada lleva `descripcion` (tal cual en el
+ticket) y **una** de estas formas:
+- `ignorar: true` + `motivo`: se parece a la dieta pero no lo es; se descarta.
+- `food_id` (existe en `foods.csv`) y exactamente una forma de cantidad:
+  - **envase**: `nombre_envase` («pack 6 latas»), `unidades_por_envase` y `gramos_por_unidad` (peso neto por unidad;
+    en latas, el escurrido; `null` = tamaño desconocido, la línea va a Dudas), más `fuente` (URL y fecha de consulta);
+  - `a_peso: true`: el ticket trae los kg en la línea siguiente (patata, mandarina);
+  - `preguntar_gramos: true`: el ticket no trae peso (pechuga, salmón); se pregunta.
+- Opcionales: `nota`, `confirmar: true` (valor pendiente de que Victor lo confirme), y en los huevos `talla` y
+  `estimado: true` (los gramos por huevo son CON cáscara; la cáscara va en `porcion_comestible`).
 
 ### Columnas de «¿Qué ceno?»: `rol_cena` y `nombre_corto` (opcionales)
 Viven aquí, en tu documento, para que al añadir un alimento (a mano o con «Estimar con IA») todo quede en un solo sitio.
@@ -80,6 +101,7 @@ texto (`"a|b"`) o listas (`["a","b"]`, `[{"nombre":"vaso","gramos":250}]`). Un n
 - `recetas.json`: recetas del catálogo (ver abajo). Las filas de receta de `foods.csv` se calculan desde aquí.
 - `retirados.json`: alimentos que se quitan del documento «como si no hubiesen estado nunca» (ver abajo).
 - `dieta.json`: la dieta predefinida por día de la semana, para «Copiar dieta del día» del Diario (ver abajo).
+- `inventario.json`: configuración del inventario y de la lista de la compra (ver «Inventario» al final).
 
 ## Alimentos retirados (`data/retirados.json`)
 ```json
@@ -223,3 +245,61 @@ dispositivo (va en la copia del diario). La lista muestra las de `data/recetas.j
 gana la tuya); «Exportar recetas.json» da el fichero completo para copiarlo en `data/`, y «Recalcular todas» vuelve a
 calcular las filas con los nutrientes actuales. Una receta estimada con IA usa los gramos del plato terminado (en
 proporción, sin `peso_final_g`).
+
+## Inventario (`data/inventario.json` y el ajuste `inventario`)
+
+Lógica en `frontend/js/core/inventario.js` (especificación en `docs/inventario/ESPEC.md`). Todo se calcula por código y el
+stock no se guarda: se deriva de los eventos y del Diario.
+
+### `data/inventario.json` (configuración, en el repositorio)
+```json
+{ "version": 1, "recetas_no_seguidas": ["lentejas_caseras"], "horizonte_dias": 7, "margen_dias": 2 }
+```
+- `recetas_no_seguidas`: ids de recetas cuyos ingredientes no se compran para ellas. Ni la receta ni sus ingredientes entran
+  en el conjunto por ella, y comerla no resta nada.
+- `horizonte_dias` (7): días de la lista de la compra desde hoy. `margen_dias` (2): días de colchón extra; se miran
+  de hoy a hoy + horizonte − 1 + margen. Las funciones los toman como parámetros.
+
+### Alimentos que sigue el inventario (`alimentosDeLaDieta`)
+Calculados, nunca a mano: los de las líneas de `data/dieta.json` (menú normal y `tipos`) de las versiones cuyo periodo del
+plan rige hoy o regirá algún día futuro (con la misma lógica de `periodoVigente`: manda el que empezó más tarde, así que un
+periodo sin `fin` tapado por otro posterior ya no cuenta) (un tramo `<id>_AAAAMMDD` cuenta para la versión del periodo del que sale; sin plan, todas).
+Una receta con `etiqueta` (producto envasado) entra como sí misma; una receta no seguida, ni ella ni sus ingredientes; cualquier
+otra receta se sustituye por sus ingredientes. Hoy: 36 alimentos.
+
+### Ajuste `inventario` (IndexedDB; va en la copia de seguridad del diario)
+```json
+{
+  "version": 1,
+  "eventos": [
+    { "id": "…", "tipo": "recuento", "momento": "2026-11-14T10:00", "food_id": "arroz_blanco_crudo", "gramos": 1000 },
+    { "id": "…", "tipo": "compra", "momento": "2026-11-16T19:00", "food_id": "huevo", "gramos": 720, "ticket": "<hash>", "linea": 7 },
+    { "id": "…", "tipo": "ajuste", "momento": "2026-11-17T09:00", "food_id": "huevo", "gramos": -60, "motivo": "caducado" }
+  ],
+  "tickets": { "<hash>": { "fecha": "2026-10-26", "aplicado": "2026-10-26T21:03", "origen": "correo" } },
+  "dudas": [ { "id": "…", "ticket": "<hash>", "linea": 7, "descripcion": "…", "cantidad": 1, "peso_kg": null, "candidatos": ["food_id"], "motivo": "…" } ],
+  "aprendido": { "griego ligero p-6": "yogur_griego_ligero", "tom. receta artesana": "ignorar" }
+}
+```
+- `id`: de `core/ids.js`. `momento`: hora local `YYYY-MM-DDTHH:MM`, comparada como texto. `gramos`: `recuento` es un valor
+  absoluto (≥ 0; un 0 es un 0 real), `compra` > 0 y `ajuste` un delta con signo distinto de 0. Los eventos solo se añaden
+  (editar = sustituir por id); nada borra el diario.
+- **Stock** (`calcularStock`): `R` = último recuento del alimento; stock = `R.gramos` + Σ compras y ajustes con `momento` >
+  `R.momento` − Σ consumo de los días cerrados `d` con día(`R`) < `d` < hoy. Sin recuento, `gramos` es `null` («sin contar»,
+  nunca 0) y se informa de lo comprado. Lo registrado hoy (`registradoHoy`) aún no se resta (se resta a las 00:00); los días
+  futuros nunca restan. Un stock negativo se marca (`negativo`, `faltanRevisar`) y no se recorta.
+- **Consumo de un día**: líneas del Diario con alimento del conjunto, con las recetas expandidas (`gramos_línea ×
+  gramos_ingrediente / peso_final_g`, o / suma de ingredientes sin peso final). Fuera del conjunto o borrado del documento: nada.
+- **Importar una copia** (`fusionarInventario`): une por id de evento (gana lo local), tickets y `aprendido` (gana lo local) y
+  dudas; no vuelve una duda cuya línea ya tiene su compra. Nunca borra.
+- **Porción comestible**: columna de trabajo opcional `porcion_comestible` de `foods.csv` (fracción en (0, 1]; vacía o
+  inválida = 1 y `sinDato` para avisar), leída por `gramosComestibles(gramosBrutos, food)`.
+
+### Tickets: dudas y lo aprendido (`core/tickets.js`)
+- Una duda lleva además `fecha` (del ticket), `gramos_sugeridos` (brutos, o `null`) y `food_id` (el seguro, si lo hay). `motivo`:
+  `parecido`, `preguntar_gramos`, `sin_peso`, `sin_tamano_envase` o `ilegible`.
+- `aprendido[descripcion normalizada]` = `food_id`, `food_id:gramos_por_unidad` (repite la cantidad: cantidad × gramos) o `ignorar`.
+- Las compras de un ticket llevan `momento` = `<fecha>T<hora>` del ticket (`T00:00` si el ticket no trae hora); las dudas guardan
+  `hora` y `momento` y `resolverDuda` los usa; `tickets[hash]` guarda también `hora`. El hash de un ticket es el SHA-256 de
+  fecha, hora y líneas normalizadas (no del nº de factura). `aplicarTicket` avisa `posible_duplicado` si ya hay otro ticket con la
+  misma fecha y hora. `resolverDuda` recibe los gramos BRUTOS y aplica la porción comestible.

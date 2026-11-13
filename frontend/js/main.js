@@ -56,8 +56,12 @@ async function boot() {
     try { nutrientesInfo = JSON.parse(await fetchText('nutrientes-info.json')); } catch { /* sin información de nutrientes */ }
     let retirados = null; // data/retirados.json: alimentos que Victor retira del documento (sin él, nada se elimina)
     try { retirados = JSON.parse(await fetchText('retirados.json')); } catch { /* sin lista de retirados */ }
+    let inventarioConfig = null; // data/inventario.json: recetas no seguidas, horizonte, margen y grupos del inventario (sin él, valores por defecto)
+    try { inventarioConfig = JSON.parse(await fetchText('inventario.json')); } catch { /* sin configuración del inventario */ }
+    let ticketsTabla = null; // data/tickets-mercadona.json: productos de los tickets de Mercadona y sus envases (sin ella, todo va a Dudas)
+    try { ticketsTabla = JSON.parse(await fetchText('tickets-mercadona.json')); } catch { /* sin tabla de tickets */ }
     mountApp(root, {
-      store, createAiClient, catalog, settings, targets, fetchPublished, appVersion: APP_VERSION, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados,
+      store, createAiClient, catalog, settings, targets, fetchPublished, appVersion: APP_VERSION, fetchDieta, fetchDietaCopia: () => fetchText('dieta.json'), recetasBase, semilla, nutrientesInfo, retirados, inventarioConfig, ticketsTabla,
       objetivos: (await store.getSetting('objetivos')) ?? {},
       initial: { foods: rec.foods, extraHeaders: rec.extraHeaders, docName: rec.name }, conn: (await store.getSetting('conn')) ?? {},
     });

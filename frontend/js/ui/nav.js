@@ -28,6 +28,8 @@ const ICONS = {
   warn: 'M12 4l9 16H3zM12 10v4M12 17h.01',
   copy: 'M9 9h10v12H9zM5 15V3h10',
   dots: 'M5 12h.01M12 12h.01M19 12h.01',
+  box: 'M4 8l8-4 8 4v9l-8 4-8-4zM4 8l8 4 8-4M12 12v9',
+  cart: 'M3 4h2l2.500 11h10L20 7H6.500M9 19.500h.01M17 19.500h.01',
 };
 
 // icon(doc, nombre) -> <svg class="ico"> decorativo (aria-hidden).

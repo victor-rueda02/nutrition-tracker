@@ -13,6 +13,7 @@
 //   await ai.ideasCena({ alimentos, deficits })  -> { cenas: [{ nombre, lineas: [{ food_id, gramos }] }], warnings }
 //   alimentos = lista compacta (sin nutrientes); deficits = solo los NOMBRES de los nutrientes con déficit (sin cantidades).
 // A USDA solo viajan términos y fdcId; la clave de USDA es un secreto del Worker.
+// Inventario (sin IA): ticketsPendientes, ticketsRecibidos y subirTicket hablan con la cola de tickets del Worker (ver abajo).
 //
 // El prompt, el esquema de Gemini y la validación viven en el Worker (worker/src/prompt.js): para ajustar el
 // comportamiento de la IA se edita allí y se redespliega el Worker, sin tocar la app. Si cambia este contrato
@@ -44,7 +45,22 @@ const MESSAGES = {
   usda_sin_configurar: 'El Worker no tiene la clave de USDA (secreto USDA_API_KEY): ver docs/notas-ia-recetas.md.',
   usda_clave: 'USDA rechaza la clave del Worker: revisa el secreto USDA_API_KEY.',
   usda: 'USDA no ha respondido bien. Prueba de nuevo en un momento.',
+  // Cola de tickets de Mercadona (Inventario; sin IA)
+  tickets_sin_configurar: 'El Worker aún no tiene la cola de tickets (falta el KV «TICKETS» y el secreto MAIL_TOKEN): ver docs/inventario/CORREO.md.',
+  ticket_ilegible: 'No he podido leer el ticket. Prueba con «Pegar el texto del ticket».',
+  ticket_invalido: 'Falta el PDF o el texto del ticket.',
+  pdf_invalido: 'Ese fichero no es un PDF válido. Prueba con «Pegar el texto del ticket».',
+  pdf_cifrado: 'El PDF está protegido con contraseña. Prueba con «Pegar el texto del ticket».',
+  pdf_no_soportado: 'No sé leer este tipo de PDF. Prueba con «Pegar el texto del ticket».',
+  sin_descompresion: 'Este navegador no puede leer el PDF (hace falta iOS 16.4 o posterior). Prueba con «Pegar el texto del ticket».',
+  sin_texto: 'El PDF no tiene texto que se pueda leer. Prueba con «Pegar el texto del ticket».',
+  pdf_demasiado_grande: 'El PDF es demasiado grande (máximo 2 MB).',
+  texto_demasiado_largo: 'El texto del ticket es demasiado largo.',
+  cuerpo_demasiado_grande: 'El ticket es demasiado grande para enviarlo.',
+  hashes_invalidos: 'Lista de tickets no válida.',
 };
+// Errores de la cola de tickets que el Worker manda con código propio (no son de la IA).
+const ERRORES_TICKETS = ['tickets_sin_configurar', 'ticket_ilegible', 'ticket_invalido', 'pdf_invalido', 'pdf_cifrado', 'pdf_no_soportado', 'sin_descompresion', 'sin_texto', 'pdf_demasiado_grande', 'texto_demasiado_largo', 'cuerpo_demasiado_grande', 'hashes_invalidos'];
 const fail = (code, detail) => new AiClientError(code, MESSAGES[code] ?? `Error: ${code}`, detail);
 
 export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.bind(globalThis), isOnline = () => globalThis.navigator?.onLine !== false } = {}) {
@@ -69,6 +85,7 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
       if (res.status === 401) throw fail('token_invalido');
       if (res.status === 403) throw fail('origen');
       if (['limite_usda', 'usda_sin_configurar', 'usda_clave', 'usda'].includes(body?.error)) throw fail(body.error, `HTTP ${res.status}`);
+      if (ERRORES_TICKETS.includes(body?.error)) throw Object.assign(fail(body.error, body.detalle ?? `HTTP ${res.status}`), { codigo: body.codigo });
       if (res.status === 429) throw fail('limite_de_uso');
       if (res.status === 404 && body?.error === 'no_encontrado') throw fail('worker_antiguo', path);
       if (body?.error === 'respuesta_invalida') throw Object.assign(fail('respuesta_invalida', body.detalle), { recibidas: body.recibidas, descartes: body.descartes });
@@ -111,6 +128,25 @@ export function createAiClient({ endpoint, token, fetchImpl = globalThis.fetch?.
     async usdaFoods({ fdcIds }) {
       const b = await post('/usda/foods', { fdcIds }, (x) => Array.isArray(x.fichas));
       return { fichas: b.fichas, faltan: b.faltan ?? [] };
+    },
+
+    // Tickets de Mercadona (Inventario). Sin IA: el Worker solo lee el ticket y guarda fecha, hora, líneas y hash en su cola (KV).
+    // Nunca viaja el diario ni el inventario. Un 401 aquí es el token de la app; el del correo es otro y vive en el Apps Script.
+    //   await ai.ticketsPendientes()                          -> { tickets: [{ hash, fecha, hora, lineas, recibido, origen }] }
+    //   await ai.ticketsRecibidos({ hashes })                 -> { borrados }  (la app ya los aplicó: se quitan de la cola)
+    //   await ai.subirTicket({ pdf_base64 } | { texto })      -> { hash, fecha, hora, lineas, duplicado }  (entra en la cola; luego se recoge)
+    async ticketsPendientes() {
+      const b = await post('/tickets/pendientes', {}, (x) => Array.isArray(x.tickets));
+      return { tickets: b.tickets };
+    },
+    async ticketsRecibidos({ hashes }) {
+      const b = await post('/tickets/recibidos', { hashes }, (x) => x.ok === true);
+      return { borrados: b.borrados ?? hashes.length };
+    },
+    async subirTicket({ pdf_base64, texto }) {
+      const payload = pdf_base64 ? { pdf_base64 } : { texto };
+      const b = await post('/tickets', payload, (x) => x.ok === true && typeof x.hash === 'string');
+      return { hash: b.hash, fecha: b.fecha, lineas: b.lineas, duplicado: b.duplicado === true };
     },
 
     // "Probar" (no gasta IA): ¿responde?, ¿tiene sus secretos?, ¿el token es el correcto? -> { ok, configurado, token }.

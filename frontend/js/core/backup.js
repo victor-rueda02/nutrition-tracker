@@ -1,17 +1,19 @@
 // Copia de seguridad del diario (JSON): exportar e importar. Funciones puras, sin DOM.
 // La copia lleva las comidas, tu plan de objetivos (plan_objetivos; las copias antiguas traen `objetivos`), tus
-// plantillas, el registro de frases a revisar y tus recetas (sus definiciones; las filas van en el documento); nunca la
+// plantillas, el registro de frases a revisar, tus recetas (sus definiciones; las filas van en el documento) y el inventario
+// (eventos, tickets aplicados, dudas y lo aprendido; se fusiona con inventario.js/fusionarInventario); nunca la
 // conexión (el token del Worker).
 import { MEALS } from './meal-defaults.js';
 import { cleanTemplates } from './templates.js';
 import { cleanLog } from './phrase-log.js';
 import { cleanRecetas } from './recetas.js';
+import { limpiarInventario } from './inventario.js';
 
 export const BACKUP_FORMAT = 1;
 export const BACKUP_KIND = 'nutrition-tracker/diario';
 
-export function buildBackup({ meals, objetivos = null, plan = null, plantillas = [], registro = [], recetas = [], now = new Date() }) {
-  return { tipo: BACKUP_KIND, formatVersion: BACKUP_FORMAT, exportedAt: now.toISOString(), comidas: meals, objetivos, plan_objetivos: plan, plantillas, registro_frases: registro, recetas };
+export function buildBackup({ meals, objetivos = null, plan = null, plantillas = [], registro = [], recetas = [], inventario = null, now = new Date() }) {
+  return { tipo: BACKUP_KIND, formatVersion: BACKUP_FORMAT, exportedAt: now.toISOString(), comidas: meals, objetivos, plan_objetivos: plan, plantillas, registro_frases: registro, recetas, ...(inventario ? { inventario } : {}) };
 }
 export const backupToJSON = (backup) => `${JSON.stringify(backup, null, 2)}\n`;
 
@@ -69,7 +71,8 @@ export function parseBackup(text) {
   const registro = Array.isArray(data) ? [] : cleanLog(data.registro_frases);
   const plan = !Array.isArray(data) && data.plan_objetivos && typeof data.plan_objetivos === 'object' && !Array.isArray(data.plan_objetivos) ? data.plan_objetivos : null;
   const recetas = Array.isArray(data) ? [] : cleanRecetas(data.recetas);
-  return { ok: true, meals, errors, objetivos, plan, plantillas, registro, recetas };
+  const inventario = !Array.isArray(data) && data.inventario && typeof data.inventario === 'object' && !Array.isArray(data.inventario) ? limpiarInventario(data.inventario).inventario : null; // lo inválido se ignora
+  return { ok: true, meals, errors, objetivos, plan, plantillas, registro, recetas, inventario };
 }
 
 const stamp = (m) => Date.parse(m.updatedAt ?? m.createdAt);
