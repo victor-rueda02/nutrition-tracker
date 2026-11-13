@@ -4,4 +4,4 @@ export const DATA_BASE = '../data/';
 export const DB_NAME = 'nutrition-tracker';
 // Versión del código que está corriendo; se enseña en Más. Debe ser igual que VERSION de sw.js (lo comprueba pwa.test.js):
 // al publicar, sube las dos.
-export const APP_VERSION = 'nt-v46';
+export const APP_VERSION = 'nt-v47';

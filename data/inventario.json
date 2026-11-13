@@ -2,5 +2,13 @@
   "version": 1,
   "recetas_no_seguidas": ["lentejas_caseras"],
   "horizonte_dias": 7,
-  "margen_dias": 2
+  "margen_dias": 2,
+  "grupos": {
+    "Despensa": ["arroz_blanco_crudo", "avena_copos", "pasta_seca", "lentejas_secas", "corn_flakes", "muesli", "cacao_polvo", "crema_cacahuete", "chocolate_negro_85", "semillas_chia", "aceite_oliva", "sal", "salsa_tomate_frito"],
+    "Frutos secos": ["almendras_crudas", "anacardos", "nueces", "datiles_deglet_noor"],
+    "Latas": ["atun_lata_aceite", "sardina_lata_reducida_sal"],
+    "Frescos": ["huevo", "pechuga_pollo_cruda", "salmon_atlantico", "bebida_de_avena", "yogur_griego_ligero", "pan_integral"],
+    "Fruta y verdura": ["manzana_con_piel", "platano", "kiwi_verde", "mandarina", "tomate", "patata_cruda", "zanahoria", "cebolla", "pimiento_rojo"],
+    "Congelados": ["verduras_asadas_hacendado", "salteado_verduras_hacendado"]
+  }
 }

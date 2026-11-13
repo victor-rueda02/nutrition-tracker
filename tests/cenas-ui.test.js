@@ -182,6 +182,7 @@ test('«Más ideas» envía solo alimentos (lista compacta) y deficits (nombres 
   const cuerpos = [];
   let status = 200;
   const fetchImpl = async (url, init) => {
+    if (url.includes('/tickets')) return { ok: true, status: 200, json: async () => ({ tickets: [] }) }; // la cola de tickets al abrir la app: no es IA ni cuenta
     cuerpos.push({ url, body: JSON.parse(init.body), headers: init.headers });
     if (status === 429) return { ok: false, status, json: async () => ({ error: 'limite_de_uso' }) };
     return { ok: true, status, json: async () => ({ ...IDEAS, model: 'm' }) };
